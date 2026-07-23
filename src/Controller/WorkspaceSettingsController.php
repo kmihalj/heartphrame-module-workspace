@@ -1,0 +1,190 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
+
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceSettingsService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
+use HeartPhrame\Alert\Alert;
+use HeartPhrame\Alert\AlertHandler;
+use HeartPhrame\CodeBook\AlertLevelEnum;
+use HeartPhrame\Http\ResponseFactory;
+use HeartPhrame\Routing\UrlGenerator;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
+
+use function is_string;
+use function rawurlencode;
+
+final readonly class WorkspaceSettingsController
+{
+    /**
+     * HR: Prima servise za administratorske postavke, popise i zajedničke toast poruke.
+     * EN: Receives services for administration settings, listings, and shared toast messages.
+     */
+    public function __construct(
+        private ResponseFactory $responseFactory,
+        private WorkspaceModuleViewRenderer $viewRenderer,
+        private WorkspaceRepository $repository,
+        private WorkspaceAccessService $access,
+        private WorkspaceSettingsService $settings,
+        private WorkspaceConfig $config,
+        private UrlGenerator $urlGenerator,
+        private AlertHandler $alertHandler,
+    ) {
+    }
+
+    /**
+     * HR: Prikazuje opće postavke putanje, vidljivosti, stabla i kreiranja područja.
+     * EN: Displays general settings for routing, visibility, the tree, and workspace creation.
+     */
+    public function index(): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        return $this->viewRenderer->render('settings/index', [
+            'title' => __('Postavke područja'),
+            'settings' => $this->settings->settingsForForm(),
+            'savePath' => $this->pathFor('workspace.settings.save', '/settings/workspaces'),
+            'settingsPath' => $this->pathFor('workspace.settings', '/settings/workspaces'),
+            'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
+            'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
+            'settingsMenuActiveSection' => 'workspace.settings',
+            'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+        ]);
+    }
+
+    /**
+     * HR: Sprema opće postavke nakon provjere administratorskog statusa.
+     * EN: Saves general settings after checking administrator status.
+     */
+    public function save(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        $body = $request->getParsedBody();
+        try {
+            $this->settings->saveFromForm(WorkspaceValue::stringKeyArray($body));
+            $this->alertHandler->add(new Alert(
+                __('Postavke područja su spremljene.'),
+                AlertLevelEnum::Success,
+            ));
+        } catch (Throwable $throwable) {
+            $this->alertHandler->add(new Alert(
+                $throwable->getMessage(),
+                AlertLevelEnum::Danger,
+            ));
+        }
+
+        return $this->responseFactory->redirect(
+            $this->pathFor('workspace.settings', '/settings/workspaces'),
+        );
+    }
+
+    /**
+     * HR: Prikazuje sva aktivna područja administratoru.
+     * EN: Displays all active workspaces to an administrator.
+     */
+    public function all(): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        return $this->workspaceList(
+            __('Sva područja'),
+            $this->repository->tablesReady() ? $this->repository->allWorkspaces() : [],
+            false,
+        );
+    }
+
+    /**
+     * HR: Prikazuje soft-obrisana područja i obrasce za vraćanje.
+     * EN: Displays soft-deleted workspaces and restore forms.
+     */
+    public function deleted(): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        return $this->workspaceList(
+            __('Obrisana područja'),
+            $this->repository->tablesReady() ? $this->repository->deletedWorkspaces() : [],
+            true,
+        );
+    }
+
+    /**
+     * HR: Renderira zajednički administratorski popis aktivnih ili obrisanih područja.
+     * EN: Renders the shared administration list for active or deleted workspaces.
+     *
+     * @param list<array<string, mixed>> $workspaces
+     */
+    private function workspaceList(string $title, array $workspaces, bool $deleted): ResponseInterface
+    {
+        foreach ($workspaces as &$workspace) {
+            $slug = is_string($workspace['slug'] ?? null) ? $workspace['slug'] : '';
+            $workspace['manage_path'] = $this->pathFor('workspace.manage', '/workspaces/manage')
+            . '?workspace='
+            . rawurlencode($slug);
+            $workspace['public_path'] = $this->urlGenerator->namedRouteExists('workspace.show')
+            ? $this->urlGenerator->getPathFor('workspace.show', ['workspaceSlug' => $slug])
+            : rtrim($this->urlGenerator->getBasePath(), '/')
+            . '/'
+            . $this->config->rootPath()
+            . '/'
+            . rawurlencode($slug);
+        }
+
+        return $this->viewRenderer->render('settings/workspaces', [
+            'title' => $title,
+            'workspaces' => $workspaces,
+            'deleted' => $deleted,
+            'restorePath' => $this->pathFor('workspace.restore', '/workspaces/restore'),
+            'settingsPath' => $this->pathFor('workspace.settings', '/settings/workspaces'),
+            'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
+            'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
+            'newPath' => $this->pathFor('workspace.manage', '/workspaces/manage'),
+            'settingsMenuActiveSection' => $deleted
+            ? 'workspace.settings.deleted'
+            : 'workspace.settings.all',
+            'tablesReady' => $this->repository->tablesReady(),
+            'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+        ]);
+    }
+
+    /**
+     * HR: Vraća čitljiv 403 prikaz za korisnika bez administratorskih prava.
+     * EN: Returns a readable 403 view for a user without administrator rights.
+     */
+    private function accessDenied(): ResponseInterface
+    {
+        return $this->viewRenderer->render('workspace/access-denied', [
+            'title' => __('Nedozvoljen pristup'),
+            'message' => __('Samo administrator može mijenjati postavke područja.'),
+            'indexPath' => $this->pathFor('workspace.index', '/workspaces'),
+        ], true, 403);
+    }
+
+    /**
+     * HR: Generira named rutu ili stabilni fallback za samostalni rad modula.
+     * EN: Generates a named route or stable fallback for standalone module operation.
+     */
+    private function pathFor(string $routeName, string $fallback): string
+    {
+        return $this->urlGenerator->namedRouteExists($routeName)
+        ? $this->urlGenerator->getPathFor($routeName)
+        : $fallback;
+    }
+}

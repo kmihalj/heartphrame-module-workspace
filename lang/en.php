@@ -1,0 +1,268 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'Workspaces' => 'Workspaces',
+    'Workspace' => 'Workspace',
+    'restricted' => 'Restricted',
+    'authenticated' => 'All signed-in users',
+    'public' => 'Public',
+    'document' => 'Page (HTML document)',
+    'internal_link' => 'Internal link',
+    'external_link' => 'External link',
+    'can_view' => 'View',
+    'can_add' => 'Add',
+    'can_edit' => 'Edit',
+    'can_publish' => 'Publish',
+    'can_delete' => 'Delete',
+    'can_manage' => 'Manage',
+    'Organize related pages, members, and permissions in one place.' =>
+        'Organize related pages, members, and permissions in one place.',
+    'Akcije' => 'Actions',
+    'Akcije područja' => 'Workspace actions',
+    'Arhivirano područje je samo za čitanje' => 'An archived workspace is read-only',
+    'Brisanje područja' => 'Delete workspace',
+    'Brisanje obuhvaća i sve podređene stavke.' =>
+        'Deletion includes every descendant item.',
+    'Ciljni URL ili interna putanja' => 'Target URL or internal path',
+    'Dodaj poveznicu ili postojeći dokument' => 'Add a link or existing document',
+    'Dodaj stavku' => 'Add item',
+    'Dodaj grupu' => 'Add group',
+    'Dodaj korisnika' => 'Add user',
+    'Dodaj u stablo' => 'Add to tree',
+    'Dodaj čvor' => 'Add node',
+    'Dokument nije dostupan.' => 'The document is unavailable.',
+    'Dok su Područja uključena, njihove putanje i ACL nadjačavaju samostalnu slug putanju editora.' =>
+        'While Workspaces are enabled, their routes and ACL override the editor standalone slug route.',
+    'Grupe' => 'Groups',
+    'Javno' => 'Public',
+    'HTML dokument' => 'HTML document',
+    'HTML dokument nije moguće kreirati.' => 'The HTML document could not be created.',
+    'HTML dokument nije odabran.' => 'No HTML document was selected.',
+    'HTML dokument nije pronađen.' => 'The HTML document was not found.',
+    'HTML dokument već pripada drugoj stranici područja.' =>
+        'The HTML document already belongs to another Workspace page.',
+    'HTML editor nije dostupan.' => 'The HTML editor is unavailable.',
+    'HTML editor ne podržava trajno brisanje neobjavljenog dokumenta.' =>
+        'The HTML editor does not support permanent deletion of an unpublished document.',
+    'Hijerarhija i redoslijed stranica su spremljeni.' =>
+        'The page hierarchy and order were saved.',
+    'Integracija s HTML editorom' => 'HTML editor integration',
+    'Interna named ruta' => 'Internal named route',
+    'Interna ruta ili putanja je obavezna.' => 'An internal route or path is required.',
+    'Interna named ruta ne postoji i nema rezervnu putanju.' =>
+        'The internal named route does not exist and has no fallback path.',
+    'Interna putanja nije valjana.' => 'The internal path is invalid.',
+    'Korijen stabla' => 'Tree root',
+    'Korijenska putanja područja' => 'Workspace root path',
+    'Korisnici' => 'Users',
+    'Korisnik' => 'User',
+    'Korisničko sučelje' => 'User interface',
+    'Kreiraj i uredi' => 'Create and edit',
+    'Kreiraj novi dokument ako je tip Dokument' => 'Create a new document when the type is Document',
+    'Nadređena stranica' => 'Parent page',
+    'Nasljedna ograničenja' => 'Inherited restrictions',
+    'Naslov' => 'Title',
+    'Naslov stranice' => 'Page title',
+    'Naslov čvora je obavezan.' => 'The item title is required.',
+    'Nakon kreiranja otvorit će se HTML editor.' => 'The HTML editor opens after the page is created.',
+    'Natrag na područja' => 'Back to Workspaces',
+    'Naziv' => 'Name',
+    'Naziv područja je obavezan.' => 'The workspace name is required.',
+    'Nedozvoljen pristup' => 'Access denied',
+    'Nema kreiranih područja.' => 'No workspaces have been created.',
+    'Nema dodijeljenih subjekata.' => 'No subjects have been assigned.',
+    'Nema obrisanih područja.' => 'There are no deleted workspaces.',
+    'Nema područja koja smijete vidjeti.' => 'There are no workspaces you may view.',
+    'Nema rezultata.' => 'No results.',
+    'Neispravan tip subjekta.' => 'Invalid subject type.',
+    'Nemate potrebna prava za ovo područje ili stranicu.' =>
+        'You do not have the required permission for this workspace or page.',
+    'Nije moguće kreirati direktorij postavki područja.' =>
+        'The Workspace settings directory could not be created.',
+    'Nije moguće zapisati postavke područja.' => 'Workspace settings could not be written.',
+    'Nova stranica' => 'New page',
+    'Nova stavka bit će dodana u stablo ovog područja.' =>
+        'The new item will be added to this Workspace tree.',
+    'Nove stranice kreiraju se iz otvorenog Područja. Ovdje uređujete hijerarhiju, poveznice i nasljedna ograničenja.' =>
+        'Create new pages from the open Workspace. Use this screen to manage hierarchy, links, and inherited restrictions.',
+    'Novi HTML dokument bit će automatski kreiran.' => 'A new HTML document will be created automatically.',
+    'Novo područje' => 'New workspace',
+    'Obrisana područja' => 'Deleted workspaces',
+    'Obrisano područje nije pronađeno.' => 'The deleted workspace was not found.',
+    'Obrisati ovo područje?' => 'Delete this workspace?',
+    'Obrisati stranicu i cijelu njezinu podgranu?' => 'Delete the page and its complete subtree?',
+    'Obriši podgranu' => 'Delete subtree',
+    'Obriši područje' => 'Delete workspace',
+    'Odustani' => 'Cancel',
+    'Odaberite stranicu iz stabla ili postavite početnu stranicu područja.' =>
+        'Choose a page from the tree or set a workspace homepage.',
+    'Odabranu putanju već koristi druga ruta aplikacije.' =>
+        'The selected path is already used by another application route.',
+    'Ograničenja stranice su spremljena i nasljeđuju ih potomci.' =>
+        'Page restrictions were saved and are inherited by descendants.',
+    'Opis' => 'Description',
+    'Opće ponašanje URL-ova, stabla i novih područja.' =>
+        'General routing, tree, and new-workspace behavior.',
+    'Otvori' => 'Open',
+    'Otvori područje' => 'Open Workspace',
+    'Podaci područja' => 'Workspace data',
+    'Podaci područja, članovi i prava.' => 'Workspace data, members, and permissions.',
+    'Podaci područja, članovi, prava i hijerarhija stranica.' =>
+        'Workspace data, members, permissions, and page hierarchy.',
+    'Područja' => 'Workspaces',
+    'Područja još nisu instalirana' => 'Workspaces are not installed yet',
+    'Područje je obrisano.' => 'The workspace was deleted.',
+    'Područje je spremljeno.' => 'The workspace was saved.',
+    'Područje je vraćeno.' => 'The workspace was restored.',
+    'Područje se soft-briše i administrator ga može vratiti iz postavki.' =>
+        'The workspace is soft-deleted and an administrator can restore it in Settings.',
+    'Pokrenite početnu Workspace migraciju pa ponovno otvorite stranicu.' =>
+        'Run the initial Workspace migration, then open this page again.',
+    'Postavke' => 'Settings',
+    'Postavke stranica i poveznica' => 'Page and link settings',
+    'Postavke stavke nije moguće učitati.' => 'The item settings could not be loaded.',
+    'Postavke stavke stabla' => 'Tree item settings',
+    'Postavke područja' => 'Workspace settings',
+    'Postavke područja su spremljene.' => 'Workspace settings were saved.',
+    'Povezane stranice, članovi i prava organizirani na jednom mjestu.' =>
+        'Related pages, members, and permissions organized in one place.',
+    'Početna Workspace migracija još nije pokrenuta.' =>
+        'The initial Workspace migration has not been run.',
+    'Početna stranica područja' => 'Workspace homepage',
+    'Prava korisnika i njegovih grupa se zbrajaju. Upravljanje uključuje sva prava.' =>
+        'A user and their group grants are combined. Manage includes all permissions.',
+    'Prava korisnika i njegovih grupa se zbrajaju. Dodajte samo potrebne subjekte; upravljanje uključuje sva prava.' =>
+        'A user and their group grants are combined. Add only the required subjects; manage includes all permissions.',
+    'Pretraživanje nije uspjelo.' => 'Search failed.',
+    'Pretražite po imenu ili korisničkoj oznaci.' => 'Search by name or login identifier.',
+    'Pretraži grupe' => 'Search groups',
+    'Pretraži korisnike' => 'Search users',
+    'Prava područja su spremljena.' => 'Workspace permissions were saved.',
+    'Prazna tablica znači da čvor nasljeđuje prava područja bez dodatnog ograničenja.' =>
+        'An empty table means the node inherits Workspace rights without an additional restriction.',
+    'Položaj: ' => 'Position: ',
+    'Pomakni dolje' => 'Move down',
+    'Pomakni gore' => 'Move up',
+    'Putanja mora imati slobodan prvi segment aplikacije.' =>
+        'The path must use an available first application segment.',
+    'Radnju nije moguće dovršiti.' => 'The action could not be completed.',
+    'Radnje' => 'Actions',
+    'Redoslijed' => 'Order',
+    'Raspored stabla' => 'Tree arrangement',
+    'Raspored stabla nije potpun ili sadrži nepoznatu stranicu.' =>
+        'The tree arrangement is incomplete or contains an unknown page.',
+    'Roditelj i redoslijed određuju hijerarhiju. Ograničenja se nasljeđuju na potomke.' =>
+        'Parent and order define the hierarchy. Restrictions are inherited by descendants.',
+    'Roditeljska stranica' => 'Parent page',
+    'Roditeljska stranica nije valjana.' => 'The parent page is invalid.',
+    'Sadržaj nije pronađen' => 'Content not found',
+    'Samo dokument-stranica može imati podređene stavke.' =>
+        'Only a document page may contain child items.',
+    'Samo administrator može mijenjati postavke područja.' =>
+        'Only an administrator may change Workspace settings.',
+    'Slug' => 'Slug',
+    'Slug za vraćanje' => 'Restore slug',
+    'Spremi' => 'Save',
+    'Spremi ograničenja' => 'Save restrictions',
+    'Spremi postavke' => 'Save settings',
+    'Spremi prava' => 'Save permissions',
+    'Spremi raspored' => 'Save arrangement',
+    'Spremi stavku' => 'Save item',
+    'Spremi čvor' => 'Save node',
+    'Spremljeni čvor nije moguće učitati.' => 'The saved node could not be loaded.',
+    'Spremljeno područje nije moguće učitati.' => 'The saved workspace could not be loaded.',
+    'Stablo' => 'Tree',
+    'Stablo je početno prikazano' => 'Show the tree initially',
+    'Stablo je prazno.' => 'The tree is empty.',
+    'Stablo stranica' => 'Page tree',
+    'Stablo stranica je spremljeno.' => 'The page tree was saved.',
+    'Strelice pomiču cijelu podgranu ili mijenjaju njezinu razinu.' =>
+        'The arrows move a complete subtree or change its level.',
+    'Stranica je kreirana. Sada uredite njezin sadržaj.' =>
+        'The page was created. Now edit its content.',
+    'Stranica i njezina podgrana su obrisane.' => 'The page and its subtree were deleted.',
+    'Stranicu nije moguće premjestiti u vlastitu podgranu.' =>
+        'A page cannot be moved into its own subtree.',
+    'Sva područja' => 'All workspaces',
+    'Svi prijavljeni' => 'All signed-in users',
+    'Svaki prijavljeni korisnik smije kreirati područje' =>
+        'Every signed-in user may create a workspace',
+    'Tip čvora' => 'Node type',
+    'Traženo područje ili stranica ne postoji.' => 'The requested workspace or page does not exist.',
+    'Upravljaj' => 'Manage',
+    'Upravljaj područjem' => 'Manage workspace',
+    'Upravljaj sadržajem' => 'Manage content',
+    'Upravljanje aktivnim područjima i njihovim sadržajem.' =>
+        'Manage active workspaces and their content.',
+    'Učitavanje...' => 'Loading...',
+    'Ugrađeno' => 'Built-in',
+    'Ukloni' => 'Remove',
+    'Uvuci jednu razinu' => 'Indent one level',
+    'Uredi stavku' => 'Edit item',
+    'Uredi stablo' => 'Edit tree',
+    'Uredi stranicu' => 'Edit page',
+    'Vanjski URL nije valjan.' => 'The external URL is invalid.',
+    'Vidljivost' => 'Visibility',
+    'Vlasnik' => 'Owner',
+    'Vlasnik područja nije valjan.' => 'The workspace owner is invalid.',
+    'Vrsta stavke' => 'Item type',
+    'Vrati' => 'Restore',
+    'Vraćanje prethodno obrisanih područja.' => 'Restore previously deleted workspaces.',
+    'Vraćeno područje nije moguće učitati.' => 'The restored workspace could not be loaded.',
+    'Javno i Svi prijavljeni ugrađene su publike, a ne Auth grupe.' =>
+        'Public and All signed-in users are built-in audiences, not Auth groups.',
+    'Workspace migracija još nije pokrenuta.' => 'The Workspace migration has not been run.',
+    'Za ovu radnju potrebna je prijava.' => 'You must sign in to perform this action.',
+    'Zadana vidljivost' => 'Default visibility',
+    'Članovi i prava' => 'Members and permissions',
+    'Zatvori' => 'Close',
+    'Izvuci jednu razinu' => 'Outdent one level',
+    'Ako ostane prazan, slug se izrađuje iz naslova.' =>
+        'Leave blank to generate the slug from the title.',
+    'Arhiviraj' => 'Archive',
+    'Arhivirano' => 'Archived',
+    'Arhivirana stranica nije vidljiva čitateljima.' =>
+        'The archived page is not visible to readers.',
+    'Čitatelji i dalje vide zadnju objavljenu verziju.' =>
+        'Readers continue to see the last published version.',
+    'Čitatelji vide objavljenu verziju.' => 'Readers see the published version.',
+    'Dokument nema verziju koju je moguće objaviti.' =>
+        'The document has no version that can be published.',
+    'Nacrt' => 'Draft',
+    'Na pregledu' => 'In review',
+    'Novo' => 'New',
+    'Nove neobjavljene stranice' => 'New unpublished pages',
+    'Neobjavljena stranica i njezin nacrt su trajno obrisani.' =>
+        'The unpublished page and its draft were permanently deleted.',
+    'Odbaci nacrt' => 'Discard draft',
+    'Odbaciti nacrt i trajno obrisati ovu neobjavljenu stranicu?' =>
+        'Discard the draft and permanently delete this unpublished page?',
+    'Odbaciti zajednički nacrt i vratiti zadnju objavljenu verziju?' =>
+        'Discard the shared draft and restore the last published version?',
+    'Objavi' => 'Publish',
+    'Objavljeno' => 'Published',
+    'Objavljivanje' => 'Publishing',
+    'Odabrani prijelaz statusa nije dopušten.' =>
+        'The selected status transition is not allowed.',
+    'Pošalji na pregled' => 'Submit for review',
+    'Poslano na pregled' => 'Submitted for review',
+    'Pregledaj nacrt' => 'Preview draft',
+    'Radna verzija' => 'Working version',
+    'Status stranice je promijenjen: ' => 'Page status changed: ',
+    'Stranica čeka pregled' => 'Page awaiting review',
+    'Stranica "%s" u području "%s" poslana je na pregled.' =>
+        'The page "%s" in workspace "%s" was submitted for review.',
+    'Stranica je objavljena' => 'Page published',
+    'Stranica "%s" u području "%s" je objavljena.' =>
+        'The page "%s" in workspace "%s" was published.',
+    'Stranica nije vidljiva čitateljima dok se ne objavi.' =>
+        'The page is not visible to readers until it is published.',
+    'Stranica još nije objavljena.' => 'The page has not been published yet.',
+    'Stranica nije pronađena.' => 'Page not found.',
+    'Uredi nacrt' => 'Edit draft',
+    'Vrati u nacrt' => 'Return to draft',
+    'Workflow stranice nije moguće spremiti.' =>
+        'The page workflow could not be saved.',
+];

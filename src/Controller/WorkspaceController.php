@@ -1,0 +1,1951 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
+
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceWorkflowService;
+use HeartPhrame\Alert\Alert;
+use HeartPhrame\Alert\AlertHandler;
+use HeartPhrame\CodeBook\AlertLevelEnum;
+use HeartPhrame\Http\ResponseFactory;
+use HeartPhrame\Routing\UrlGenerator;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use RuntimeException;
+use Throwable;
+
+use function array_key_exists;
+use function count;
+use function is_array;
+use function is_numeric;
+use function is_scalar;
+use function rawurlencode;
+use function rtrim;
+use function str_repeat;
+use function str_starts_with;
+use function trim;
+
+final readonly class WorkspaceController
+{
+    /**
+     * HR: Inicijalizira korisničke stranice, stablo, ACL akcije i editor most.
+     * EN: Initializes user pages, tree operations, ACL actions, and the editor bridge.
+     */
+    public function __construct(
+        private ResponseFactory $responseFactory,
+        private WorkspaceModuleViewRenderer $viewRenderer,
+        private WorkspaceRepository $repository,
+        private WorkspaceAccessService $access,
+        private WorkspaceEditorBridge $editor,
+        private WorkspaceConfig $config,
+        private UrlGenerator $urlGenerator,
+        private AlertHandler $alertHandler,
+        private WorkspaceWorkflowService $workflow,
+        private WorkspaceNotificationBridge $notifications,
+    ) {
+    }
+
+    /**
+     * HR: Prikazuje javna i korisniku dodijeljena područja.
+     * EN: Displays public workspaces and workspaces assigned to the current user.
+     */
+    public function index(): ResponseInterface
+    {
+        $tablesReady = $this->repository->tablesReady();
+
+        return $this->viewRenderer->render('workspace/index', [
+            'title' => __('Područja'),
+            'tablesReady' => $tablesReady,
+            'workspaces' => $tablesReady ? $this->decorateWorkspaces($this->access->visibleWorkspaces()) : [],
+            'canCreateWorkspace' => $tablesReady && $this->access->canCreateWorkspace(),
+            'managePath' => $this->pathFor('workspace.manage', '/workspaces/manage'),
+            'settingsPath' => $this->pathFor('workspace.settings', '/settings/workspaces'),
+            'isAdministrator' => $this->access->isAdministrator(),
+            'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+        ]);
+    }
+
+    /**
+     * HR: Prikazuje početnu stranicu područja ili pregled kada stablo nema početnu stranicu.
+     * EN: Displays the workspace homepage or an overview when the tree has no homepage.
+     */
+    public function show(ServerRequestInterface $request, string $workspaceSlug): ResponseInterface
+    {
+        $workspace = $this->repository->findWorkspaceBySlug($workspaceSlug);
+        if (!is_array($workspace)) {
+            return $this->notFound();
+        }
+
+        $language = $this->language($request);
+        $visibleTree = $this->access->visibleTree($workspace, null, $language);
+        $workflows = $this->repository->nodeWorkflowsForNodes(
+            $this->treeNodeIds($visibleTree),
+            $language,
+        );
+        $tree = $this->decorateTree(
+            $visibleTree,
+            $workspace,
+            $workflows,
+        );
+        $homepage = $this->homepageNode($tree);
+
+        return $this->renderWorkspace($request, $workspace, $tree, $homepage);
+    }
+
+    /**
+     * HR: Prikazuje odabranu stranicu ili slijedi link čvor nakon ACL provjere.
+     * EN: Displays a selected page or follows a link node after an ACL check.
+     */
+    public function showNode(
+        ServerRequestInterface $request,
+        string $workspaceSlug,
+        string $nodeSlug,
+    ): ResponseInterface {
+        $workspace = $this->repository->findWorkspaceBySlug($workspaceSlug);
+        if (!is_array($workspace)) {
+            return $this->notFound();
+        }
+
+        $node = $this->repository->findNodeBySlug($this->intValue($workspace['id'] ?? 0), $nodeSlug);
+        if (!is_array($node) || !$this->access->nodePermissions($workspace, $node)['can_view']) {
+            return $this->accessDenied();
+        }
+
+        if ($this->stringValue($node['node_type'] ?? '') !== 'document') {
+            return $this->redirectLinkNode($node);
+        }
+
+        $language = $this->language($request);
+        $visibleTree = $this->access->visibleTree($workspace, null, $language);
+        $workflows = $this->repository->nodeWorkflowsForNodes(
+            $this->treeNodeIds($visibleTree),
+            $language,
+        );
+        $tree = $this->decorateTree(
+            $visibleTree,
+            $workspace,
+            $workflows,
+        );
+
+        return $this->renderWorkspace($request, $workspace, $tree, $node);
+    }
+
+    /**
+     * HR: Prikazuje podatke područja, članstva i ACL prema efektivnim pravima.
+     *     Stablo se uređuje izravno u lijevom panelu otvorenog područja.
+     * EN: Displays Workspace data, membership, and ACL according to effective
+     *     permissions. The tree is edited directly in the open Workspace sidebar.
+     */
+    public function manage(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->repository->tablesReady()) {
+            return $this->migrationMissing();
+        }
+
+        $query = WorkspaceValue::stringKeyArray($request->getQueryParams());
+        $workspace = $this->workspaceFromInput($query);
+        if (!is_array($workspace) && !$this->access->canCreateWorkspace()) {
+            return $this->accessDenied();
+        }
+
+        $workspacePermissions = is_array($workspace)
+        ? $this->access->workspacePermissions($workspace)
+        : $this->emptyPermissions();
+        if (
+            is_array($workspace)
+            && !$workspacePermissions['can_add']
+            && !$workspacePermissions['can_edit']
+            && !$workspacePermissions['can_delete']
+            && !$workspacePermissions['can_manage']
+        ) {
+            return $this->accessDenied();
+        }
+
+        $workspaceId = is_array($workspace) ? $this->intValue($workspace['id'] ?? 0) : 0;
+        $isAdministrator = $this->access->isAdministrator();
+        $ownerUserId = is_array($workspace)
+        ? $this->intValue($workspace['owner_user_id'] ?? 0)
+        : $this->currentUserId();
+        return $this->viewRenderer->render('workspace/manage', [
+            'title' => is_array($workspace) ? $this->stringValue($workspace['name'] ?? '') : __('Novo područje'),
+            'workspace' => $workspace,
+            'workspacePermissions' => $workspacePermissions,
+            'workspaceAclSubjects' => $workspaceId > 0
+                ? $this->repository->workspaceAclSubjects($workspaceId)
+                : [],
+            'ownerSubject' => $this->repository->userSubject($ownerUserId),
+            'isAdministrator' => $isAdministrator,
+            'currentUser' => $this->access->currentUser(),
+            'savePath' => $this->pathFor('workspace.save', '/workspaces/save'),
+            'deletePath' => $this->pathFor('workspace.delete', '/workspaces/delete'),
+            'aclSavePath' => $this->pathFor('workspace.acl.save', '/workspaces/acl'),
+            'subjectSearchPath' => $this->pathFor(
+                'workspace.acl.subjects',
+                '/workspaces/acl/subjects',
+            ),
+            'indexPath' => $this->pathFor('workspace.index', '/workspaces'),
+            'workspaceViewPath' => is_array($workspace)
+                ? $this->workspacePath($this->stringValue($workspace['slug'] ?? ''))
+                : '',
+            'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+            'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
+        ]);
+    }
+
+    /**
+     * HR: Kreira ili mijenja područje nakon provjere vlasništva i manage prava.
+     * EN: Creates or updates a workspace after checking ownership and manage permission.
+     */
+    public function saveWorkspace(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspaceId = $this->intValue($body['id'] ?? 0);
+        $existing = $workspaceId > 0 ? $this->repository->findWorkspaceById($workspaceId) : null;
+        if (
+            (is_array($existing) && !$this->access->workspacePermissions($existing)['can_manage'])
+            || (!is_array($existing) && !$this->access->canCreateWorkspace())
+        ) {
+            return $this->accessDenied();
+        }
+
+        try {
+            /*
+             * HR: Samo administrator smije prenijeti vlasništvo. Običnom kreatoru server uvijek
+             *     postavlja njegov ID, a kod izmjene čuva postojećeg vlasnika bez obzira na POST.
+             * EN: Only an administrator may transfer ownership. The server always assigns a regular
+             *     creator's ID and preserves the existing owner on updates regardless of POST data.
+             */
+            if (!$this->access->isAdministrator()) {
+                $body['owner_user_id'] = is_array($existing)
+                ? $this->intValue($existing['owner_user_id'] ?? 0)
+                : $this->currentUserId();
+            }
+
+            if (!is_array($existing) && !array_key_exists('visibility', $body)) {
+                $body['visibility'] = $this->config->defaultVisibility();
+            }
+
+            $workspace = $this->repository->saveWorkspace($body, $this->currentUserId());
+            $this->success(__('Područje je spremljeno.'));
+
+            return $this->responseFactory->redirect(
+                $this->managePath($this->stringValue($workspace['slug'] ?? '')),
+            );
+        } catch (Throwable $throwable) {
+            $this->failure($throwable->getMessage());
+
+            return $this->responseFactory->redirect($this->managePath(
+                is_array($existing) ? $this->stringValue($existing['slug'] ?? '') : '',
+            ));
+        }
+    }
+
+    /**
+     * HR: Soft-briše područje kada korisnik ima manage pravo.
+     * EN: Soft-deletes a workspace when the user has manage permission.
+     */
+    public function deleteWorkspace(ServerRequestInterface $request): ResponseInterface
+    {
+        $workspace = $this->workspaceFromInput($this->body($request));
+        if (!is_array($workspace) || !$this->access->workspacePermissions($workspace)['can_manage']) {
+            return $this->accessDenied();
+        }
+
+        $this->repository->softDeleteWorkspace(
+            $this->intValue($workspace['id'] ?? 0),
+            $this->currentUserId(),
+        );
+        $this->success(__('Područje je obrisano.'));
+
+        return $this->responseFactory->redirect($this->pathFor('workspace.index', '/workspaces'));
+    }
+
+    /**
+     * HR: Administrator vraća soft-obrisano područje uz automatsko rješavanje slug konflikta.
+     * EN: An administrator restores a soft-deleted workspace with automatic slug conflict resolution.
+     */
+    public function restoreWorkspace(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        $body = $this->body($request);
+        try {
+            $workspace = $this->repository->restoreWorkspace(
+                $this->intValue($body['workspace_id'] ?? 0),
+                $this->stringValue($body['slug'] ?? ''),
+                $this->currentUserId(),
+            );
+            $this->success(__('Područje je vraćeno.'));
+
+            return $this->responseFactory->redirect(
+                $this->managePath($this->stringValue($workspace['slug'] ?? '')),
+            );
+        } catch (Throwable $throwable) {
+            $this->failure($throwable->getMessage());
+
+            return $this->responseFactory->redirect(
+                $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
+            );
+        }
+    }
+
+    /**
+     * HR: Sprema korisnička i grupna prava područja.
+     * EN: Saves user and group workspace permissions.
+     */
+    public function saveWorkspaceAcl(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        if (!is_array($workspace) || !$this->access->workspacePermissions($workspace)['can_manage']) {
+            return $this->accessDenied();
+        }
+
+        $acl = WorkspaceValue::stringKeyArray($body['acl'] ?? null);
+        $this->repository->replaceWorkspaceAcl($this->intValue($workspace['id'] ?? 0), $acl);
+        $this->success(__('Prava područja su spremljena.'));
+
+        return $this->responseFactory->redirect(
+            $this->managePath($this->stringValue($workspace['slug'] ?? '')),
+        );
+    }
+
+    /**
+     * HR: Vraća najviše mali broj korisnika ili grupa koji odgovaraju upitu
+     *     ACL/owner pickera. Rezultat nikada ne izlaže cijeli Auth imenik.
+     * EN: Returns a small bounded set of users or groups matching an ACL/owner
+     *     picker query. The endpoint never exposes the complete Auth directory.
+     */
+    public function searchAclSubjects(ServerRequestInterface $request): ResponseInterface
+    {
+        $query = WorkspaceValue::stringKeyArray($request->getQueryParams());
+        $workspace = $this->workspaceFromInput($query);
+        if (is_array($workspace)) {
+            if (!$this->access->workspacePermissions($workspace)['can_manage']) {
+                return $this->responseFactory->json(['ok' => false, 'error' => __('Nedozvoljen pristup')], 403);
+            }
+        } elseif (!$this->access->isAdministrator()) {
+            return $this->responseFactory->json(['ok' => false, 'error' => __('Nedozvoljen pristup')], 403);
+        }
+
+        $category = $this->stringValue($query['type'] ?? '');
+        if (
+            !in_array(
+                $category,
+                [WorkspaceRepository::SUBJECT_USER, WorkspaceRepository::SUBJECT_GROUP],
+                true,
+            )
+        ) {
+            return $this->responseFactory->json(['ok' => false, 'error' => __('Neispravan tip subjekta.')], 422);
+        }
+
+        return $this->responseFactory->json([
+            'ok' => true,
+            'results' => $this->repository->searchDirectorySubjects(
+                $category,
+                $this->stringValue($query['q'] ?? ''),
+            ),
+        ]);
+    }
+
+    /**
+     * HR: Iz otvorenog područja kreira običnu stranicu, povezuje novi HTML
+     * dokument i odmah vodi korisnika u editor. Prva stranica automatski postaje
+     * početna kako prazno područje ne bi zahtijevalo dodatno administriranje.
+     *
+     * EN: Creates a regular page from an open Workspace, links a new HTML
+     * document, and immediately opens the editor. The first page automatically
+     * becomes the homepage so an empty Workspace needs no extra administration.
+     */
+    public function createPage(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        if (!is_array($workspace)) {
+            return $this->notFound();
+        }
+
+        $workspacePath = $this->workspacePath($this->stringValue($workspace['slug'] ?? ''));
+        $parentId = $this->intValue($body['parent_id'] ?? 0);
+        if (!$this->canCreatePageUnderParent($workspace, $parentId)) {
+            return $this->accessDenied();
+        }
+
+        $documentKey = '';
+        try {
+            $title = $this->stringValue($body['title'] ?? '');
+            $slug = $this->stringValue($body['slug'] ?? '');
+            $language = $this->language($request);
+            $documentKey = $this->editor->createDocument($title, $slug, $language);
+            $node = $this->repository->saveNode(
+                $this->intValue($workspace['id'] ?? 0),
+                [
+                    'title' => $title,
+                    'slug' => $slug,
+                    'node_type' => 'document',
+                    'document_key' => $documentKey,
+                    'parent_id' => $parentId,
+                    'sort_order' => 100,
+                    'is_homepage' => !$this->workspaceHasHomepage($workspace),
+                ],
+                $this->currentUserId(),
+            );
+            $latestVersion = $this->editor->latestVersionNumber($documentKey, $language);
+            if ($latestVersion > 0) {
+                $this->editor->markVersionDraft($documentKey, $language, $latestVersion);
+                $this->workflow->markDocumentDraft(
+                    $documentKey,
+                    $language,
+                    $latestVersion,
+                    $this->currentUserId(),
+                );
+            }
+
+            $this->success(__('Stranica je kreirana. Sada uredite njezin sadržaj.'));
+
+            return $this->responseFactory->redirect(
+                $this->editor->editorPath(
+                    $this->stringValue($node['document_key'] ?? $documentKey),
+                    $language,
+                ),
+            );
+        } catch (Throwable $throwable) {
+            if ($documentKey !== '') {
+                $this->editor->deleteDocument($documentKey);
+            }
+
+            $this->failure($throwable->getMessage());
+
+            return $this->responseFactory->redirect($workspacePath);
+        }
+    }
+
+    /**
+     * HR: Učitava sadržaj zajedničkog modala za uređivanje jednog čvora tek
+     * nakon klika u stablu. Time veliko stablo ne renderira desetke skrivenih
+     * obrazaca, a svaka akcija i dalje prolazi isti serverski ACL.
+     *
+     * EN: Loads the shared edit-modal content for one node only after a tree
+     * click. This keeps large trees from rendering dozens of hidden forms while
+     * every action still passes through the same server-side ACL.
+     */
+    public function nodeDialog(ServerRequestInterface $request): ResponseInterface
+    {
+        $query = WorkspaceValue::stringKeyArray($request->getQueryParams());
+        $workspace = $this->workspaceFromInput($query);
+        $node = $this->repository->findNodeById($this->intValue($query['node_id'] ?? 0));
+        if (!is_array($workspace) || !is_array($node)) {
+            return $this->responseFactory->html(
+                '<div class="modal-body"><div class="alert alert-danger mb-0">'
+                . htmlspecialchars(__('Sadržaj nije pronađen'), ENT_QUOTES, 'UTF-8')
+                . '</div></div>',
+                404,
+            );
+        }
+
+        if (
+            $this->intValue($node['workspace_id'] ?? 0) !== $this->intValue($workspace['id'] ?? 0)
+        ) {
+            return $this->responseFactory->html('', 404);
+        }
+
+        $permissions = $this->access->nodePermissions($workspace, $node);
+        if (
+            !$permissions['can_edit']
+            && !$permissions['can_delete']
+            && !$permissions['can_manage']
+        ) {
+            return $this->responseFactory->html(
+                '<div class="modal-body"><div class="alert alert-danger mb-0">'
+                . htmlspecialchars(
+                    __('Nemate potrebna prava za ovo područje ili stranicu.'),
+                    ENT_QUOTES,
+                    'UTF-8',
+                )
+                . '</div></div>',
+                403,
+            );
+        }
+
+        $workspaceId = $this->intValue($workspace['id'] ?? 0);
+        $nodes = [];
+        foreach ($this->repository->nodesForWorkspace($workspaceId) as $candidate) {
+            $candidatePermissions = $this->access->nodePermissions($workspace, $candidate);
+            if (!$candidatePermissions['can_view']) {
+                continue;
+            }
+
+            $candidate['permissions'] = $candidatePermissions;
+            $nodes[] = $candidate;
+        }
+
+        $isAdministrator = $this->access->isAdministrator();
+        $node['permissions'] = $permissions;
+        $node['restrictions'] = $permissions['can_manage']
+        ? $this->repository->nodeAclRows($this->intValue($node['id'] ?? 0))
+        : [];
+
+        $html = $this->viewRenderer->renderPartial('workspace/node-dialog', [
+            'workspace' => $workspace,
+            'workspaceAclSubjects' => $this->repository->workspaceAclSubjects($workspaceId),
+            'node' => $node,
+            'nodes' => $this->orderNodesForManagement($nodes),
+            'editorAvailable' => $this->editor->isAvailable(),
+            'editorDocuments' => $isAdministrator
+                ? $this->editor->documents($this->language($request))
+                : [],
+            'canAttachExistingDocuments' => $isAdministrator,
+            'nodeSavePath' => $this->pathFor('workspace.node.save', '/workspaces/node/save'),
+            'nodeDeletePath' => $this->pathFor('workspace.node.delete', '/workspaces/node/delete'),
+            'nodeAclSavePath' => $this->pathFor(
+                'workspace.node.acl.save',
+                '/workspaces/node/acl',
+            ),
+            'returnNodeId' => $this->intValue($query['return_node_id'] ?? 0),
+        ]);
+
+        return $this->responseFactory->html($html, 200, ['Cache-Control' => 'no-store']);
+    }
+
+    /**
+     * HR: Kreira, povezuje ili premješta čvor stabla uz provjeru add/edit prava.
+     * EN: Creates, links, or moves a tree node after checking add/edit permission.
+     */
+    public function saveNode(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        if (!is_array($workspace)) {
+            return $this->notFound();
+        }
+
+        $nodeId = $this->intValue($body['id'] ?? 0);
+        $existing = $nodeId > 0 ? $this->repository->findNodeById($nodeId) : null;
+        if (is_array($existing)) {
+            if (!array_key_exists('parent_id', $body)) {
+                $body['parent_id'] = $existing['parent_id'] ?? null;
+            }
+
+            if (!array_key_exists('sort_order', $body)) {
+                $body['sort_order'] = $existing['sort_order'] ?? 100;
+            }
+        }
+
+        $parentId = $this->intValue($body['parent_id'] ?? 0);
+        if (is_array($existing)) {
+            if (
+                $this->intValue($existing['workspace_id'] ?? 0) !== $this->intValue($workspace['id'] ?? 0)
+                || !$this->access->nodePermissions($workspace, $existing)['can_edit']
+            ) {
+                return $this->accessDenied();
+            }
+
+            $existingParentId = $this->intValue($existing['parent_id'] ?? 0);
+            if ($existingParentId !== $parentId && !$this->canAddUnderParent($workspace, $parentId)) {
+                return $this->accessDenied();
+            }
+        } elseif (!$this->canAddUnderParent($workspace, $parentId)) {
+            return $this->accessDenied();
+        }
+
+        try {
+            $nodeType = $this->stringValue($body['node_type'] ?? 'document');
+            $documentKey = $this->stringValue($body['document_key'] ?? '');
+            $existingDocumentKey = is_array($existing)
+            ? $this->stringValue($existing['document_key'] ?? '')
+            : '';
+            $createdDocument = false;
+
+            /*
+             * HR: Obični urednik smije kreirati novi dokument ili zadržati dokument svojeg čvora.
+             *     Povezivanje drugog postojećeg dokumenta ostaje administratorska operacija.
+             * EN: A regular editor may create a new document or keep their node's current document.
+             *     Attaching a different existing document remains an administrator operation.
+             */
+            if (
+                !$this->access->isAdministrator()
+                && ($documentKey !== $existingDocumentKey
+                    || ($existingDocumentKey !== '' && $nodeType !== 'document'))
+            ) {
+                return $this->accessDenied();
+            }
+
+            if ($nodeType === 'document' && $documentKey !== '' && !$this->editor->hasDocument($documentKey)) {
+                throw new RuntimeException(__('HTML dokument nije pronađen.'));
+            }
+
+            $this->assertInternalLinkCanResolve($body);
+            if (
+                $nodeType === 'document'
+                && $documentKey === ''
+            ) {
+                $body['document_key'] = $this->editor->createDocument(
+                    $this->stringValue($body['title'] ?? __('Nova stranica')),
+                    $this->stringValue($body['slug'] ?? ''),
+                    $this->language($request),
+                );
+                $createdDocument = true;
+            }
+
+            $savedNode = $this->repository->saveNode(
+                $this->intValue($workspace['id'] ?? 0),
+                $body,
+                $this->currentUserId(),
+            );
+            $savedDocumentKey = $this->stringValue($savedNode['document_key'] ?? '');
+            if ($createdDocument && $savedDocumentKey !== '') {
+                $language = $this->language($request);
+                $latestVersion = $this->editor->latestVersionNumber($savedDocumentKey, $language);
+                if ($latestVersion > 0) {
+                    $this->editor->markVersionDraft($savedDocumentKey, $language, $latestVersion);
+                    $this->workflow->markDocumentDraft(
+                        $savedDocumentKey,
+                        $language,
+                        $latestVersion,
+                        $this->currentUserId(),
+                    );
+                }
+            }
+
+            if ($existingDocumentKey !== '' && $existingDocumentKey !== $savedDocumentKey) {
+                $this->editor->deleteDocument($existingDocumentKey);
+            }
+
+            $this->success(__('Stablo stranica je spremljeno.'));
+        } catch (Throwable $throwable) {
+            $this->failure($throwable->getMessage());
+        }
+
+        return $this->responseFactory->redirect(
+            $this->actionReturnPath($workspace, $body),
+        );
+    }
+
+    /**
+     * HR: Sprema kompletan vizualno uređeni raspored stabla samo kada korisnik
+     *     smije uređivati svaki aktivni čvor područja.
+     * EN: Saves the complete visually edited tree arrangement only when the
+     *     user may edit every active node in the Workspace.
+     */
+    public function saveTreeOrder(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        if (!is_array($workspace)) {
+            return $this->notFound();
+        }
+
+        if (!$this->access->workspacePermissions($workspace)['can_manage']) {
+            return $this->accessDenied();
+        }
+
+        foreach ($this->repository->nodesForWorkspace($this->intValue($workspace['id'] ?? 0)) as $node) {
+            if (!$this->access->nodePermissions($workspace, $node)['can_edit']) {
+                return $this->accessDenied();
+            }
+        }
+
+        try {
+            $this->repository->reorderNodes(
+                $this->intValue($workspace['id'] ?? 0),
+                WorkspaceValue::rows($body['items'] ?? null),
+                $this->currentUserId(),
+            );
+            $this->success(__('Hijerarhija i redoslijed stranica su spremljeni.'));
+        } catch (Throwable $throwable) {
+            $this->failure($throwable->getMessage());
+        }
+
+        return $this->responseFactory->redirect(
+            $this->actionReturnPath($workspace, $body),
+        );
+    }
+
+    /**
+     * HR: Briše cijelu podgranu tek kada korisnik ima delete pravo na svaki čvor.
+     * EN: Deletes a complete subtree only when the user has delete permission on every node.
+     */
+    public function deleteNode(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        $node = $this->repository->findNodeById($this->intValue($body['node_id'] ?? 0));
+        if (!is_array($workspace) || !is_array($node)) {
+            return $this->notFound();
+        }
+
+        if ($this->intValue($node['workspace_id'] ?? 0) !== $this->intValue($workspace['id'] ?? 0)) {
+            return $this->notFound();
+        }
+
+        $subtree = $this->repository->nodesInSubtree(
+            $this->intValue($workspace['id'] ?? 0),
+            $this->intValue($node['id'] ?? 0),
+        );
+        foreach ($subtree as $subtreeNode) {
+            if (!$this->access->nodePermissions($workspace, $subtreeNode)['can_delete']) {
+                return $this->accessDenied();
+            }
+        }
+
+        try {
+            $documentKeys = [];
+            foreach ($subtree as $subtreeNode) {
+                if (
+                    $this->stringValue($subtreeNode['node_type'] ?? '') === 'document'
+                    && $this->stringValue($subtreeNode['document_key'] ?? '') !== ''
+                ) {
+                    $documentKeys[] = $this->stringValue($subtreeNode['document_key'] ?? '');
+                }
+            }
+
+            $this->repository->disableNodeTree(
+                $this->intValue($workspace['id'] ?? 0),
+                $this->intValue($node['id'] ?? 0),
+                $this->currentUserId(),
+            );
+            foreach ($documentKeys as $documentKey) {
+                $this->editor->deleteDocument($documentKey);
+            }
+
+            $this->success(__('Stranica i njezina podgrana su obrisane.'));
+        } catch (Throwable $throwable) {
+            $this->failure($throwable->getMessage());
+        }
+
+        return $this->responseFactory->redirect(
+            $this->actionReturnPath($workspace, $body),
+        );
+    }
+
+    /**
+     * HR: Sprema nasljedna ograničenja čvora samo za postojeće članove područja.
+     * EN: Saves inherited node restrictions only for existing workspace members.
+     */
+    public function saveNodeAcl(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        $node = $this->repository->findNodeById($this->intValue($body['node_id'] ?? 0));
+        if (!is_array($workspace) || !is_array($node)) {
+            return $this->notFound();
+        }
+
+        if ($this->intValue($node['workspace_id'] ?? 0) !== $this->intValue($workspace['id'] ?? 0)) {
+            return $this->notFound();
+        }
+
+        $permissions = $this->access->nodePermissions($workspace, $node);
+        if (!$permissions['can_manage']) {
+            return $this->accessDenied();
+        }
+
+        $acl = WorkspaceValue::stringKeyArray($body['acl'] ?? null);
+        $this->repository->replaceNodeAcl(
+            $this->intValue($workspace['id'] ?? 0),
+            $this->intValue($node['id'] ?? 0),
+            $acl,
+        );
+        $this->success(__('Ograničenja stranice su spremljena i nasljeđuju ih potomci.'));
+
+        return $this->responseFactory->redirect(
+            $this->actionReturnPath($workspace, $body),
+        );
+    }
+
+    /**
+     * HR: Mijenja status otvorene jezične stranice nakon provjere nasljednih
+     *     edit/manage prava i točnog broja aktualne Editor verzije.
+     * EN: Changes the open page-locale status after checking inherited
+     *     edit/manage rights and the exact current Editor version number.
+     */
+    public function transitionWorkflow(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = $this->body($request);
+        $workspace = $this->workspaceFromInput($body);
+        $node = $this->repository->findNodeById($this->intValue($body['node_id'] ?? 0));
+        if (!is_array($workspace) || !is_array($node)) {
+            return $this->notFound();
+        }
+
+        if (
+            $this->intValue($node['workspace_id'] ?? 0)
+            !== $this->intValue($workspace['id'] ?? 0)
+            || $this->stringValue($node['node_type'] ?? '') !== 'document'
+        ) {
+            return $this->notFound();
+        }
+
+        $permissions = $this->access->nodePermissions($workspace, $node);
+        if (
+            !$permissions['can_edit']
+            && !$permissions['can_publish']
+            && !$permissions['can_manage']
+        ) {
+            return $this->accessDenied();
+        }
+
+        $language = strtolower($this->stringValue($body['language'] ?? 'hr'));
+        if (preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) !== 1) {
+            $language = 'hr';
+        }
+
+        $documentKey = $this->stringValue($node['document_key'] ?? '');
+        $latestVersion = $this->editor->latestVersionNumber($documentKey, $language);
+        $action = $this->stringValue($body['action'] ?? '');
+        $workspacePath = $this->workspacePath($this->stringValue($workspace['slug'] ?? ''));
+        $redirectPath = $this->nodePath(
+            $this->stringValue($workspace['slug'] ?? ''),
+            $this->stringValue($node['slug'] ?? ''),
+        );
+        $workflowBeforeTransition = $this->repository->nodeWorkflow(
+            $this->intValue($node['id'] ?? 0),
+            $language,
+        );
+        $pageWasPermanentlyDeleted = false;
+        try {
+            if ($action === 'discard') {
+                if (!(bool)$permissions['can_edit']) {
+                    return $this->accessDenied();
+                }
+
+                $workflowBeforeDiscard = $this->workflow->viewModel(
+                    $this->intValue($node['id'] ?? 0),
+                    $language,
+                    $latestVersion,
+                    (bool)$permissions['can_edit'],
+                    (bool)$permissions['can_publish'],
+                    (bool)$permissions['can_manage'],
+                );
+                $deleteNewPage = (bool)($workflowBeforeDiscard['is_new_unpublished_page'] ?? false)
+                && $this->editor->isDocumentNeverPublished($documentKey);
+                if ($deleteNewPage) {
+                    if (!(bool)($permissions['can_delete'] ?? false)) {
+                        return $this->accessDenied();
+                    }
+
+                    $redirectPath = $workspacePath;
+                    $this->editor->deleteUnpublishedDocumentPermanently($documentKey);
+                    $this->repository->deleteUnpublishedNodePermanently(
+                        $this->intValue($workspace['id'] ?? 0),
+                        $this->intValue($node['id'] ?? 0),
+                        $this->currentUserId(),
+                    );
+                    $pageWasPermanentlyDeleted = true;
+                    $this->success(__('Neobjavljena stranica i njezin nacrt su trajno obrisani.'));
+                } else {
+                    $this->editor->discardDraft($documentKey, $language);
+                    $latestVersion = $this->editor->latestVersionNumber($documentKey, $language);
+                    $this->workflow->discardDraft(
+                        $this->intValue($node['id'] ?? 0),
+                        $language,
+                        $latestVersion,
+                        $this->currentUserId(),
+                    );
+                }
+            } else {
+                if ($action === 'publish') {
+                    if (!(bool)$permissions['can_publish']) {
+                        return $this->accessDenied();
+                    }
+
+                    $this->editor->publishDraft($documentKey, $language, $latestVersion);
+                }
+
+                $this->workflow->transition(
+                    $this->intValue($node['id'] ?? 0),
+                    $language,
+                    $action,
+                    $latestVersion,
+                    $this->currentUserId(),
+                    (bool)$permissions['can_edit'],
+                    (bool)$permissions['can_publish'],
+                    (bool)$permissions['can_manage'],
+                );
+
+                if ($action === 'submit') {
+                    $this->notifications->pageSubmitted(
+                        $workspace,
+                        $node,
+                        $language,
+                        $latestVersion,
+                        $this->currentUserId(),
+                    );
+                } elseif ($action === 'publish') {
+                    $this->notifications->pagePublished(
+                        $workspace,
+                        $node,
+                        $language,
+                        $latestVersion,
+                        $this->intValue($workflowBeforeTransition['submitted_by_user_id'] ?? 0),
+                        $this->currentUserId(),
+                    );
+                }
+            }
+
+            if (!$pageWasPermanentlyDeleted) {
+                $workflowView = $this->workflow->viewModel(
+                    $this->intValue($node['id'] ?? 0),
+                    $language,
+                    $latestVersion,
+                    (bool)$permissions['can_edit'],
+                    (bool)$permissions['can_publish'],
+                    (bool)$permissions['can_manage'],
+                );
+                $this->success(
+                    $this->stringValue(__('Status stranice je promijenjen: '))
+                    . $this->stringValue($workflowView['label'] ?? ''),
+                );
+            }
+        } catch (Throwable $throwable) {
+            $this->failure($throwable->getMessage());
+        }
+
+        return $this->responseFactory->redirect(
+            $redirectPath . '?lang=' . rawurlencode($language),
+        );
+    }
+
+    /**
+     * HR: Poslužuje mali CSS sloj za stablo i Workspace raspored.
+     * EN: Serves the small CSS layer for the tree and Workspace layout.
+     */
+    public function styles(): ResponseInterface
+    {
+        return $this->responseFactory->file(
+            $this->config->moduleRoot() . '/resources/assets/workspace.css',
+            'text/css; charset=utf-8',
+        );
+    }
+
+    /**
+     * HR: Poslužuje JavaScript za organizator stabla, modalne obrasce čvorova
+     * i prikaz samo onih polja koja pripadaju odabranoj vrsti čvora.
+     *
+     * EN: Serves JavaScript for the tree organizer, node dialogs, and showing
+     * only the fields that belong to the selected node type.
+     */
+    public function scripts(): ResponseInterface
+    {
+        return $this->responseFactory->file(
+            $this->config->moduleRoot() . '/resources/assets/workspace.js',
+            'text/javascript; charset=utf-8',
+        );
+    }
+
+    /**
+     * HR: Renderira područje s lijevim stablom i odabranim HTML sadržajem.
+     * EN: Renders a workspace with its left tree and selected HTML content.
+     *
+     * @param array<string, mixed> $workspace
+     * @param list<array<string, mixed>> $tree
+     * @param array<string, mixed>|null $node
+     */
+    private function renderWorkspace(
+        ServerRequestInterface $request,
+        array $workspace,
+        array $tree,
+        ?array $node,
+    ): ResponseInterface {
+        $workspacePermissions = $this->access->workspacePermissions($workspace);
+        if (!$workspacePermissions['can_view']) {
+            return $this->accessDenied();
+        }
+
+        $language = $this->language($request);
+        $editorView = null;
+        $workflowView = null;
+        $nodePermissions = $workspacePermissions;
+        if (is_array($node)) {
+            $nodePermissions = $this->access->nodePermissions($workspace, $node);
+            if (!$nodePermissions['can_view']) {
+                return $this->accessDenied();
+            }
+
+            $documentKey = $this->stringValue($node['document_key'] ?? '');
+            if ($documentKey !== '') {
+                $latestVersion = $this->editor->latestVersionNumber($documentKey, $language);
+                $editorView = $this->editor->documentView(
+                    $documentKey,
+                    $language,
+                    $request->getQueryParams(),
+                    (bool)($nodePermissions['can_edit'] ?? false),
+                    (bool)($nodePermissions['can_edit'] ?? false)
+                        || (bool)($nodePermissions['can_publish'] ?? false),
+                );
+                $workflowView = $this->workflow->viewModel(
+                    $this->intValue($node['id'] ?? 0),
+                    $language,
+                    $latestVersion,
+                    (bool)($nodePermissions['can_edit'] ?? false),
+                    (bool)($nodePermissions['can_publish'] ?? false),
+                    (bool)($nodePermissions['can_manage'] ?? false),
+                );
+            }
+        }
+
+        $workflowTransitionPath = $this->pathFor(
+            'workspace.workflow.transition',
+            '/workspaces/workflow',
+        );
+        if (is_array($editorView)) {
+            $editorView['leadingActions'] = $this->documentLeadingActions(
+                $workspace,
+                $node,
+                $nodePermissions,
+                $workflowView,
+                $workflowTransitionPath,
+                $language,
+                (bool)($editorView['isDraftPreview'] ?? false),
+            );
+        }
+
+        /*
+         * HR: Organizator dobiva sve aktivne čvorove samo kada ih korisnik sve
+         *     vidi i smije uređivati. Djelomično stablo ne smije mijenjati
+         *     globalni redoslijed jer bi skriveni čvorovi mogli biti izgubljeni.
+         * EN: The organizer receives all active nodes only when the user can see
+         *     and edit every one of them. A partial tree must not change the
+         *     global order because hidden nodes could otherwise be displaced.
+         */
+        $workspaceId = $this->intValue($workspace['id'] ?? 0);
+        $allNodes = $this->repository->nodesForWorkspace($workspaceId);
+        $allWorkflows = $this->repository->nodeWorkflowsForNodes(
+            array_values(array_map(
+                fn(array $candidate): int => $this->intValue($candidate['id'] ?? 0),
+                $allNodes,
+            )),
+            $language,
+        );
+        $managementNodes = [];
+        $reviewQueue = [];
+        $unpublishedPages = [];
+        $canOrganizeTree = (bool)($workspacePermissions['can_manage'] ?? false);
+        foreach ($allNodes as $candidate) {
+            $candidatePermissions = $this->access->nodePermissions($workspace, $candidate);
+            if (!$candidatePermissions['can_view']) {
+                $canOrganizeTree = false;
+                continue;
+            }
+
+            $candidate['permissions'] = $candidatePermissions;
+            $managementNodes[] = $candidate;
+            $canOrganizeTree = $canOrganizeTree && (bool)($candidatePermissions['can_edit'] ?? false);
+
+            $candidateId = $this->intValue($candidate['id'] ?? 0);
+            $candidateWorkflow = $allWorkflows[$candidateId] ?? null;
+            $candidateStatus = is_array($candidateWorkflow)
+            ? $this->stringValue($candidateWorkflow['status'] ?? '')
+            : '';
+            $candidateCanWorkWithDraft = (bool)($candidatePermissions['can_edit'] ?? false)
+            || (bool)($candidatePermissions['can_publish'] ?? false)
+            || (bool)($candidatePermissions['can_manage'] ?? false);
+            $candidateIsNewUnpublished = is_array($candidateWorkflow)
+            && $this->stringValue($candidate['node_type'] ?? '') === 'document'
+            && $this->intValue($candidateWorkflow['current_version_number'] ?? 0) > 0
+            && $this->intValue($candidateWorkflow['published_version_number'] ?? 0) <= 0
+            && $candidateStatus !== 'archived';
+            if ($candidateCanWorkWithDraft && $candidateIsNewUnpublished) {
+                $unpublishedPages[] = [
+                    'title' => $this->stringValue($candidate['title'] ?? ''),
+                    'href' => $this->nodePath(
+                        $this->stringValue($workspace['slug'] ?? ''),
+                        $this->stringValue($candidate['slug'] ?? ''),
+                    ) . '?lang=' . rawurlencode($language),
+                    'status' => $candidateStatus,
+                    'statusLabel' => $candidateStatus === 'in_review'
+                        ? __('Na pregledu')
+                        : __('Nacrt'),
+                    'updatedAt' => $this->stringValue($candidateWorkflow['updated_at'] ?? ''),
+                ];
+            }
+
+            if (
+                (bool)($candidatePermissions['can_publish'] ?? false)
+                && is_array($candidateWorkflow)
+                && $candidateStatus === 'in_review'
+            ) {
+                $reviewQueue[] = [
+                    'title' => $this->stringValue($candidate['title'] ?? ''),
+                    'href' => $this->nodePath(
+                        $this->stringValue($workspace['slug'] ?? ''),
+                        $this->stringValue($candidate['slug'] ?? ''),
+                    ) . '?lang=' . rawurlencode($language),
+                    'submittedAt' => $this->stringValue($candidateWorkflow['submitted_at'] ?? ''),
+                ];
+            }
+        }
+
+        $canOrganizeTree = $canOrganizeTree && count($managementNodes) === count($allNodes);
+        $managementNodes = $this->orderNodesForManagement($managementNodes);
+
+        return $this->viewRenderer->render('workspace/show', [
+            'title' => is_array($editorView)
+                ? $this->stringValue($editorView['title'] ?? '')
+                : $this->stringValue($workspace['name'] ?? ''),
+            'workspace' => $workspace,
+            'workspacePermissions' => $workspacePermissions,
+            'tree' => $tree,
+            'activeNode' => $node,
+            'editorView' => $editorView,
+            'workflow' => $workflowView,
+            'workflowTransitionPath' => $workflowTransitionPath,
+            'reviewQueue' => $reviewQueue,
+            'unpublishedPages' => $unpublishedPages,
+            'language' => $language,
+            'treeVisibleByDefault' => $this->config->treeVisibleByDefault(),
+            'managePath' => $this->managePath($this->stringValue($workspace['slug'] ?? '')),
+            'pageCreatePath' => $this->pathFor('workspace.page.create', '/workspaces/page/create'),
+            'pageParentOptions' => $this->pageParentOptions($tree),
+            'defaultPageParentId' => is_array($node)
+                && $this->stringValue($node['node_type'] ?? '') === 'document'
+                && (bool)($nodePermissions['can_add'] ?? false)
+                    ? $this->intValue($node['id'] ?? 0)
+                    : 0,
+            'canCreatePage' => (bool)($workspacePermissions['can_add'] ?? false)
+                && $this->editor->isAvailable(),
+            'canOrganizeTree' => $canOrganizeTree,
+            'managementNodes' => $managementNodes,
+            'nodeSavePath' => $this->pathFor('workspace.node.save', '/workspaces/node/save'),
+            'nodeDialogPath' => $this->pathFor(
+                'workspace.node.dialog',
+                '/workspaces/node/dialog',
+            ),
+            'treeOrderSavePath' => $this->pathFor(
+                'workspace.tree.order.save',
+                '/workspaces/tree/order',
+            ),
+            'editorAvailable' => $this->editor->isAvailable(),
+            'editorDocuments' => $this->access->isAdministrator()
+                ? $this->editor->documents($language)
+                : [],
+            'canAttachExistingDocuments' => $this->access->isAdministrator(),
+            'fallbackLeadingActions' => $this->documentLeadingActions(
+                $workspace,
+                $node,
+                $nodePermissions,
+                $workflowView,
+                $workflowTransitionPath,
+                $language,
+                false,
+            ),
+            'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+            'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
+        ]);
+    }
+
+    /**
+     * HR: Provjerava smije li se nova stranica dodati u korijen ili ispod
+     * odabrane dokument-stranice. Linkovi namjerno ne mogu biti roditelji.
+     *
+     * EN: Checks whether a new page may be added at the root or below the
+     * selected document page. Link items intentionally cannot be parents.
+     *
+     * @param array<string, mixed> $workspace
+     */
+    private function canCreatePageUnderParent(array $workspace, int $parentId): bool
+    {
+        if (!$this->editor->isAvailable() || !$this->canAddUnderParent($workspace, $parentId)) {
+            return false;
+        }
+
+        if ($parentId <= 0) {
+            return true;
+        }
+
+        $parent = $this->repository->findNodeById($parentId);
+
+        return is_array($parent)
+        && $this->intValue($parent['workspace_id'] ?? 0) === $this->intValue($workspace['id'] ?? 0)
+        && $this->stringValue($parent['node_type'] ?? '') === 'document';
+    }
+
+    /**
+     * HR: Provjerava ima li područje već aktivnu početnu dokument-stranicu.
+     * EN: Checks whether the Workspace already has an active document homepage.
+     *
+     * @param array<string, mixed> $workspace
+     */
+    private function workspaceHasHomepage(array $workspace): bool
+    {
+        foreach ($this->repository->nodesForWorkspace($this->intValue($workspace['id'] ?? 0)) as $node) {
+            if (
+                $this->stringValue($node['node_type'] ?? '') === 'document'
+                && (bool)($node['is_homepage'] ?? false)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * HR: Pretvara vidljivo stablo u ravan popis dopuštenih roditeljskih
+     * stranica, uz uvlačenje naslova koje zadržava hijerarhiju u selectu.
+     *
+     * EN: Flattens the visible tree into allowed parent pages while indenting
+     * labels so the select preserves the hierarchy.
+     *
+     * @param list<array<string, mixed>> $tree
+     * @return list<array{id:int,label:string}>
+     */
+    private function pageParentOptions(array $tree, int $depth = 0): array
+    {
+        $options = [];
+        foreach ($tree as $node) {
+            $permissions = WorkspaceValue::stringKeyArray($node['permissions'] ?? null);
+            if (
+                $this->stringValue($node['node_type'] ?? '') === 'document'
+                && (bool)($permissions['can_add'] ?? false)
+            ) {
+                $options[] = [
+                    'id' => $this->intValue($node['id'] ?? 0),
+                    'label' => str_repeat('— ', $depth)
+                        . $this->stringValue($node['title'] ?? ''),
+                ];
+            }
+
+            $options = [
+                ...$options,
+                ...$this->pageParentOptions(WorkspaceValue::rows($node['children'] ?? null), $depth + 1),
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * HR: Pretvara vidljive ravne čvorove u redoslijed prikladan za vizualni
+     *     organizator i svakom retku dodaje dubinu u stablu.
+     * EN: Converts visible flat nodes into an order suitable for the visual
+     *     organizer and adds tree depth to every row.
+     *
+     * @param list<array<string, mixed>> $nodes
+     * @return list<array<string, mixed>>
+     */
+    private function orderNodesForManagement(array $nodes): array
+    {
+        $knownIds = [];
+        foreach ($nodes as $node) {
+            $knownIds[$this->intValue($node['id'] ?? 0)] = true;
+        }
+
+        $byParent = [];
+        foreach ($nodes as $node) {
+            $parentId = $this->intValue($node['parent_id'] ?? 0);
+            if ($parentId > 0 && !isset($knownIds[$parentId])) {
+                $parentId = 0;
+            }
+
+            $byParent[$parentId][] = $node;
+        }
+
+        $visited = [];
+        $ordered = $this->appendManagementBranch($byParent, 0, 0, $visited);
+        foreach ($nodes as $node) {
+            $nodeId = $this->intValue($node['id'] ?? 0);
+            if (isset($visited[$nodeId])) {
+                continue;
+            }
+
+            $node['tree_depth'] = 0;
+            $ordered[] = $node;
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * HR: Rekurzivno dodaje jednu podgranu organizatoru i štiti prikaz od
+     *     eventualnog ciklusa u postojećim podacima.
+     * EN: Recursively appends one branch to the organizer and protects the
+     *     view from a possible cycle in existing data.
+     *
+     * @param array<int, list<array<string, mixed>>> $byParent
+     * @param array<int, true> $visited
+     * @return list<array<string, mixed>>
+     */
+    private function appendManagementBranch(
+        array $byParent,
+        int $parentId,
+        int $depth,
+        array &$visited,
+    ): array {
+        $ordered = [];
+        foreach ($byParent[$parentId] ?? [] as $node) {
+            $nodeId = $this->intValue($node['id'] ?? 0);
+            if ($nodeId <= 0) {
+                continue;
+            }
+
+            if (isset($visited[$nodeId])) {
+                continue;
+            }
+
+            $visited[$nodeId] = true;
+            $node['tree_depth'] = $depth;
+            $ordered[] = $node;
+            $ordered = [
+                ...$ordered,
+                ...$this->appendManagementBranch($byParent, $nodeId, $depth + 1, $visited),
+            ];
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * HR: Provjerava add pravo područja ili odabranog roditeljskog čvora.
+     * EN: Checks add permission on the workspace or selected parent node.
+     *
+     * @param array<string, mixed> $workspace
+     */
+    private function canAddUnderParent(array $workspace, int $parentId): bool
+    {
+        if ($parentId <= 0) {
+            return $this->access->workspacePermissions($workspace)['can_add'];
+        }
+
+        $parent = $this->repository->findNodeById($parentId);
+
+        return is_array($parent)
+        && $this->intValue($parent['workspace_id'] ?? 0) === $this->intValue($workspace['id'] ?? 0)
+        && $this->access->nodePermissions($workspace, $parent)['can_add'];
+    }
+
+    /**
+     * HR: Odbija nepostojeću named rutu kada interni link nema sigurnu rezervnu putanju.
+     * EN: Rejects a missing named route when an internal link has no safe fallback path.
+     *
+     * @param array<string, mixed> $input
+     */
+    private function assertInternalLinkCanResolve(array $input): void
+    {
+        if ($this->stringValue($input['node_type'] ?? '') !== 'internal_link') {
+            return;
+        }
+
+        $routeName = $this->stringValue($input['route_name'] ?? '');
+        $targetPath = $this->stringValue($input['target_url'] ?? '');
+        if (
+            $routeName !== ''
+            && !$this->urlGenerator->namedRouteExists($routeName)
+            && $targetPath === ''
+        ) {
+            throw new RuntimeException(__('Interna named ruta ne postoji i nema rezervnu putanju.'));
+        }
+    }
+
+    /**
+     * HR: Slijedi vanjski URL ili sigurnu internu named rutu.
+     * EN: Follows an external URL or a safe internal named route.
+     *
+     * @param array<string, mixed> $node
+     */
+    private function redirectLinkNode(array $node): ResponseInterface
+    {
+        $routeName = $this->stringValue($node['route_name'] ?? '');
+        if ($routeName !== '' && $this->urlGenerator->namedRouteExists($routeName)) {
+            return $this->responseFactory->redirect($this->urlGenerator->getPathFor($routeName));
+        }
+
+        $target = $this->stringValue($node['target_url'] ?? '');
+        if ($target === '') {
+            return $this->notFound();
+        }
+
+        return $this->responseFactory->redirect(
+            $this->stringValue($node['node_type'] ?? '') === 'internal_link'
+            ? $this->internalTargetPath($target)
+            : $target,
+        );
+    }
+
+    /**
+     * HR: Dodaje javne URL-ove područjima za popis.
+     * EN: Adds public URLs to workspaces for the index.
+     *
+     * @param list<array<string, mixed>> $workspaces
+     * @return list<array<string, mixed>>
+     */
+    private function decorateWorkspaces(array $workspaces): array
+    {
+        foreach ($workspaces as &$workspace) {
+            $workspace['href'] = $this->workspacePath(
+                $this->stringValue($workspace['slug'] ?? ''),
+            );
+        }
+
+        return $workspaces;
+    }
+
+    /**
+     * HR: Rekurzivno dodaje URL svakome vidljivom čvoru stabla.
+     * EN: Recursively adds a URL to each visible tree node.
+     *
+     * @param list<array<string, mixed>> $tree
+     * @param array<string, mixed> $workspace
+     * @param array<int, array<string, mixed>> $workflows
+     * @return list<array<string, mixed>>
+     */
+    private function decorateTree(
+        array $tree,
+        array $workspace,
+        array $workflows = [],
+    ): array {
+        foreach ($tree as &$node) {
+            $type = $this->stringValue($node['node_type'] ?? 'document');
+            $node['href'] = $type === 'document'
+            ? $this->nodePath(
+                $this->stringValue($workspace['slug'] ?? ''),
+                $this->stringValue($node['slug'] ?? ''),
+            )
+            : $this->linkNodeHref($node);
+            $permissions = WorkspaceValue::stringKeyArray($node['permissions'] ?? null);
+            $workflow = $workflows[$this->intValue($node['id'] ?? 0)] ?? null;
+            if (
+                $type === 'document'
+                && is_array($workflow)
+                && ((bool)($permissions['can_edit'] ?? false)
+                    || (bool)($permissions['can_publish'] ?? false)
+                    || (bool)($permissions['can_manage'] ?? false))
+            ) {
+                $status = $this->stringValue($workflow['status'] ?? 'draft');
+                $isNewUnpublished = $this->intValue(
+                    $workflow['current_version_number'] ?? 0,
+                ) > 0 && $this->intValue(
+                    $workflow['published_version_number'] ?? 0,
+                ) <= 0;
+                $statusLabel = match ($status) {
+                    'in_review' => __('Na pregledu'),
+                    'archived' => __('Arhivirano'),
+                    'published' => '',
+                    default => __('Nacrt'),
+                };
+                $node['workflow_status'] = $status;
+                $node['workflow_label'] = $isNewUnpublished && $statusLabel !== ''
+                ? __('Novo') . ' · ' . $statusLabel
+                : $statusLabel;
+                $node['is_new_unpublished'] = $isNewUnpublished;
+            }
+
+            $children = WorkspaceValue::rows($node['children'] ?? null);
+            $node['children'] = $this->decorateTree($children, $workspace, $workflows);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * HR: Rekurzivno prikuplja ID-eve vidljivog stabla za jedan grupni workflow upit.
+     * EN: Recursively collects visible-tree IDs for one batched workflow query.
+     *
+     * @param list<array<string, mixed>> $tree
+     * @return list<int>
+     */
+    private function treeNodeIds(array $tree): array
+    {
+        $ids = [];
+        foreach ($tree as $node) {
+            $nodeId = $this->intValue($node['id'] ?? 0);
+            if ($nodeId > 0) {
+                $ids[] = $nodeId;
+            }
+
+            foreach ($this->treeNodeIds(WorkspaceValue::rows($node['children'] ?? null)) as $childId) {
+                $ids[] = $childId;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * HR: Gradi diskretne akcije dokumenta za stablo, nacrt, pregled, objavu i
+     *     ostale dopuštene workflow prijelaze. Akcije koje mijenjaju nacrt
+     *     prikazuje samo na njegovu eksplicitnom pregledu ili novoj stranici
+     *     koja još nema objavljenu verziju.
+     * EN: Builds discreet document actions for the tree, draft, preview,
+     *     publication, and other allowed workflow transitions. Draft-mutating
+     *     actions are shown only on its explicit preview or on a new page that
+     *     does not yet have a published version.
+     *
+     * @param array<string, mixed> $workspace
+     * @param array<string, mixed>|null $node
+     * @param array<string, bool> $permissions
+     * @param array<string, mixed>|null $workflow
+     * @return list<array<string, mixed>>
+     */
+    private function documentLeadingActions(
+        array $workspace,
+        ?array $node,
+        array $permissions,
+        ?array $workflow,
+        string $transitionPath,
+        string $language,
+        bool $isDraftPreview,
+    ): array {
+        $actions = [[
+            'type' => 'collapse',
+            'label' => __('Stablo'),
+            'target' => '#workspace-page-tree',
+            'controls' => 'workspace-page-tree',
+            'expanded' => $this->config->treeVisibleByDefault(),
+            'icon' => 'tree',
+        ]];
+        if (!is_array($node) || !is_array($workflow)) {
+            return $actions;
+        }
+
+        $hasDraft = (bool)($workflow['has_unpublished_changes'] ?? false);
+        $isNewUnpublishedPage = (bool)($workflow['is_new_unpublished_page'] ?? false);
+        $showDraftMutations = $isDraftPreview || $isNewUnpublishedPage;
+        $documentKey = $this->stringValue($node['document_key'] ?? '');
+        $deleteNewPage = $isNewUnpublishedPage
+        && $this->editor->isDocumentNeverPublished($documentKey);
+        $nodePath = $this->nodePath(
+            $this->stringValue($workspace['slug'] ?? ''),
+            $this->stringValue($node['slug'] ?? ''),
+        );
+        if ($hasDraft && (bool)($permissions['can_edit'] ?? false)) {
+            $actions[] = [
+                'type' => 'link',
+                'label' => __('Uredi nacrt'),
+                'href' => $this->editor->editorPath($documentKey, $language),
+                'icon' => 'draft',
+                'style' => 'warning',
+            ];
+        }
+
+        if (
+            $hasDraft
+            && !$isDraftPreview
+            && ((bool)($permissions['can_edit'] ?? false)
+                || (bool)($permissions['can_publish'] ?? false))
+        ) {
+            $actions[] = [
+                'type' => 'link',
+                'label' => __('Pregledaj nacrt'),
+                'href' => $nodePath . '?lang=' . rawurlencode($language) . '&draft=preview',
+                'icon' => 'view',
+                'style' => 'warning',
+            ];
+        }
+
+        if (
+            $hasDraft
+            && $showDraftMutations
+            && (bool)($permissions['can_edit'] ?? false)
+            && (!$deleteNewPage || (bool)($permissions['can_delete'] ?? false))
+        ) {
+            $actions[] = $this->workflowFormAction(
+                $workspace,
+                $node,
+                $transitionPath,
+                $language,
+                'discard',
+                __('Odbaci nacrt'),
+                'trash',
+                'danger',
+                $deleteNewPage
+                    ? __('Odbaciti nacrt i trajno obrisati ovu neobjavljenu stranicu?')
+                    : __('Odbaciti zajednički nacrt i vratiti zadnju objavljenu verziju?'),
+            );
+        }
+
+        foreach (WorkspaceValue::rows($workflow['actions'] ?? null) as $workflowAction) {
+            $name = $this->stringValue($workflowAction['action'] ?? '');
+            if ($name === '') {
+                continue;
+            }
+
+            if ($hasDraft && !$showDraftMutations) {
+                continue;
+            }
+
+            $actions[] = $this->workflowFormAction(
+                $workspace,
+                $node,
+                $transitionPath,
+                $language,
+                $name,
+                $this->stringValue($workflowAction['label'] ?? ''),
+                $name,
+                $this->stringValue($workflowAction['style'] ?? 'secondary'),
+            );
+        }
+
+        return $actions;
+    }
+
+    /**
+     * HR: Pretvara jedan workflow prijelaz u podatke sigurnog POST gumba.
+     * EN: Converts one workflow transition into safe POST-button data.
+     *
+     * @param array<string, mixed> $workspace
+     * @param array<string, mixed> $node
+     * @return array<string, mixed>
+     */
+    private function workflowFormAction(
+        array $workspace,
+        array $node,
+        string $transitionPath,
+        string $language,
+        string $action,
+        string $label,
+        string $icon,
+        string $style,
+        string $confirm = '',
+    ): array {
+        return [
+            'type' => 'form',
+            'label' => $label,
+            'path' => $transitionPath,
+            'icon' => $icon,
+            'style' => $style,
+            'confirm' => $confirm,
+            'fields' => [
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'node_id' => $this->intValue($node['id'] ?? 0),
+                'language' => $language,
+                'action' => $action,
+            ],
+        ];
+    }
+
+    /**
+     * HR: Razrješava URL link čvora bez izvođenja redirecta.
+     * EN: Resolves a link-node URL without issuing a redirect.
+     *
+     * @param array<string, mixed> $node
+     */
+    private function linkNodeHref(array $node): string
+    {
+        $routeName = $this->stringValue($node['route_name'] ?? '');
+        if ($routeName !== '' && $this->urlGenerator->namedRouteExists($routeName)) {
+            return $this->urlGenerator->getPathFor($routeName);
+        }
+
+        $target = $this->stringValue($node['target_url'] ?? '#');
+
+        return $this->stringValue($node['node_type'] ?? '') === 'internal_link'
+        ? $this->internalTargetPath($target)
+        : $target;
+    }
+
+    /**
+     * HR: Dodaje aplikacijski base path internoj apsolutnoj putanji samo kada
+     * ga putanja već ne sadrži. Tako `/calendars` radi i pod `/hfc`.
+     * EN: Adds the application base path to an internal absolute path only when
+     * the path does not already contain it. This keeps `/calendars` working under `/hfc`.
+     */
+    private function internalTargetPath(string $target): string
+    {
+        $basePath = rtrim($this->urlGenerator->getBasePath(), '/');
+        if (
+            $basePath === ''
+            || $target === $basePath
+            || str_starts_with($target, $basePath . '/')
+        ) {
+            return $target;
+        }
+
+        return $basePath . $target;
+    }
+
+    /**
+     * HR: Pronalazi označenu početnu stranicu u ugniježđenom stablu.
+     * EN: Finds the designated homepage in a nested tree.
+     *
+     * @param list<array<string, mixed>> $tree
+     * @return array<string, mixed>|null
+     */
+    private function homepageNode(array $tree): ?array
+    {
+        foreach ($tree as $node) {
+            if ((bool)($node['is_homepage'] ?? false)) {
+                return $node;
+            }
+
+            $children = WorkspaceValue::rows($node['children'] ?? null);
+            $found = $this->homepageNode($children);
+            if (is_array($found)) {
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * HR: Učitava područje iz ID-a ili sluga forme.
+     * EN: Loads a workspace from form ID or slug.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>|null
+     */
+    private function workspaceFromInput(array $input): ?array
+    {
+        $id = $this->intValue($input['workspace_id'] ?? $input['id'] ?? 0);
+        if ($id > 0) {
+            return $this->repository->findWorkspaceById($id);
+        }
+
+        $slug = $this->stringValue($input['workspace'] ?? $input['slug'] ?? '');
+
+        return $slug !== '' ? $this->repository->findWorkspaceBySlug($slug) : null;
+    }
+
+    /**
+     * HR: Gradi administratorsku putanju za postojeće ili novo područje.
+     * EN: Builds the administration path for an existing or new workspace.
+     */
+    private function managePath(string $workspaceSlug): string
+    {
+        $path = $this->pathFor('workspace.manage', '/workspaces/manage');
+
+        return $workspaceSlug !== '' ? $path . '?workspace=' . rawurlencode($workspaceSlug) : $path;
+    }
+
+    /**
+     * HR: Gradi javnu putanju područja iz aktivne konfiguracije.
+     * EN: Builds a public workspace path from active configuration.
+     */
+    private function workspacePath(string $workspaceSlug): string
+    {
+        if ($this->urlGenerator->namedRouteExists('workspace.show')) {
+            return $this->urlGenerator->getPathFor('workspace.show', [
+                'workspaceSlug' => $workspaceSlug,
+            ]);
+        }
+
+        return rtrim($this->urlGenerator->getBasePath(), '/')
+        . '/'
+        . trim($this->config->rootPath(), '/')
+        . '/'
+        . rawurlencode($workspaceSlug);
+    }
+
+    /**
+     * HR: Gradi javnu putanju stranice koju kontrolira područje.
+     * EN: Builds a public page path controlled by its workspace.
+     */
+    private function nodePath(string $workspaceSlug, string $nodeSlug): string
+    {
+        if ($this->urlGenerator->namedRouteExists('workspace.node.show')) {
+            return $this->urlGenerator->getPathFor('workspace.node.show', [
+                'workspaceSlug' => $workspaceSlug,
+                'nodeSlug' => $nodeSlug,
+            ]);
+        }
+
+        return $this->workspacePath($workspaceSlug) . '/' . rawurlencode($nodeSlug);
+    }
+
+    /**
+     * HR: Nakon modalne akcije sigurno vraća korisnika na područje ili aktivnu
+     * dokument-stranicu. Klijent šalje samo ID, a URL se ponovno gradi iz
+     * provjerenih podataka kako POST parametar ne bi postao otvoreni redirect.
+     *
+     * EN: Safely returns the user to the Workspace or active document page
+     * after a modal action. The client sends only an ID and the URL is rebuilt
+     * from verified data so a POST parameter cannot become an open redirect.
+     *
+     * @param array<string, mixed> $workspace
+     * @param array<string, mixed> $input
+     */
+    private function actionReturnPath(array $workspace, array $input): string
+    {
+        $workspaceSlug = $this->stringValue($workspace['slug'] ?? '');
+        if ($this->stringValue($input['return_context'] ?? '') !== 'workspace') {
+            return $this->managePath($workspaceSlug);
+        }
+
+        $returnNodeId = $this->intValue($input['return_node_id'] ?? 0);
+        if ($returnNodeId > 0) {
+            $returnNode = $this->repository->findNodeById($returnNodeId);
+            if (
+                is_array($returnNode)
+                && $this->intValue($returnNode['workspace_id'] ?? 0)
+                    === $this->intValue($workspace['id'] ?? 0)
+                && $this->stringValue($returnNode['node_type'] ?? '') === 'document'
+                && $this->access->nodePermissions($workspace, $returnNode)['can_view']
+            ) {
+                return $this->nodePath(
+                    $workspaceSlug,
+                    $this->stringValue($returnNode['slug'] ?? ''),
+                );
+            }
+        }
+
+        return $this->workspacePath($workspaceSlug);
+    }
+
+    /**
+     * HR: Vraća čitljiv 403 prikaz umjesto prazne ili tehničke poruke.
+     * EN: Returns a readable 403 view instead of an empty or technical message.
+     */
+    private function accessDenied(): ResponseInterface
+    {
+        return $this->viewRenderer->render('workspace/access-denied', [
+            'title' => __('Nedozvoljen pristup'),
+            'message' => __('Nemate potrebna prava za ovo područje ili stranicu.'),
+            'indexPath' => $this->pathFor('workspace.index', '/workspaces'),
+        ], true, 403);
+    }
+
+    /**
+     * HR: Vraća čitljiv 404 prikaz.
+     * EN: Returns a readable 404 view.
+     */
+    private function notFound(): ResponseInterface
+    {
+        return $this->viewRenderer->render('workspace/access-denied', [
+            'title' => __('Sadržaj nije pronađen'),
+            'message' => __('Traženo područje ili stranica ne postoji.'),
+            'indexPath' => $this->pathFor('workspace.index', '/workspaces'),
+        ], true, 404);
+    }
+
+    /**
+     * HR: Objašnjava administratoru da početna migracija nedostaje.
+     * EN: Explains to an administrator that the initial migration is missing.
+     */
+    private function migrationMissing(): ResponseInterface
+    {
+        return $this->viewRenderer->render('workspace/access-denied', [
+            'title' => __('Područja još nisu instalirana'),
+            'message' => __('Pokrenite početnu Workspace migraciju pa ponovno otvorite stranicu.'),
+            'indexPath' => $this->pathFor('workspace.index', '/workspaces'),
+        ], true, 503);
+    }
+
+    /**
+     * HR: Čita odabrani jezik dokumenta uz hrvatski fallback.
+     * EN: Reads the selected document language with a Croatian fallback.
+     */
+    private function language(ServerRequestInterface $request): string
+    {
+        $query = $request->getQueryParams();
+        $language = strtolower($this->stringValue($query['lang'] ?? 'hr'));
+
+        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : 'hr';
+    }
+
+    /**
+     * HR: Čita parsed body kao string-key polje.
+     * EN: Reads the parsed body as a string-key array.
+     *
+     * @return array<string, mixed>
+     */
+    private function body(ServerRequestInterface $request): array
+    {
+        $body = $request->getParsedBody();
+        if (!is_array($body)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($body as $key => $value) {
+            if (is_string($key)) {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * HR: Vraća ID prijavljenog korisnika potreban za audit.
+     * EN: Returns the authenticated user ID required for auditing.
+     */
+    private function currentUserId(): int
+    {
+        $user = $this->access->currentUser();
+        $id = is_array($user) && is_numeric($user['id'] ?? null) ? (int)$user['id'] : 0;
+        if ($id <= 0) {
+            throw new RuntimeException(__('Za ovu radnju potrebna je prijava.'));
+        }
+
+        return $id;
+    }
+
+    /**
+     * HR: Vraća named route ili stabilni fallback dok se kasne rute još registriraju.
+     * EN: Returns a named route or stable fallback while late routes are still registering.
+     */
+    private function pathFor(string $routeName, string $fallback): string
+    {
+        return $this->urlGenerator->namedRouteExists($routeName)
+        ? $this->urlGenerator->getPathFor($routeName)
+        : $fallback;
+    }
+
+    /**
+     * HR: Sprema uspješnu poruku u zajednički toast sustav.
+     * EN: Stores a success message in the shared toast system.
+     */
+    private function success(string $message): void
+    {
+        $this->alertHandler->add(new Alert($message, AlertLevelEnum::Success));
+    }
+
+    /**
+     * HR: Sprema poruku pogreške u zajednički toast sustav.
+     * EN: Stores an error message in the shared toast system.
+     */
+    private function failure(string $message): void
+    {
+        $this->alertHandler->add(new Alert(
+            $message !== '' ? $message : __('Radnju nije moguće dovršiti.'),
+            AlertLevelEnum::Danger,
+        ));
+    }
+
+    /**
+     * HR: Normalizira skalarnu tekstualnu vrijednost.
+     * EN: Normalizes a scalar text value.
+     */
+    private function stringValue(mixed $value): string
+    {
+        return is_scalar($value) ? trim((string)$value) : '';
+    }
+
+    /**
+     * HR: Čita cijeli broj iz zahtjeva.
+     * EN: Reads an integer from request input.
+     */
+    private function intValue(mixed $value): int
+    {
+        return is_numeric($value) ? (int)$value : 0;
+    }
+
+    /**
+     * HR: Vraća prazna prava za formu novog područja.
+     * EN: Returns empty permissions for the new-workspace form.
+     *
+     * @return array<string, bool>
+     */
+    private function emptyPermissions(): array
+    {
+        return [
+            'can_view' => false,
+            'can_add' => false,
+            'can_edit' => false,
+            'can_publish' => false,
+            'can_delete' => false,
+            'can_manage' => false,
+        ];
+    }
+}

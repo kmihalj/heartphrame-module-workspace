@@ -1,0 +1,268 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'Workspaces' => 'Područja',
+    'Workspace' => 'Područje',
+    'restricted' => 'Ograničeno',
+    'authenticated' => 'Svi prijavljeni',
+    'public' => 'Javno',
+    'document' => 'Stranica (HTML dokument)',
+    'internal_link' => 'Interni link',
+    'external_link' => 'Vanjski link',
+    'can_view' => 'Pregled',
+    'can_add' => 'Dodavanje',
+    'can_edit' => 'Uređivanje',
+    'can_publish' => 'Objavljivanje',
+    'can_delete' => 'Brisanje',
+    'can_manage' => 'Upravljanje',
+    'Organize related pages, members, and permissions in one place.' =>
+        'Organizirajte povezane stranice, članove i prava na jednom mjestu.',
+    'Akcije' => 'Akcije',
+    'Akcije područja' => 'Akcije područja',
+    'Arhivirano područje je samo za čitanje' => 'Arhivirano područje je samo za čitanje',
+    'Brisanje područja' => 'Brisanje područja',
+    'Brisanje obuhvaća i sve podređene stavke.' =>
+        'Brisanje obuhvaća i sve podređene stavke.',
+    'Ciljni URL ili interna putanja' => 'Ciljni URL ili interna putanja',
+    'Dodaj poveznicu ili postojeći dokument' => 'Dodaj poveznicu ili postojeći dokument',
+    'Dodaj stavku' => 'Dodaj stavku',
+    'Dodaj grupu' => 'Dodaj grupu',
+    'Dodaj korisnika' => 'Dodaj korisnika',
+    'Dodaj u stablo' => 'Dodaj u stablo',
+    'Dodaj čvor' => 'Dodaj čvor',
+    'Dokument nije dostupan.' => 'Dokument nije dostupan.',
+    'Dok su Područja uključena, njihove putanje i ACL nadjačavaju samostalnu slug putanju editora.' =>
+        'Dok su Područja uključena, njihove putanje i ACL nadjačavaju samostalnu slug putanju editora.',
+    'Grupe' => 'Grupe',
+    'Javno' => 'Javno',
+    'HTML dokument' => 'HTML dokument',
+    'HTML dokument nije moguće kreirati.' => 'HTML dokument nije moguće kreirati.',
+    'HTML dokument nije odabran.' => 'HTML dokument nije odabran.',
+    'HTML dokument nije pronađen.' => 'HTML dokument nije pronađen.',
+    'HTML dokument već pripada drugoj stranici područja.' =>
+        'HTML dokument već pripada drugoj stranici područja.',
+    'HTML editor nije dostupan.' => 'HTML editor nije dostupan.',
+    'HTML editor ne podržava trajno brisanje neobjavljenog dokumenta.' =>
+        'HTML editor ne podržava trajno brisanje neobjavljenog dokumenta.',
+    'Hijerarhija i redoslijed stranica su spremljeni.' =>
+        'Hijerarhija i redoslijed stranica su spremljeni.',
+    'Integracija s HTML editorom' => 'Integracija s HTML editorom',
+    'Interna named ruta' => 'Interna imenovana ruta',
+    'Interna ruta ili putanja je obavezna.' => 'Interna ruta ili putanja je obavezna.',
+    'Interna named ruta ne postoji i nema rezervnu putanju.' =>
+        'Interna imenovana ruta ne postoji i nema rezervnu putanju.',
+    'Interna putanja nije valjana.' => 'Interna putanja nije valjana.',
+    'Korijen stabla' => 'Korijen stabla',
+    'Korijenska putanja područja' => 'Korijenska putanja područja',
+    'Korisnici' => 'Korisnici',
+    'Korisnik' => 'Korisnik',
+    'Korisničko sučelje' => 'Korisničko sučelje',
+    'Kreiraj i uredi' => 'Kreiraj i uredi',
+    'Kreiraj novi dokument ako je tip Dokument' => 'Kreiraj novi dokument ako je tip Dokument',
+    'Nadređena stranica' => 'Nadređena stranica',
+    'Nasljedna ograničenja' => 'Nasljedna ograničenja',
+    'Naslov' => 'Naslov',
+    'Naslov stranice' => 'Naslov stranice',
+    'Naslov čvora je obavezan.' => 'Naslov stavke je obavezan.',
+    'Nakon kreiranja otvorit će se HTML editor.' => 'Nakon kreiranja otvorit će se HTML editor.',
+    'Natrag na područja' => 'Natrag na područja',
+    'Naziv' => 'Naziv',
+    'Naziv područja je obavezan.' => 'Naziv područja je obavezan.',
+    'Nedozvoljen pristup' => 'Nedozvoljen pristup',
+    'Nema kreiranih područja.' => 'Nema kreiranih područja.',
+    'Nema dodijeljenih subjekata.' => 'Nema dodijeljenih subjekata.',
+    'Nema obrisanih područja.' => 'Nema obrisanih područja.',
+    'Nema područja koja smijete vidjeti.' => 'Nema područja koja smijete vidjeti.',
+    'Nema rezultata.' => 'Nema rezultata.',
+    'Neispravan tip subjekta.' => 'Neispravan tip subjekta.',
+    'Nemate potrebna prava za ovo područje ili stranicu.' =>
+        'Nemate potrebna prava za ovo područje ili stranicu.',
+    'Nije moguće kreirati direktorij postavki područja.' =>
+        'Nije moguće kreirati direktorij postavki područja.',
+    'Nije moguće zapisati postavke područja.' => 'Nije moguće zapisati postavke područja.',
+    'Nova stranica' => 'Nova stranica',
+    'Nova stavka bit će dodana u stablo ovog područja.' =>
+        'Nova stavka bit će dodana u stablo ovog područja.',
+    'Nove stranice kreiraju se iz otvorenog Područja. Ovdje uređujete hijerarhiju, poveznice i nasljedna ograničenja.' =>
+        'Nove stranice kreiraju se iz otvorenog Područja. Ovdje uređujete hijerarhiju, poveznice i nasljedna ograničenja.',
+    'Novi HTML dokument bit će automatski kreiran.' => 'Novi HTML dokument bit će automatski kreiran.',
+    'Novo područje' => 'Novo područje',
+    'Obrisana područja' => 'Obrisana područja',
+    'Obrisano područje nije pronađeno.' => 'Obrisano područje nije pronađeno.',
+    'Obrisati ovo područje?' => 'Obrisati ovo područje?',
+    'Obrisati stranicu i cijelu njezinu podgranu?' => 'Obrisati stranicu i cijelu njezinu podgranu?',
+    'Obriši podgranu' => 'Obriši podgranu',
+    'Obriši područje' => 'Obriši područje',
+    'Odustani' => 'Odustani',
+    'Odaberite stranicu iz stabla ili postavite početnu stranicu područja.' =>
+        'Odaberite stranicu iz stabla ili postavite početnu stranicu područja.',
+    'Odabranu putanju već koristi druga ruta aplikacije.' =>
+        'Odabranu putanju već koristi druga ruta aplikacije.',
+    'Ograničenja stranice su spremljena i nasljeđuju ih potomci.' =>
+        'Ograničenja stranice su spremljena i nasljeđuju ih potomci.',
+    'Opis' => 'Opis',
+    'Opće ponašanje URL-ova, stabla i novih područja.' =>
+        'Opće ponašanje URL-ova, stabla i novih područja.',
+    'Otvori' => 'Otvori',
+    'Otvori područje' => 'Otvori područje',
+    'Podaci područja' => 'Podaci područja',
+    'Podaci područja, članovi i prava.' => 'Podaci područja, članovi i prava.',
+    'Podaci područja, članovi, prava i hijerarhija stranica.' =>
+        'Podaci područja, članovi, prava i hijerarhija stranica.',
+    'Područja' => 'Područja',
+    'Područja još nisu instalirana' => 'Područja još nisu instalirana',
+    'Područje je obrisano.' => 'Područje je obrisano.',
+    'Područje je spremljeno.' => 'Područje je spremljeno.',
+    'Područje je vraćeno.' => 'Područje je vraćeno.',
+    'Područje se soft-briše i administrator ga može vratiti iz postavki.' =>
+        'Područje se soft-briše i administrator ga može vratiti iz postavki.',
+    'Pokrenite početnu Workspace migraciju pa ponovno otvorite stranicu.' =>
+        'Pokrenite početnu Workspace migraciju pa ponovno otvorite stranicu.',
+    'Postavke' => 'Postavke',
+    'Postavke stranica i poveznica' => 'Postavke stranica i poveznica',
+    'Postavke stavke nije moguće učitati.' => 'Postavke stavke nije moguće učitati.',
+    'Postavke stavke stabla' => 'Postavke stavke stabla',
+    'Postavke područja' => 'Postavke područja',
+    'Postavke područja su spremljene.' => 'Postavke područja su spremljene.',
+    'Povezane stranice, članovi i prava organizirani na jednom mjestu.' =>
+        'Povezane stranice, članovi i prava organizirani na jednom mjestu.',
+    'Početna Workspace migracija još nije pokrenuta.' =>
+        'Početna Workspace migracija još nije pokrenuta.',
+    'Početna stranica područja' => 'Početna stranica područja',
+    'Prava korisnika i njegovih grupa se zbrajaju. Upravljanje uključuje sva prava.' =>
+        'Prava korisnika i njegovih grupa se zbrajaju. Upravljanje uključuje sva prava.',
+    'Prava korisnika i njegovih grupa se zbrajaju. Dodajte samo potrebne subjekte; upravljanje uključuje sva prava.' =>
+        'Prava korisnika i njegovih grupa se zbrajaju. Dodajte samo potrebne subjekte; upravljanje uključuje sva prava.',
+    'Pretraživanje nije uspjelo.' => 'Pretraživanje nije uspjelo.',
+    'Pretražite po imenu ili korisničkoj oznaci.' => 'Pretražite po imenu ili korisničkoj oznaci.',
+    'Pretraži grupe' => 'Pretraži grupe',
+    'Pretraži korisnike' => 'Pretraži korisnike',
+    'Prava područja su spremljena.' => 'Prava područja su spremljena.',
+    'Prazna tablica znači da čvor nasljeđuje prava područja bez dodatnog ograničenja.' =>
+        'Prazna tablica znači da čvor nasljeđuje prava područja bez dodatnog ograničenja.',
+    'Položaj: ' => 'Položaj: ',
+    'Pomakni dolje' => 'Pomakni dolje',
+    'Pomakni gore' => 'Pomakni gore',
+    'Putanja mora imati slobodan prvi segment aplikacije.' =>
+        'Putanja mora imati slobodan prvi segment aplikacije.',
+    'Radnju nije moguće dovršiti.' => 'Radnju nije moguće dovršiti.',
+    'Radnje' => 'Radnje',
+    'Redoslijed' => 'Redoslijed',
+    'Raspored stabla' => 'Raspored stabla',
+    'Raspored stabla nije potpun ili sadrži nepoznatu stranicu.' =>
+        'Raspored stabla nije potpun ili sadrži nepoznatu stranicu.',
+    'Roditelj i redoslijed određuju hijerarhiju. Ograničenja se nasljeđuju na potomke.' =>
+        'Roditelj i redoslijed određuju hijerarhiju. Ograničenja se nasljeđuju na potomke.',
+    'Roditeljska stranica' => 'Roditeljska stranica',
+    'Roditeljska stranica nije valjana.' => 'Roditeljska stranica nije valjana.',
+    'Sadržaj nije pronađen' => 'Sadržaj nije pronađen',
+    'Samo dokument-stranica može imati podređene stavke.' =>
+        'Samo dokument-stranica može imati podređene stavke.',
+    'Samo administrator može mijenjati postavke područja.' =>
+        'Samo administrator može mijenjati postavke područja.',
+    'Slug' => 'Slug',
+    'Slug za vraćanje' => 'Slug za vraćanje',
+    'Spremi' => 'Spremi',
+    'Spremi ograničenja' => 'Spremi ograničenja',
+    'Spremi postavke' => 'Spremi postavke',
+    'Spremi prava' => 'Spremi prava',
+    'Spremi raspored' => 'Spremi raspored',
+    'Spremi stavku' => 'Spremi stavku',
+    'Spremi čvor' => 'Spremi čvor',
+    'Spremljeni čvor nije moguće učitati.' => 'Spremljeni čvor nije moguće učitati.',
+    'Spremljeno područje nije moguće učitati.' => 'Spremljeno područje nije moguće učitati.',
+    'Stablo' => 'Stablo',
+    'Stablo je početno prikazano' => 'Stablo je početno prikazano',
+    'Stablo je prazno.' => 'Stablo je prazno.',
+    'Stablo stranica' => 'Stablo stranica',
+    'Stablo stranica je spremljeno.' => 'Stablo stranica je spremljeno.',
+    'Strelice pomiču cijelu podgranu ili mijenjaju njezinu razinu.' =>
+        'Strelice pomiču cijelu podgranu ili mijenjaju njezinu razinu.',
+    'Stranica je kreirana. Sada uredite njezin sadržaj.' =>
+        'Stranica je kreirana. Sada uredite njezin sadržaj.',
+    'Stranica i njezina podgrana su obrisane.' => 'Stranica i njezina podgrana su obrisane.',
+    'Stranicu nije moguće premjestiti u vlastitu podgranu.' =>
+        'Stranicu nije moguće premjestiti u vlastitu podgranu.',
+    'Sva područja' => 'Sva područja',
+    'Svi prijavljeni' => 'Svi prijavljeni',
+    'Svaki prijavljeni korisnik smije kreirati područje' =>
+        'Svaki prijavljeni korisnik smije kreirati područje',
+    'Tip čvora' => 'Tip čvora',
+    'Traženo područje ili stranica ne postoji.' => 'Traženo područje ili stranica ne postoji.',
+    'Upravljaj' => 'Upravljaj',
+    'Upravljaj područjem' => 'Upravljaj područjem',
+    'Upravljaj sadržajem' => 'Upravljaj sadržajem',
+    'Upravljanje aktivnim područjima i njihovim sadržajem.' =>
+        'Upravljanje aktivnim područjima i njihovim sadržajem.',
+    'Učitavanje...' => 'Učitavanje...',
+    'Ugrađeno' => 'Ugrađeno',
+    'Ukloni' => 'Ukloni',
+    'Uvuci jednu razinu' => 'Uvuci jednu razinu',
+    'Uredi stavku' => 'Uredi stavku',
+    'Uredi stablo' => 'Uredi stablo',
+    'Uredi stranicu' => 'Uredi stranicu',
+    'Vanjski URL nije valjan.' => 'Vanjski URL nije valjan.',
+    'Vidljivost' => 'Vidljivost',
+    'Vlasnik' => 'Vlasnik',
+    'Vlasnik područja nije valjan.' => 'Vlasnik područja nije valjan.',
+    'Vrsta stavke' => 'Vrsta stavke',
+    'Vrati' => 'Vrati',
+    'Vraćanje prethodno obrisanih područja.' => 'Vraćanje prethodno obrisanih područja.',
+    'Vraćeno područje nije moguće učitati.' => 'Vraćeno područje nije moguće učitati.',
+    'Javno i Svi prijavljeni ugrađene su publike, a ne Auth grupe.' =>
+        'Javno i Svi prijavljeni ugrađene su publike, a ne Auth grupe.',
+    'Workspace migracija još nije pokrenuta.' => 'Workspace migracija još nije pokrenuta.',
+    'Za ovu radnju potrebna je prijava.' => 'Za ovu radnju potrebna je prijava.',
+    'Zadana vidljivost' => 'Zadana vidljivost',
+    'Članovi i prava' => 'Članovi i prava',
+    'Zatvori' => 'Zatvori',
+    'Izvuci jednu razinu' => 'Izvuci jednu razinu',
+    'Ako ostane prazan, slug se izrađuje iz naslova.' =>
+        'Ako ostane prazan, slug se izrađuje iz naslova.',
+    'Arhiviraj' => 'Arhiviraj',
+    'Arhivirano' => 'Arhivirano',
+    'Arhivirana stranica nije vidljiva čitateljima.' =>
+        'Arhivirana stranica nije vidljiva čitateljima.',
+    'Čitatelji i dalje vide zadnju objavljenu verziju.' =>
+        'Čitatelji i dalje vide zadnju objavljenu verziju.',
+    'Čitatelji vide objavljenu verziju.' => 'Čitatelji vide objavljenu verziju.',
+    'Dokument nema verziju koju je moguće objaviti.' =>
+        'Dokument nema verziju koju je moguće objaviti.',
+    'Nacrt' => 'Nacrt',
+    'Na pregledu' => 'Na pregledu',
+    'Novo' => 'Novo',
+    'Nove neobjavljene stranice' => 'Nove neobjavljene stranice',
+    'Neobjavljena stranica i njezin nacrt su trajno obrisani.' =>
+        'Neobjavljena stranica i njezin nacrt su trajno obrisani.',
+    'Odbaci nacrt' => 'Odbaci nacrt',
+    'Odbaciti nacrt i trajno obrisati ovu neobjavljenu stranicu?' =>
+        'Odbaciti nacrt i trajno obrisati ovu neobjavljenu stranicu?',
+    'Odbaciti zajednički nacrt i vratiti zadnju objavljenu verziju?' =>
+        'Odbaciti zajednički nacrt i vratiti zadnju objavljenu verziju?',
+    'Objavi' => 'Objavi',
+    'Objavljeno' => 'Objavljeno',
+    'Objavljivanje' => 'Objavljivanje',
+    'Odabrani prijelaz statusa nije dopušten.' =>
+        'Odabrani prijelaz statusa nije dopušten.',
+    'Pošalji na pregled' => 'Pošalji na pregled',
+    'Poslano na pregled' => 'Poslano na pregled',
+    'Pregledaj nacrt' => 'Pregledaj nacrt',
+    'Radna verzija' => 'Radna verzija',
+    'Status stranice je promijenjen: ' => 'Status stranice je promijenjen: ',
+    'Stranica čeka pregled' => 'Stranica čeka pregled',
+    'Stranica "%s" u području "%s" poslana je na pregled.' =>
+        'Stranica "%s" u području "%s" poslana je na pregled.',
+    'Stranica je objavljena' => 'Stranica je objavljena',
+    'Stranica "%s" u području "%s" je objavljena.' =>
+        'Stranica "%s" u području "%s" je objavljena.',
+    'Stranica nije vidljiva čitateljima dok se ne objavi.' =>
+        'Stranica nije vidljiva čitateljima dok se ne objavi.',
+    'Stranica još nije objavljena.' => 'Stranica još nije objavljena.',
+    'Stranica nije pronađena.' => 'Stranica nije pronađena.',
+    'Uredi nacrt' => 'Uredi nacrt',
+    'Vrati u nacrt' => 'Vrati u nacrt',
+    'Workflow stranice nije moguće spremiti.' =>
+        'Workflow stranice nije moguće spremiti.',
+];

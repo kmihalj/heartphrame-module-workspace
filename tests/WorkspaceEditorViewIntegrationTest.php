@@ -1,0 +1,184 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AaiEduHr\HeartPhrameModuleWorkspace\Tests;
+
+use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\TestCase;
+
+#[CoversNothing]
+final class WorkspaceEditorViewIntegrationTest extends TestCase
+{
+    /**
+     * HR: Workspace mora ugraditi službeni Editorov pregled umjesto vlastitog ispisa sirovog HTML-a.
+     * EN: Workspace must embed Editor's official view instead of rendering raw HTML itself.
+     */
+    public function testWorkspaceEmbedsOfficialEditorDocumentView(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+
+        $this->assertIsString($view);
+        $this->assertStringContainsString("'editor/view'", $view);
+        $this->assertStringContainsString('$editorView', $view);
+        $this->assertStringNotContainsString('workspace-document', $view);
+        $this->assertStringNotContainsString('$document[\'html\']', $view);
+    }
+
+    /**
+     * HR: Opcionalni most mora tražiti zajednički builder bez tvrde Composer ovisnosti.
+     * EN: The optional bridge must resolve the shared builder without a hard Composer dependency.
+     */
+    public function testBridgeUsesSharedEditorViewBuilder(): void
+    {
+        $bridge = file_get_contents(dirname(__DIR__) . '/src/Service/WorkspaceEditorBridge.php');
+
+        $this->assertIsString($bridge);
+        $this->assertStringContainsString('EditorDocumentViewBuilder', $bridge);
+        $this->assertStringContainsString('documentView(', $bridge);
+    }
+
+    /**
+     * HR: Akcije područja moraju ostati u karticama kojima pripadaju kako ne bi
+     *     stvarale zaseban prazan red iznad stabla i HTML sadržaja.
+     * EN: Workspace actions must remain inside their owning cards so they do
+     *     not create a separate empty row above the tree and HTML content.
+     */
+    public function testWorkspaceActionsStayInsideTreeAndEditorCards(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+        $controller = file_get_contents(dirname(__DIR__) . '/src/Controller/WorkspaceController.php');
+
+        $this->assertIsString($view);
+        $this->assertIsString($controller);
+        $this->assertStringContainsString('workspace-tree-card-actions', $view);
+        $this->assertStringNotContainsString('class="workspace-actions"', $view);
+        $this->assertStringContainsString("'leadingActions'", $controller);
+        $this->assertStringContainsString("'target' => '#workspace-page-tree'", $controller);
+    }
+
+    /**
+     * HR: Akcije stabla moraju biti u zasebnom retku iznad punog naslova kako
+     *     usko zaglavlje ne bi skraćivalo naziv područja.
+     * EN: Tree actions must occupy a separate row above the complete title so
+     *     a narrow header does not truncate the workspace name.
+     */
+    public function testTreeHeaderKeepsCompactActionsAboveCompleteTitle(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+        $css = file_get_contents(dirname(__DIR__) . '/resources/assets/workspace.css');
+
+        $this->assertIsString($view);
+        $this->assertIsString($css);
+        $this->assertLessThan(
+            strpos($view, 'workspace-tree-title'),
+            strpos($view, 'workspace-tree-card-actions'),
+        );
+        $this->assertStringContainsString('flex-direction: column', $css);
+        $this->assertStringContainsString('white-space: normal', $css);
+        $this->assertStringContainsString('.workspace-tree-card-action-count', $css);
+    }
+
+    /**
+     * HR: Blok za soft-brisanje mora koristiti tematsku Bootstrap karticu kao i ostale postavke.
+     * EN: The soft-delete block must use a theme-aware Bootstrap card like the other settings.
+     */
+    public function testWorkspaceDeleteBlockUsesThemeAwareCard(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/manage.php');
+
+        $this->assertIsString($view);
+        $this->assertStringContainsString('id="workspace-delete-title"', $view);
+        $this->assertStringContainsString('class="card mb-4"', $view);
+        $this->assertStringNotContainsString('border border-danger rounded p-3', $view);
+    }
+
+    /**
+     * HR: Organizator i modalne postavke čvorova pripadaju prikazu Područja,
+     *     dok ekran upravljanja zadržava samo podatke, članove i Workspace ACL.
+     * EN: The organizer and modal node settings belong to the Workspace view,
+     *     while the management screen retains data, members, and Workspace ACL.
+     */
+    public function testTreeManagementLivesInWorkspaceSidebar(): void
+    {
+        $workspaceView = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+        $manageView = file_get_contents(dirname(__DIR__) . '/views/workspace/manage.php');
+
+        $this->assertIsString($workspaceView);
+        $this->assertIsString($manageView);
+        $this->assertStringContainsString('data-workspace-tree-edit-toggle', $workspaceView);
+        $this->assertStringContainsString("'workspace/tree-organizer'", $workspaceView);
+        $this->assertStringContainsString('data-workspace-node-editor-modal', $workspaceView);
+        $this->assertStringNotContainsString('data-workspace-tree-order-form', $manageView);
+        $this->assertStringNotContainsString("'workspace/node-fields'", $manageView);
+    }
+
+    /**
+     * HR: Stablo mora jasno označiti nove neobjavljene stranice, dok izdavači
+     *     dobivaju zaseban popis sadržaja poslanog na pregled.
+     * EN: The tree must clearly mark new unpublished pages, while publishers
+     *     receive a separate queue of content submitted for review.
+     */
+    public function testWorkspaceExposesUnpublishedAndReviewQueues(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+        $tree = file_get_contents(dirname(__DIR__) . '/views/workspace/tree.php');
+        $controller = file_get_contents(dirname(__DIR__) . '/src/Controller/WorkspaceController.php');
+
+        $this->assertIsString($view);
+        $this->assertIsString($tree);
+        $this->assertIsString($controller);
+        $this->assertStringContainsString('workspace-unpublished-pages-modal', $view);
+        $this->assertStringContainsString('workspace-review-queue-modal', $view);
+        $this->assertStringContainsString('$unpublishedPages', $controller);
+        $this->assertStringContainsString('$reviewQueue', $controller);
+        $this->assertStringContainsString('workspace-tree-status', $tree);
+    }
+
+    /**
+     * HR: Obični pregled objave smije nuditi samo ulaz u nacrt, dok se akcije
+     *     koje mijenjaju nacrt prikazuju na njegovu pregledu ili novoj stranici.
+     * EN: A regular published view may only offer entry into the draft, while
+     *     draft-mutating actions appear on its preview or on a new page.
+     */
+    public function testDraftMutationsRequireDraftPreviewOrNewUnpublishedPage(): void
+    {
+        $controller = file_get_contents(dirname(__DIR__) . '/src/Controller/WorkspaceController.php');
+
+        $this->assertIsString($controller);
+        $this->assertStringContainsString(
+            '$showDraftMutations = $isDraftPreview || $isNewUnpublishedPage;',
+            $controller,
+        );
+        $this->assertStringContainsString('$hasDraft && !$showDraftMutations', $controller);
+        $this->assertStringContainsString(
+            "(bool)(\$editorView['isDraftPreview'] ?? false)",
+            $controller,
+        );
+    }
+
+    /**
+     * HR: Odbacivanje nikad objavljene stranice mora trajno ukloniti Editor
+     *     dokument i Workspace čvor umjesto da ih stavi među soft-obrisane.
+     * EN: Discarding a never-published page must permanently remove the Editor
+     *     document and Workspace node instead of soft-deleting them.
+     */
+    public function testDiscardingNewPagePermanentlyDeletesDocumentAndNode(): void
+    {
+        $controller = file_get_contents(dirname(__DIR__) . '/src/Controller/WorkspaceController.php');
+
+        $this->assertIsString($controller);
+        $this->assertStringContainsString(
+            "\$workflowBeforeDiscard['is_new_unpublished_page']",
+            $controller,
+        );
+        $this->assertStringContainsString(
+            '$this->editor->deleteUnpublishedDocumentPermanently($documentKey);',
+            $controller,
+        );
+        $this->assertStringContainsString(
+            '$this->repository->deleteUnpublishedNodePermanently(',
+            $controller,
+        );
+    }
+}
