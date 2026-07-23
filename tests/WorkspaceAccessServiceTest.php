@@ -12,7 +12,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceWorkflowService;
-use HeartPhrame\Authn\ArrayAuthnHandler;
+use HeartPhrame\Authn\AuthnHandlerInterface;
 use HeartPhrame\Config\Config;
 use HeartPhrame\Helper\Helper;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -31,7 +31,7 @@ final class WorkspaceAccessServiceTest extends TestCase
 
     private WorkspaceRepository $repository;
 
-    private ArrayAuthnHandler $authn;
+    private AuthnHandlerInterface $authn;
 
     private WorkspaceAccessService $access;
 
@@ -60,7 +60,64 @@ final class WorkspaceAccessServiceTest extends TestCase
         $migration->up($this->database);
 
         $this->repository = new WorkspaceRepository($this->database);
-        $this->authn = new ArrayAuthnHandler();
+        $this->authn = new class implements AuthnHandlerInterface {
+            /**
+             * @var mixed[]|null
+             */
+            private ?array $user = null;
+
+            /**
+             * HR: Sprema testnog korisnika bez izvođenja stvarne autentikacije.
+             * EN: Stores the test user without performing real authentication.
+             *
+             * @return mixed[]|null
+             */
+            public function login(mixed $credentials): ?array
+            {
+                $this->user = is_array($credentials) ? $credentials : null;
+                return $this->user;
+            }
+
+            /**
+             * HR: Uklanja aktivnog testnog korisnika.
+             * EN: Removes the active test user.
+             */
+            public function logout(): void
+            {
+                $this->user = null;
+            }
+
+            /**
+             * HR: Vraća postoji li aktivni testni korisnik.
+             * EN: Reports whether an active test user exists.
+             */
+            public function check(): bool
+            {
+                return $this->user !== null;
+            }
+
+            /**
+             * HR: Vraća aktivnog testnog korisnika.
+             * EN: Returns the active test user.
+             *
+             * @return mixed[]|null
+             */
+            public function user(): ?array
+            {
+                return $this->user;
+            }
+
+            /**
+             * HR: Vraća podatke aktivnog testnog korisnika.
+             * EN: Returns the active test user's data.
+             *
+             * @return mixed[]|null
+             */
+            public function userData(): ?array
+            {
+                return $this->user;
+            }
+        };
         $this->access = new WorkspaceAccessService(
             $this->repository,
             $this->authn,
