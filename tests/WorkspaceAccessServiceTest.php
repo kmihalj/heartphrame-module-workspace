@@ -201,6 +201,86 @@ final class WorkspaceAccessServiceTest extends TestCase
     }
 
     /**
+     * HR: Dokazuje da paketni ACL izračun zadržava nasljeđivanje roditeljskih
+     *     ograničenja za više čvorova bez zasebnog izračuna svakoga čvora.
+     * EN: Proves that batched ACL calculation preserves inherited parent
+     *     restrictions for multiple nodes without calculating each node separately.
+     */
+    public function testBatchedNodePermissionsPreserveInheritedRestrictions(): void
+    {
+        $workspace = $this->repository->saveWorkspace([
+            'name' => 'Paketna prava',
+            'slug' => 'paketna-prava',
+            'visibility' => 'restricted',
+            'owner_user_id' => 1,
+        ], 1);
+        $workspaceId = (int)$workspace['id'];
+        $this->repository->replaceWorkspaceAcl($workspaceId, [
+            'user' => [
+                2 => ['can_view' => true, 'can_add' => true, 'can_edit' => true],
+            ],
+        ]);
+        $root = $this->repository->saveNode($workspaceId, [
+            'title' => 'Korijen',
+            'node_type' => 'document',
+            'document_key' => 'batch-root',
+        ], 1);
+        $child = $this->repository->saveNode($workspaceId, [
+            'title' => 'Potomak',
+            'node_type' => 'document',
+            'document_key' => 'batch-child',
+            'parent_id' => $root['id'],
+        ], 1);
+        $this->repository->replaceNodeAcl($workspaceId, (int)$root['id'], [
+            'user' => [
+                2 => ['can_view' => true],
+            ],
+        ]);
+        $this->authn->login(['id' => 2, 'is_admin' => false]);
+
+        $permissions = $this->access->nodePermissionsForNodes(
+            $workspace,
+            $this->repository->nodesForWorkspace($workspaceId),
+        );
+        $rootPermissions = $permissions[(int)$root['id']] ?? [];
+        $childPermissions = $permissions[(int)$child['id']] ?? [];
+
+        $this->assertTrue((bool)($rootPermissions['can_view'] ?? false));
+        $this->assertFalse((bool)($rootPermissions['can_edit'] ?? true));
+        $this->assertSame($rootPermissions, $childPermissions);
+    }
+
+    /**
+     * HR: Dokazuje da se kratkotrajni ACL cache može isprazniti nakon izmjene
+     *     prava te sljedeći izračun čita novo stanje.
+     * EN: Proves that the short-lived ACL cache can be cleared after a
+     *     permission change so the next calculation reads the new state.
+     */
+    public function testRequestCacheIsClearedAfterPermissionChanges(): void
+    {
+        $workspace = $this->repository->saveWorkspace([
+            'name' => 'Promjena prava',
+            'slug' => 'promjena-prava',
+            'visibility' => 'restricted',
+            'owner_user_id' => 1,
+        ], 1);
+        $workspaceId = (int)$workspace['id'];
+        $this->repository->replaceWorkspaceAcl($workspaceId, [
+            'user' => [
+                2 => ['can_view' => true],
+            ],
+        ]);
+        $this->authn->login(['id' => 2, 'is_admin' => false]);
+
+        $this->assertTrue($this->access->workspacePermissions($workspace)['can_view']);
+
+        $this->repository->replaceWorkspaceAcl($workspaceId, []);
+        $this->access->clearRequestCache();
+
+        $this->assertFalse($this->access->workspacePermissions($workspace)['can_view']);
+    }
+
+    /**
      * HR: Dokazuje da arhiva ostavlja pregled i upravljanje postavkama, ali zaključava sadržaj i vlasniku i adminu.
      * EN: Proves that archive keeps viewing and settings management while locking content for owner and admin.
      */

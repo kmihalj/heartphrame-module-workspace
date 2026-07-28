@@ -93,6 +93,16 @@ ACL čvora namjerno samo ograničava:
 Prazan ACL čvora znači “naslijedi bez dodatnog ograničenja”. Ograničenje
 roditeljske stranice automatski vrijedi za sve potomke.
 
+Kod prikaza velikog stabla modul grupno učitava čvorove, Workspace ACL,
+korisnikove grupe, ograničenja čvorova i workflow stanja. Lanci predaka i
+efektivna prava zatim se računaju u memoriji. Time broj ORM upita ostaje
+približno stalan umjesto da raste za nekoliko upita sa svakom novom stranicom,
+uz potpuno isto nasljeđivanje i sigurnosne provjere.
+
+Rezultati tog izračuna vrijede samo tijekom jednog zahtjeva. Nakon spremanja
+Workspace ili čvornog ACL-a controller izričito prazni kratkotrajni cache, pa
+sljedeća provjera u istom zahtjevu također vidi nova prava.
+
 ## 5. Stablo stranica
 
 Lijevo stablo može se prikazati ili sakriti. Izgledom prati karticu sadržaja
@@ -169,6 +179,13 @@ Kroz opcionalni servisni most traži `EditorDocumentViewBuilder`, a zatim
 renderira Editorov službeni `editor/view` partial uz lijevo stablo. Jezični i
 TOC linkovi zato ostaju u trenutačnom Području, dok export i asset rute ponovno
 provjeravaju isti nasljedni ACL na serveru.
+
+Tijekom jednog HTTP zahtjeva integracijski servis pamti već pronađeni dokument,
+pripadajuće Područje, izračunata prava, javnu putanju i broj objavljene verzije.
+Editor pri izgradnji jednog pregleda iste podatke treba za više ikona,
+jezičnih poveznica i stavki povijesti. Ovaj kratkotrajni cache uklanja
+ponovljene ORM upite, ne prenosi se u sljedeći zahtjev i ne mijenja sigurnosne
+provjere.
 
 Korisnik s pravom `can_add` u otvorenom Području vidi naredbu **Nova
 stranica**. Sažeti obrazac traži samo naslov, opcionalni slug i nadređenu

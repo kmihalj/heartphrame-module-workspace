@@ -97,6 +97,16 @@ Node ACL is deliberately restrictive:
 An empty node ACL means “inherit without an additional restriction.” A
 restriction on a parent automatically applies to every descendant.
 
+When rendering a large tree, the module batch-loads nodes, Workspace ACL,
+the user's groups, node restrictions, and workflow states. Ancestor chains and
+effective permissions are then calculated in memory. This keeps the number of
+ORM queries approximately constant instead of adding several queries for every
+new page, while preserving identical inheritance and security checks.
+
+Those calculated results live for one request only. After saving Workspace or
+node ACL entries, the controller explicitly clears the short-lived cache, so a
+later check in the same request also sees the new permissions.
+
 ## 5. Page tree
 
 The left-side tree can be shown or hidden. It visually follows the HTML
@@ -174,6 +184,13 @@ It requests `EditorDocumentViewBuilder` through the optional service bridge and
 renders Editor's official `editor/view` partial next to the left tree. Language
 and outline links therefore remain in the current Workspace, while export and
 asset routes re-check the same inherited ACL on the server.
+
+During one HTTP request, the integration service caches the resolved document,
+owning Workspace, calculated permissions, public path, and published version
+number. Editor needs those same values for several icons, locale links, and
+history entries while building one view. This short-lived cache removes
+duplicate ORM queries, is not carried into the next request, and does not alter
+security checks.
 
 A user with `can_add` sees **New page** in the open Workspace. The compact
 form asks only for a title, optional slug, and parent page. On submit, the

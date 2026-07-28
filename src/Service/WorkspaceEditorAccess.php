@@ -6,20 +6,58 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Service;
 
 use HeartPhrame\Routing\UrlGenerator;
 
+use function array_key_exists;
 use function is_array;
 
-final readonly class WorkspaceEditorAccess
+final class WorkspaceEditorAccess
 {
+    /**
+     * HR: Pamti dokument i njegovo područje tijekom jednog zahtjeva jer Editor
+     *     gradi više poveznica i akcija za isti dokument.
+     * EN: Caches a document and its workspace for one request because the Editor
+     *     builds several links and actions for the same document.
+     *
+     * @var array<string, array{
+     *     node: array<string, mixed>,
+     *     workspace: array<string, mixed>
+     * }|null>
+     */
+    private array $documentContextCache = [];
+
+    /**
+     * HR: Pamti efektivna prava po dokumentu i korisniku tijekom jednog zahtjeva.
+     * EN: Caches effective permissions per document and user for one request.
+     *
+     * @var array<string, array<string, bool>>
+     */
+    private array $documentPermissionCache = [];
+
+    /**
+     * HR: Pamti javne putanje po dokumentu i jeziku tijekom jednog zahtjeva.
+     * EN: Caches public paths per document and language for one request.
+     *
+     * @var array<string, string>
+     */
+    private array $documentPathCache = [];
+
+    /**
+     * HR: Pamti broj objavljene verzije po dokumentu i jeziku tijekom jednog zahtjeva.
+     * EN: Caches the published version number per document and language for one request.
+     *
+     * @var array<string, int>
+     */
+    private array $publicationVersionCache = [];
+
     /**
      * HR: Povezuje editorove akcije s područjem koje posjeduje dokument.
      * EN: Connects editor actions to the workspace that owns a document.
      */
     public function __construct(
-        private WorkspaceRepository $repository,
-        private WorkspaceAccessService $access,
-        private WorkspaceConfig $config,
-        private UrlGenerator $urlGenerator,
-        private WorkspaceWorkflowService $workflow,
+        private readonly WorkspaceRepository $repository,
+        private readonly WorkspaceAccessService $access,
+        private readonly WorkspaceConfig $config,
+        private readonly UrlGenerator $urlGenerator,
+        private readonly WorkspaceWorkflowService $workflow,
     ) {
     }
 
@@ -43,7 +81,7 @@ final readonly class WorkspaceEditorAccess
      */
     public function canReadDocument(string $documentKey): bool
     {
-        return $this->access->canUseDocument($documentKey, 'can_view');
+        return (bool)($this->documentPermissions($documentKey)['can_view'] ?? false);
     }
 
     /**
@@ -52,7 +90,7 @@ final readonly class WorkspaceEditorAccess
      */
     public function canEditDocument(string $documentKey): bool
     {
-        return $this->access->canUseDocument($documentKey, 'can_edit');
+        return (bool)($this->documentPermissions($documentKey)['can_edit'] ?? false);
     }
 
     /**
@@ -61,7 +99,7 @@ final readonly class WorkspaceEditorAccess
      */
     public function canPublishDocument(string $documentKey): bool
     {
-        return $this->access->canUseDocument($documentKey, 'can_publish');
+        return (bool)($this->documentPermissions($documentKey)['can_publish'] ?? false);
     }
 
     /**
@@ -70,7 +108,7 @@ final readonly class WorkspaceEditorAccess
      */
     public function canDeleteDocument(string $documentKey): bool
     {
-        return $this->access->canUseDocument($documentKey, 'can_delete');
+        return (bool)($this->documentPermissions($documentKey)['can_delete'] ?? false);
     }
 
     /**
@@ -79,7 +117,7 @@ final readonly class WorkspaceEditorAccess
      */
     public function canManageDocument(string $documentKey): bool
     {
-        return $this->access->canUseDocument($documentKey, 'can_manage');
+        return (bool)($this->documentPermissions($documentKey)['can_manage'] ?? false);
     }
 
     /**
@@ -88,16 +126,18 @@ final readonly class WorkspaceEditorAccess
      */
     public function documentPath(string $documentKey, string $language = ''): string
     {
-        $node = $this->repository->findNodeByDocumentKey($documentKey);
-        if (!is_array($node)) {
+        $cacheKey = $documentKey . '|' . $language;
+        if (array_key_exists($cacheKey, $this->documentPathCache)) {
+            return $this->documentPathCache[$cacheKey];
+        }
+
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context)) {
             return '';
         }
 
-        $workspace = $this->repository->findWorkspaceById(WorkspaceValue::int($node['workspace_id'] ?? 0));
-        if (!is_array($workspace)) {
-            return '';
-        }
-
+        $node = $context['node'];
+        $workspace = $context['workspace'];
         $workspaceSlug = WorkspaceValue::string($workspace['slug'] ?? '');
         $nodeSlug = WorkspaceValue::string($node['slug'] ?? '');
         $path = $this->urlGenerator->namedRouteExists('workspace.node.show')
@@ -116,7 +156,7 @@ final readonly class WorkspaceEditorAccess
             $path .= '?lang=' . rawurlencode($language);
         }
 
-        return $path;
+        return $this->documentPathCache[$cacheKey] = $path;
     }
 
     /**
@@ -125,7 +165,7 @@ final readonly class WorkspaceEditorAccess
      */
     public function ownsDocument(string $documentKey): bool
     {
-        return is_array($this->repository->findNodeByDocumentKey($documentKey));
+        return is_array($this->documentContext($documentKey));
     }
 
     /**
@@ -136,7 +176,20 @@ final readonly class WorkspaceEditorAccess
      */
     public function publicationVersion(string $documentKey, string $language): ?int
     {
-        return $this->workflow->publicationVersion($documentKey, $language);
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context)) {
+            return null;
+        }
+
+        $cacheKey = $documentKey . '|' . $language;
+        if (array_key_exists($cacheKey, $this->publicationVersionCache)) {
+            return $this->publicationVersionCache[$cacheKey];
+        }
+
+        return $this->publicationVersionCache[$cacheKey] = $this->workflow->publicationVersionForNode(
+            WorkspaceValue::int($context['node']['id'] ?? 0),
+            $language,
+        );
     }
 
     /**
@@ -170,15 +223,13 @@ final readonly class WorkspaceEditorAccess
         string $language,
         int $versionNumber,
     ): void {
-        $node = $this->repository->findNodeByDocumentKey($documentKey);
-        if (!is_array($node) || !$this->canPublishDocument($documentKey)) {
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context) || !$this->canPublishDocument($documentKey)) {
             throw new \RuntimeException(__('Nemate pravo objavljivanja ove stranice.'));
         }
 
-        $permissions = $this->access->nodePermissions(
-            $this->workspaceForNode($node),
-            $node,
-        );
+        $node = $context['node'];
+        $permissions = $this->documentPermissions($documentKey);
         $user = $this->access->currentUser();
         $this->workflow->transition(
             WorkspaceValue::int($node['id'] ?? 0),
@@ -190,6 +241,7 @@ final readonly class WorkspaceEditorAccess
             (bool)($permissions['can_publish'] ?? false),
             (bool)($permissions['can_manage'] ?? false),
         );
+        unset($this->publicationVersionCache[$documentKey . '|' . $language]);
     }
 
     /**
@@ -203,11 +255,12 @@ final readonly class WorkspaceEditorAccess
         string $language,
         int $currentVersionNumber,
     ): void {
-        $node = $this->repository->findNodeByDocumentKey($documentKey);
-        if (!is_array($node) || !$this->canEditDocument($documentKey)) {
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context) || !$this->canEditDocument($documentKey)) {
             throw new \RuntimeException(__('Nemate pravo uređivanja ove stranice.'));
         }
 
+        $node = $context['node'];
         $user = $this->access->currentUser();
         $this->workflow->discardDraft(
             WorkspaceValue::int($node['id'] ?? 0),
@@ -215,26 +268,73 @@ final readonly class WorkspaceEditorAccess
             $currentVersionNumber,
             is_array($user) ? WorkspaceValue::int($user['id'] ?? 0) : 0,
         );
+        unset($this->publicationVersionCache[$documentKey . '|' . $language]);
     }
 
     /**
-     * HR: Učitava područje kojem pripada dokument-stranica ili prekida
-     *     nevaljanu integracijsku operaciju.
-     * EN: Loads the Workspace owning a document page or stops an invalid
-     *     integration operation.
+     * HR: Učitava dokument i pripadajuće područje samo jednom tijekom zahtjeva.
+     *     Null se također pamti kako nepostojeći dokument ne bi stalno tražili.
+     * EN: Loads a document and its workspace only once during a request. Null is
+     *     cached as well so a missing document is not looked up repeatedly.
      *
-     * @param array<string, mixed> $node
-     * @return array<string, mixed>
+     * @return array{
+     *     node: array<string, mixed>,
+     *     workspace: array<string, mixed>
+     * }|null
      */
-    private function workspaceForNode(array $node): array
+    private function documentContext(string $documentKey): ?array
     {
+        if (array_key_exists($documentKey, $this->documentContextCache)) {
+            return $this->documentContextCache[$documentKey];
+        }
+
+        $node = $this->repository->findNodeByDocumentKey($documentKey);
+        if (!is_array($node)) {
+            return $this->documentContextCache[$documentKey] = null;
+        }
+
         $workspace = $this->repository->findWorkspaceById(
             WorkspaceValue::int($node['workspace_id'] ?? 0),
         );
         if (!is_array($workspace)) {
-            throw new \RuntimeException(__('Područje nije pronađeno.'));
+            return $this->documentContextCache[$documentKey] = null;
         }
 
-        return $workspace;
+        return $this->documentContextCache[$documentKey] = [
+            'node' => $node,
+            'workspace' => $workspace,
+        ];
+    }
+
+    /**
+     * HR: Računa i pamti cijeli skup prava kako pojedinačne Editor provjere
+     *     čitanja, izmjene, objave i brisanja ne ponavljaju isti ACL izračun.
+     * EN: Calculates and caches the complete permission set so individual Editor
+     *     read, edit, publish, and delete checks do not repeat the same ACL work.
+     *
+     * @return array<string, bool>
+     */
+    private function documentPermissions(string $documentKey): array
+    {
+        $user = $this->access->currentUser();
+        $cacheKey = $documentKey
+        . '|'
+        . WorkspaceValue::int(is_array($user) ? ($user['id'] ?? 0) : 0)
+        . '|'
+        . (int)$this->access->isAdministrator($user);
+        if (array_key_exists($cacheKey, $this->documentPermissionCache)) {
+            return $this->documentPermissionCache[$cacheKey];
+        }
+
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context)) {
+            return $this->documentPermissionCache[$cacheKey] = [];
+        }
+
+        return $this->documentPermissionCache[$cacheKey] = $this->access->nodePermissions(
+            $context['workspace'],
+            $context['node'],
+            $user,
+        );
     }
 }

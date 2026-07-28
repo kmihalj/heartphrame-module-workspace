@@ -115,9 +115,16 @@ final readonly class WorkspaceController
         }
 
         $node = $this->repository->findNodeBySlug($this->intValue($workspace['id'] ?? 0), $nodeSlug);
-        if (!is_array($node) || !$this->access->nodePermissions($workspace, $node)['can_view']) {
+        if (!is_array($node)) {
             return $this->accessDenied();
         }
+
+        $nodePermissions = $this->access->nodePermissions($workspace, $node);
+        if (!$nodePermissions['can_view']) {
+            return $this->accessDenied();
+        }
+
+        $node['permissions'] = $nodePermissions;
 
         if ($this->stringValue($node['node_type'] ?? '') !== 'document') {
             return $this->redirectLinkNode($node);
@@ -313,6 +320,7 @@ final readonly class WorkspaceController
 
         $acl = WorkspaceValue::stringKeyArray($body['acl'] ?? null);
         $this->repository->replaceWorkspaceAcl($this->intValue($workspace['id'] ?? 0), $acl);
+        $this->access->clearRequestCache();
         $this->success(__('Prava područja su spremljena.'));
 
         return $this->responseFactory->redirect(
@@ -756,6 +764,7 @@ final readonly class WorkspaceController
             $this->intValue($node['id'] ?? 0),
             $acl,
         );
+        $this->access->clearRequestCache();
         $this->success(__('Ograničenja stranice su spremljena i nasljeđuju ih potomci.'));
 
         return $this->responseFactory->redirect(
@@ -967,7 +976,10 @@ final readonly class WorkspaceController
         $workflowView = null;
         $nodePermissions = $workspacePermissions;
         if (is_array($node)) {
-            $nodePermissions = $this->access->nodePermissions($workspace, $node);
+            $preloadedPermissions = $node['permissions'] ?? null;
+            $nodePermissions = is_array($preloadedPermissions)
+            ? $this->permissionArray($preloadedPermissions)
+            : $this->access->nodePermissions($workspace, $node);
             if (!$nodePermissions['can_view']) {
                 return $this->accessDenied();
             }
@@ -1027,12 +1039,14 @@ final readonly class WorkspaceController
             )),
             $language,
         );
+        $allNodePermissions = $this->access->nodePermissionsForNodes($workspace, $allNodes);
         $managementNodes = [];
         $reviewQueue = [];
         $unpublishedPages = [];
         $canOrganizeTree = (bool)($workspacePermissions['can_manage'] ?? false);
         foreach ($allNodes as $candidate) {
-            $candidatePermissions = $this->access->nodePermissions($workspace, $candidate);
+            $candidateId = $this->intValue($candidate['id'] ?? 0);
+            $candidatePermissions = $allNodePermissions[$candidateId] ?? $workspacePermissions;
             if (!$candidatePermissions['can_view']) {
                 $canOrganizeTree = false;
                 continue;
@@ -1042,7 +1056,6 @@ final readonly class WorkspaceController
             $managementNodes[] = $candidate;
             $canOrganizeTree = $canOrganizeTree && (bool)($candidatePermissions['can_edit'] ?? false);
 
-            $candidateId = $this->intValue($candidate['id'] ?? 0);
             $candidateWorkflow = $allWorkflows[$candidateId] ?? null;
             $candidateStatus = is_array($candidateWorkflow)
             ? $this->stringValue($candidateWorkflow['status'] ?? '')
@@ -1929,6 +1942,27 @@ final readonly class WorkspaceController
     private function intValue(mixed $value): int
     {
         return is_numeric($value) ? (int)$value : 0;
+    }
+
+    /**
+     * HR: Normalizira unaprijed izračunata prava čvora na zatvoreni skup
+     *     logičkih vrijednosti koji ostatak kontrolera sigurno koristi.
+     * EN: Normalizes precomputed node permissions to the closed boolean set
+     *     that the rest of the controller can safely consume.
+     *
+     * @param array<mixed> $permissions
+     * @return array<string, bool>
+     */
+    private function permissionArray(array $permissions): array
+    {
+        return [
+            'can_view' => (bool)($permissions['can_view'] ?? false),
+            'can_add' => (bool)($permissions['can_add'] ?? false),
+            'can_edit' => (bool)($permissions['can_edit'] ?? false),
+            'can_publish' => (bool)($permissions['can_publish'] ?? false),
+            'can_delete' => (bool)($permissions['can_delete'] ?? false),
+            'can_manage' => (bool)($permissions['can_manage'] ?? false),
+        ];
     }
 
     /**

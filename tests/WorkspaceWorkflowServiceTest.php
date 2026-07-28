@@ -92,6 +92,7 @@ final class WorkspaceWorkflowServiceTest extends TestCase
         $published = $this->workflow->transition(1, 'hr', 'publish', 1, 7, true, true, true);
         $this->assertSame(WorkspaceWorkflowService::STATUS_PUBLISHED, $published['status']);
         $this->assertSame(1, $this->workflow->publicationVersion('upute', 'hr'));
+        $this->assertSame(1, $this->workflow->publicationVersionForNode(1, 'hr'));
 
         $newDraft = $this->workflow->markDocumentDraft('upute', 'hr', 2, 7);
         $this->assertIsArray($newDraft);

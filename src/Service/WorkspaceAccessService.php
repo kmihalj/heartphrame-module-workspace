@@ -6,10 +6,11 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Service;
 
 use HeartPhrame\Authn\AuthnHandlerInterface;
 
+use function array_key_exists;
 use function is_array;
 use function is_numeric;
 
-final readonly class WorkspaceAccessService
+final class WorkspaceAccessService
 {
     private const PERMISSION_KEYS = [
         'can_view',
@@ -21,14 +22,54 @@ final readonly class WorkspaceAccessService
     ];
 
     /**
+     * HR: Pamti grupne identifikatore po korisniku tijekom jednog zahtjeva.
+     * EN: Caches group identifiers per user during one request.
+     *
+     * @var array<int, list<int>>
+     */
+    private array $groupIdsCache = [];
+
+    /**
+     * HR: Pamti ACL retke područja tijekom jednog zahtjeva.
+     * EN: Caches Workspace ACL rows during one request.
+     *
+     * @var array<int, list<array<string, mixed>>>
+     */
+    private array $workspaceAclCache = [];
+
+    /**
+     * HR: Pamti već izračunata prava područja po korisniku.
+     * EN: Caches already calculated Workspace permissions per user.
+     *
+     * @var array<string, array<string, bool>>
+     */
+    private array $workspacePermissionCache = [];
+
+    /**
+     * HR: Pamti čvorove područja tijekom jednog zahtjeva.
+     * EN: Caches Workspace nodes during one request.
+     *
+     * @var array<int, list<array<string, mixed>>>
+     */
+    private array $workspaceNodesCache = [];
+
+    /**
+     * HR: Pamti paketni rezultat nasljednog ACL izračuna.
+     * EN: Caches batched inherited ACL calculation results.
+     *
+     * @var array<string, array<int, array<string, bool>>>
+     */
+    private array $nodePermissionCache = [];
+
+    /**
      * HR: Prima repozitorij, auth kontekst i konfiguraciju potrebnu za jedinstveni ACL izračun.
      * EN: Receives the repository, auth context, and configuration required for one ACL calculation.
      */
     public function __construct(
-        private WorkspaceRepository $repository,
-        private AuthnHandlerInterface $authnHandler,
-        private WorkspaceConfig $config,
-        private WorkspaceWorkflowService $workflow,
+        private readonly WorkspaceRepository $repository,
+        private readonly AuthnHandlerInterface $authnHandler,
+        private readonly WorkspaceConfig $config,
+        private readonly WorkspaceWorkflowService $workflow,
     ) {
     }
 
@@ -114,13 +155,19 @@ final readonly class WorkspaceAccessService
     {
         $user ??= $this->currentUser();
         $userId = $this->userId($user);
-        $groupIds = $userId > 0 ? $this->repository->groupIdsForUser($userId) : [];
+        $cacheKey = $this->workspacePermissionCacheKey($workspace, $user);
+        if (array_key_exists($cacheKey, $this->workspacePermissionCache)) {
+            return $this->workspacePermissionCache[$cacheKey];
+        }
 
-        return $this->workspacePermissionsFromRows(
+        $groupIds = $this->groupIds($userId);
+        $workspaceId = WorkspaceValue::int($workspace['id'] ?? 0);
+
+        return $this->workspacePermissionCache[$cacheKey] = $this->workspacePermissionsFromRows(
             $workspace,
             $user,
             $groupIds,
-            $this->repository->workspaceAclRows(WorkspaceValue::int($workspace['id'] ?? 0)),
+            $this->workspaceAclRows($workspaceId),
         );
     }
 
@@ -136,33 +183,85 @@ final readonly class WorkspaceAccessService
     public function nodePermissions(array $workspace, array $node, ?array $user = null): array
     {
         $user ??= $this->currentUser();
-        $base = $this->workspacePermissions($workspace, $user);
+        $nodeId = WorkspaceValue::int($node['id'] ?? 0);
+        $nodes = $this->nodesForWorkspace(WorkspaceValue::int($workspace['id'] ?? 0));
+        $permissions = $this->nodePermissionsForNodes($workspace, $nodes, $user);
+
+        return $permissions[$nodeId] ?? $this->workspacePermissions($workspace, $user);
+    }
+
+    /**
+     * HR: Grupno računa efektivna prava svih zadanih čvorova iz jednog skupa
+     *     Workspace ACL-a, grupa i ograničenja. Početnička napomena: lanac
+     *     roditelja računa se u memoriji pa veliko stablo ne izvodi upit po retku.
+     *
+     * EN: Calculates effective permissions for all supplied nodes in one batch
+     *     from Workspace ACL, groups, and restrictions. Beginner note: parent
+     *     chains are calculated in memory so a large tree does not query per row.
+     *
+     * @param array<string, mixed> $workspace
+     * @param list<array<string, mixed>> $nodes
+     * @param array<string, mixed>|null $user
+     * @return array<int, array<string, bool>>
+     */
+    public function nodePermissionsForNodes(
+        array $workspace,
+        array $nodes,
+        ?array $user = null,
+    ): array {
+        $user ??= $this->currentUser();
         $userId = $this->userId($user);
+        $cacheKey = $this->nodePermissionCacheKey($workspace, $nodes, $user);
+        if (array_key_exists($cacheKey, $this->nodePermissionCache)) {
+            return $this->nodePermissionCache[$cacheKey];
+        }
+
+        $groupIds = $this->groupIds($userId);
+        $base = $this->workspacePermissions($workspace, $user);
+
+        $nodeIds = [];
+        $parentIds = [];
+        foreach ($nodes as $node) {
+            $nodeId = WorkspaceValue::int($node['id'] ?? 0);
+            if ($nodeId <= 0) {
+                continue;
+            }
+
+            $nodeIds[] = $nodeId;
+            $parentIds[$nodeId] = WorkspaceValue::int($node['parent_id'] ?? 0);
+        }
+
+        if ($nodeIds === []) {
+            return [];
+        }
+
         if (
             $this->isAdministrator($user)
             || ($userId > 0 && $userId === WorkspaceValue::int($workspace['owner_user_id'] ?? 0))
         ) {
-            return $base;
+            return $this->nodePermissionCache[$cacheKey] = array_fill_keys($nodeIds, $base);
         }
 
-        $ancestorIds = $this->repository->ancestorNodeIds(
-            WorkspaceValue::int($workspace['id'] ?? 0),
-            WorkspaceValue::int($node['id'] ?? 0),
-        );
         $rowsByNode = [];
-        foreach ($this->repository->nodeAclRowsForNodes($ancestorIds) as $row) {
-            $rowsByNode[WorkspaceValue::int($row['node_id'] ?? 0)][] = $row;
+        foreach ($this->repository->nodeAclRowsForNodes($nodeIds) as $row) {
+            $restrictionNodeId = WorkspaceValue::int($row['node_id'] ?? 0);
+            if ($restrictionNodeId > 0) {
+                $rowsByNode[$restrictionNodeId][] = $row;
+            }
         }
 
-        $groupIds = $userId > 0 ? $this->repository->groupIdsForUser($userId) : [];
+        $permissions = [];
+        foreach ($nodeIds as $nodeId) {
+            $permissions[$nodeId] = $this->restrictPermissionsFromRows(
+                $base,
+                $this->ancestorIdsFromParentMap($nodeId, $parentIds),
+                $rowsByNode,
+                $userId,
+                $groupIds,
+            );
+        }
 
-        return $this->restrictPermissionsFromRows(
-            $base,
-            $ancestorIds,
-            $rowsByNode,
-            $userId,
-            $groupIds,
-        );
+        return $this->nodePermissionCache[$cacheKey] = $permissions;
     }
 
     /**
@@ -254,9 +353,24 @@ final readonly class WorkspaceAccessService
         string $language = '',
     ): array {
         $user ??= $this->currentUser();
+        $nodes = $this->nodesForWorkspace(WorkspaceValue::int($workspace['id'] ?? 0));
+        $permissionsByNode = $this->nodePermissionsForNodes($workspace, $nodes, $user);
+        $workflowStates = $language !== ''
+        ? $this->repository->nodeWorkflowsForNodes(
+            array_values(array_filter(array_map(
+                static fn(array $node): int =>
+                    WorkspaceValue::string($node['node_type'] ?? '') === 'document'
+                        ? WorkspaceValue::int($node['id'] ?? 0)
+                        : 0,
+                $nodes,
+            ))),
+            $language,
+        )
+        : [];
         $visible = [];
-        foreach ($this->repository->nodesForWorkspace(WorkspaceValue::int($workspace['id'] ?? 0)) as $node) {
-            $permissions = $this->nodePermissions($workspace, $node, $user);
+        foreach ($nodes as $node) {
+            $nodeId = WorkspaceValue::int($node['id'] ?? 0);
+            $permissions = $permissionsByNode[$nodeId] ?? $this->emptyPermissions();
             if (!$permissions['can_view']) {
                 continue;
             }
@@ -267,10 +381,7 @@ final readonly class WorkspaceAccessService
                 && !$permissions['can_edit']
                 && !$permissions['can_publish']
                 && !$permissions['can_manage']
-                && !$this->workflow->isReadable(
-                    WorkspaceValue::int($node['id'] ?? 0),
-                    $language,
-                )
+                && !$this->workflow->isReadableWorkflow($workflowStates[$nodeId] ?? null)
             ) {
                 continue;
             }
@@ -280,6 +391,140 @@ final readonly class WorkspaceAccessService
         }
 
         return $this->buildTree($visible, null);
+    }
+
+    /**
+     * HR: Briše kratkotrajne ACL cacheve nakon promjene prava u istom zahtjevu.
+     *     Početnička napomena: sljedeći izračun tada ponovno čita bazu.
+     * EN: Clears short-lived ACL caches after permissions change in the same
+     *     request. Beginner note: the next calculation then reads the database again.
+     */
+    public function clearRequestCache(): void
+    {
+        $this->groupIdsCache = [];
+        $this->workspaceAclCache = [];
+        $this->workspacePermissionCache = [];
+        $this->workspaceNodesCache = [];
+        $this->nodePermissionCache = [];
+    }
+
+    /**
+     * HR: Gradi lanac predaka iz već učitane mape roditelja i zaustavlja se
+     *     na nedostajućem čvoru ili ciklusu neispravnih podataka.
+     * EN: Builds an ancestor chain from a preloaded parent map and stops at a
+     *     missing node or a cycle in malformed data.
+     *
+     * @param array<int, int> $parentIds
+     * @return list<int>
+     */
+    private function ancestorIdsFromParentMap(int $nodeId, array $parentIds): array
+    {
+        $ancestorIds = [];
+        $visited = [];
+        $currentId = $nodeId;
+        while ($currentId > 0 && isset($parentIds[$currentId]) && !isset($visited[$currentId])) {
+            $visited[$currentId] = true;
+            $ancestorIds[] = $currentId;
+            $currentId = $parentIds[$currentId];
+        }
+
+        return array_reverse($ancestorIds);
+    }
+
+    /**
+     * HR: Vraća korisnikove grupe iz cachea ili ih prvi put učitava kroz repozitorij.
+     * EN: Returns a user's groups from cache or loads them through the repository once.
+     *
+     * @return list<int>
+     */
+    private function groupIds(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+
+        if (!array_key_exists($userId, $this->groupIdsCache)) {
+            $this->groupIdsCache[$userId] = $this->repository->groupIdsForUser($userId);
+        }
+
+        return $this->groupIdsCache[$userId];
+    }
+
+    /**
+     * HR: Vraća ACL retke područja iz cachea ili ih prvi put učitava.
+     * EN: Returns Workspace ACL rows from cache or loads them once.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function workspaceAclRows(int $workspaceId): array
+    {
+        if (!array_key_exists($workspaceId, $this->workspaceAclCache)) {
+            $this->workspaceAclCache[$workspaceId] = $this->repository->workspaceAclRows($workspaceId);
+        }
+
+        return $this->workspaceAclCache[$workspaceId];
+    }
+
+    /**
+     * HR: Vraća sve čvorove područja iz cachea ili ih prvi put učitava.
+     * EN: Returns all Workspace nodes from cache or loads them once.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function nodesForWorkspace(int $workspaceId): array
+    {
+        if (!array_key_exists($workspaceId, $this->workspaceNodesCache)) {
+            $this->workspaceNodesCache[$workspaceId] = $this->repository->nodesForWorkspace($workspaceId);
+        }
+
+        return $this->workspaceNodesCache[$workspaceId];
+    }
+
+    /**
+     * HR: Gradi stabilan ključ prava područja iz korisnika i sigurnosno bitnih
+     *     svojstava područja.
+     * EN: Builds a stable Workspace-permission key from the user and
+     *     security-relevant Workspace properties.
+     *
+     * @param array<string, mixed> $workspace
+     * @param array<string, mixed>|null $user
+     */
+    private function workspacePermissionCacheKey(array $workspace, ?array $user): string
+    {
+        return WorkspaceValue::int($workspace['id'] ?? 0)
+        . '|'
+        . $this->userId($user)
+        . '|'
+        . (int)$this->isAdministrator($user)
+        . '|'
+        . WorkspaceValue::int($workspace['owner_user_id'] ?? 0)
+        . '|'
+        . WorkspaceValue::string($workspace['visibility'] ?? '')
+        . '|'
+        . (int)(bool)($workspace['is_archived'] ?? false);
+    }
+
+    /**
+     * HR: Gradi ključ paketnog ACL rezultata iz područja, korisnika i strukture
+     *     zadanih čvorova.
+     * EN: Builds a batched ACL result key from the Workspace, user, and supplied
+     *     node structure.
+     *
+     * @param array<string, mixed> $workspace
+     * @param list<array<string, mixed>> $nodes
+     * @param array<string, mixed>|null $user
+     */
+    private function nodePermissionCacheKey(array $workspace, array $nodes, ?array $user): string
+    {
+        $nodeSignature = '';
+        foreach ($nodes as $node) {
+            $nodeSignature .= WorkspaceValue::int($node['id'] ?? 0)
+            . ':'
+            . WorkspaceValue::int($node['parent_id'] ?? 0)
+            . ';';
+        }
+
+        return $this->workspacePermissionCacheKey($workspace, $user) . '|' . $nodeSignature;
     }
 
     /**

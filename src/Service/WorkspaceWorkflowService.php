@@ -97,8 +97,22 @@ final readonly class WorkspaceWorkflowService
             return null;
         }
 
-        $workflow = $this->repository->nodeWorkflow(
+        return $this->publicationVersionForNode(
             WorkspaceValue::int($node['id'] ?? 0),
+            $language,
+        );
+    }
+
+    /**
+     * HR: Vraća objavljenu verziju već poznatog čvora bez ponovnog traženja
+     *     dokumenta. Nula znači da objavljeni sadržaj nije dostupan.
+     * EN: Returns the published version for an already known node without
+     *     looking up the document again. Zero means no published content is available.
+     */
+    public function publicationVersionForNode(int $nodeId, string $language): int
+    {
+        $workflow = $this->repository->nodeWorkflow(
+            $nodeId,
             $language,
         );
         if (!is_array($workflow)) {
@@ -120,12 +134,19 @@ final readonly class WorkspaceWorkflowService
      */
     public function isReadable(int $nodeId, string $language): bool
     {
-        $workflow = $this->repository->nodeWorkflow($nodeId, $language);
-        if (!is_array($workflow)) {
-            return false;
-        }
+        return $this->isReadableWorkflow($this->repository->nodeWorkflow($nodeId, $language));
+    }
 
-        return $this->status($workflow['status'] ?? '') !== self::STATUS_ARCHIVED
+    /**
+     * HR: Provjerava čitljivost već učitanog workflow retka bez dodatnog upita.
+     * EN: Checks a preloaded workflow row for readability without another query.
+     *
+     * @param array<string, mixed>|null $workflow
+     */
+    public function isReadableWorkflow(?array $workflow): bool
+    {
+        return is_array($workflow)
+        && $this->status($workflow['status'] ?? '') !== self::STATUS_ARCHIVED
         && $this->positiveInt($workflow['published_version_number'] ?? null) > 0;
     }
 
