@@ -6,6 +6,27 @@ The Workspace module organizes related content into **Workspaces** (`Područja`
 in Croatian). Each Workspace has its own URL, owner, visibility, members,
 permissions, and hierarchical page tree.
 
+## Dependencies
+
+Required, in enable order:
+
+1. `aaieduhr/heartphrame-framework` (`dev-main`)
+2. `aaieduhr/heartphrame-module-orm` (`dev-main`)
+3. `aaieduhr/heartphrame-module-auth` (`dev-main`)
+4. `aaieduhr/heartphrame-module-workspace` (`dev-main`)
+
+Optional integrations:
+
+- HTML Editor provides owned pages and editing; Menu adds navigation.
+- Notification informs reviewers/authors; E-mail can copy those notifications.
+- API adds ACL-aware Workspace resources and tree-management endpoints.
+
+```bash
+composer require aaieduhr/heartphrame-module-workspace:dev-main
+vendor/bin/hph workspace:install-migration
+vendor/bin/hph orm-migrate:up
+```
+
 Croatian documentation: [README_hr.md](README_hr.md)
 
 ## Features

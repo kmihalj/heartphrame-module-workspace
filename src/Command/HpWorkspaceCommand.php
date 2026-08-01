@@ -74,7 +74,7 @@ final readonly class HpWorkspaceCommand
         }
 
         $this->write(__('Kreirana je početna Workspace migracija: ') . $target);
-        $this->write(__('Sljedeći korak: pokreni `vendor/bin/hph orm-migrate up`.'));
+        $this->write(__('Sljedeći korak: pokreni `vendor/bin/hph orm-migrate:up`.'));
 
         return 0;
     }
@@ -86,7 +86,7 @@ final readonly class HpWorkspaceCommand
     public function help(): int
     {
         $this->write('hph workspace <install|help>');
-        $this->write('  vendor/bin/hph workspace install');
+        $this->write('  vendor/bin/hph workspace:install-migration');
 
         return 0;
     }

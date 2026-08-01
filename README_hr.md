@@ -6,6 +6,27 @@ Workspace modul organizira povezani sadržaj u **Područja** (`Workspaces` na
 engleskom). Svako Područje ima svoju putanju, vlasnika, vidljivost, članove,
 prava i hijerarhijsko stablo stranica.
 
+## Ovisnosti
+
+Obavezno, redoslijedom uključivanja:
+
+1. `aaieduhr/heartphrame-framework` (`dev-main`)
+2. `aaieduhr/heartphrame-module-orm` (`dev-main`)
+3. `aaieduhr/heartphrame-module-auth` (`dev-main`)
+4. `aaieduhr/heartphrame-module-workspace` (`dev-main`)
+
+Opcionalne integracije:
+
+- HTML Editor daje stranice i uređivanje, a Menu dodaje navigaciju.
+- Notification obavještava recenzente/autore; E-mail može slati kopije.
+- API dodaje ACL Workspace resurse i rute za upravljanje stablom.
+
+```bash
+composer require aaieduhr/heartphrame-module-workspace:dev-main
+vendor/bin/hph workspace:install-migration
+vendor/bin/hph orm-migrate:up
+```
+
 English documentation: [README.md](README.md)
 
 ## Mogućnosti

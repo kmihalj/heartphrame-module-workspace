@@ -365,6 +365,19 @@ Pretraga ACL subjekata vraća samo sigurni picker DTO: `id`, `label`, `type`,
 `category`, `is_builtin` i `is_read_only`. Interna Auth polja, uključujući
 hash lozinke i podatke prijave, ne prelaze granicu repozitorija.
 
+Primjer čitanja ključem koji ima `workspace:read`:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --header "Authorization: Bearer $HPH_API_TOKEN" \
+  --header 'Accept: application/json' \
+  "$HPH_API_URL/workspaces"
+```
+
+JSON envelope sadrži samo vidljive Workspace DTO objekte u `data`,
+`meta.request_id` i navigacijski `links`. Dvojezični brzi početak API modula
+sadrži ekvivalentni obični PHP klijent i očekivani problem odgovor.
+
 Početnička mentalna slika: `workspace:manage` znači „klijent smije zatražiti
 upravljanje područjem”. Korisnik kojem ključ pripada i dalje mora imati pravo
 izvršiti konkretnu operaciju.

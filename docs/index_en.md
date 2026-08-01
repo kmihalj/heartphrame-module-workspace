@@ -375,6 +375,19 @@ The ACL-subject search returns only the safe picker DTO: `id`, `label`, `type`,
 `category`, `is_builtin`, and `is_read_only`. Internal Auth fields, including
 password hashes and login metadata, never cross the repository boundary.
 
+Example read with a `workspace:read` key:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  --header "Authorization: Bearer $HPH_API_TOKEN" \
+  --header 'Accept: application/json' \
+  "$HPH_API_URL/workspaces"
+```
+
+The JSON envelope contains only visible Workspace DTOs in `data`, a
+`meta.request_id`, and navigation `links`. The API module's bilingual quick
+start contains the equivalent plain-PHP client and expected problem response.
+
 Beginners should think of `workspace:manage` as “the client may ask to manage a
 Workspace.” The user who owns that key must still be allowed to perform the
 specific operation.
