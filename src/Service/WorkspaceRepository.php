@@ -1350,13 +1350,17 @@ final readonly class WorkspaceRepository
                 continue;
             }
 
-            $user['label'] = $displayNames[$userId]
-            ?? $this->stringValue($user['login_identifier'] ?? __('Korisnik'));
-            $user['type'] = self::SUBJECT_USER;
-            $user['category'] = self::SUBJECT_USER;
-            $user['is_builtin'] = false;
-            $user['is_read_only'] = false;
-            $decorated[$userId] = $user;
+            // HR: Imenik vraća samo javna picker polja jer Auth red može sadržavati tajne.
+            // EN: The directory returns only public picker fields because an Auth row may contain secrets.
+            $decorated[$userId] = [
+                'id' => $userId,
+                'label' => $displayNames[$userId]
+                    ?? $this->stringValue($user['login_identifier'] ?? __('Korisnik')),
+                'type' => self::SUBJECT_USER,
+                'category' => self::SUBJECT_USER,
+                'is_builtin' => false,
+                'is_read_only' => false,
+            ];
         }
 
         return $decorated;

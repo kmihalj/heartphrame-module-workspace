@@ -8,6 +8,7 @@ use HeartPhrame\Routing\UrlGenerator;
 
 use function array_key_exists;
 use function is_array;
+use function trim;
 
 final class WorkspaceEditorAccess
 {
@@ -58,6 +59,7 @@ final class WorkspaceEditorAccess
         private readonly WorkspaceConfig $config,
         private readonly UrlGenerator $urlGenerator,
         private readonly WorkspaceWorkflowService $workflow,
+        private readonly WorkspaceNotificationBridge $notifications,
     ) {
     }
 
@@ -85,12 +87,34 @@ final class WorkspaceEditorAccess
     }
 
     /**
+     * HR: Provjerava pravo čitanja dokumenta za eksplicitnog API korisnika.
+     * EN: Checks document read permission for an explicit API user.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function canReadDocumentForUser(string $documentKey, array $user): bool
+    {
+        return (bool)($this->documentPermissionsForUser($documentKey, $user)['can_view'] ?? false);
+    }
+
+    /**
      * HR: Provjerava nasljedno pravo uređivanja editor dokumenta.
      * EN: Checks inherited edit permission for an editor document.
      */
     public function canEditDocument(string $documentKey): bool
     {
         return (bool)($this->documentPermissions($documentKey)['can_edit'] ?? false);
+    }
+
+    /**
+     * HR: Provjerava pravo uređivanja dokumenta za eksplicitnog API korisnika.
+     * EN: Checks document edit permission for an explicit API user.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function canEditDocumentForUser(string $documentKey, array $user): bool
+    {
+        return (bool)($this->documentPermissionsForUser($documentKey, $user)['can_edit'] ?? false);
     }
 
     /**
@@ -103,6 +127,17 @@ final class WorkspaceEditorAccess
     }
 
     /**
+     * HR: Provjerava pravo objavljivanja dokumenta za eksplicitnog API korisnika.
+     * EN: Checks document publishing permission for an explicit API user.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function canPublishDocumentForUser(string $documentKey, array $user): bool
+    {
+        return (bool)($this->documentPermissionsForUser($documentKey, $user)['can_publish'] ?? false);
+    }
+
+    /**
      * HR: Provjerava nasljedno pravo brisanja editor dokumenta.
      * EN: Checks inherited delete permission for an editor document.
      */
@@ -112,12 +147,167 @@ final class WorkspaceEditorAccess
     }
 
     /**
+     * HR: Provjerava pravo brisanja dokumenta za eksplicitnog API korisnika.
+     * EN: Checks document deletion permission for an explicit API user.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function canDeleteDocumentForUser(string $documentKey, array $user): bool
+    {
+        return (bool)($this->documentPermissionsForUser($documentKey, $user)['can_delete'] ?? false);
+    }
+
+    /**
      * HR: Provjerava upravljačko pravo nad editor dokumentom.
      * EN: Checks management permission for an editor document.
      */
     public function canManageDocument(string $documentKey): bool
     {
         return (bool)($this->documentPermissions($documentKey)['can_manage'] ?? false);
+    }
+
+    /**
+     * HR: Provjerava upravljačko pravo dokumenta za eksplicitnog API korisnika.
+     * EN: Checks document management permission for an explicit API user.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function canManageDocumentForUser(string $documentKey, array $user): bool
+    {
+        return (bool)($this->documentPermissionsForUser($documentKey, $user)['can_manage'] ?? false);
+    }
+
+    /**
+     * HR: Provjerava smije li API korisnik dodati dokument u korijen ili ispod
+     * dokument-stranice zadanog područja.
+     *
+     * EN: Checks whether an API user may add a document at the root or below a
+     * document page in the supplied Workspace.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function canCreateDocumentForUser(
+        string $workspaceSlug,
+        int $parentId,
+        array $user,
+    ): bool {
+        $workspace = $this->repository->findWorkspaceBySlug(trim($workspaceSlug));
+        if (!is_array($workspace)) {
+            return false;
+        }
+
+        if ($parentId <= 0) {
+            return $this->access->workspacePermissions($workspace, $user)['can_add'];
+        }
+
+        $parent = $this->repository->findNodeById($parentId);
+        $sameWorkspace = is_array($parent)
+        && WorkspaceValue::int($parent['workspace_id'] ?? 0)
+        === WorkspaceValue::int($workspace['id'] ?? 0);
+
+        return $sameWorkspace
+        && is_array($parent)
+        && WorkspaceValue::string($parent['node_type'] ?? '') === 'document'
+        && $this->access->nodePermissions($workspace, $parent, $user)['can_add'];
+    }
+
+    /**
+     * HR: Povezuje upravo kreirani Editor dokument s Workspace čvorom i
+     * inicijalizira njegov jedini neobjavljeni nacrt.
+     *
+     * EN: Links a newly created Editor document to a Workspace node and
+     * initializes its single unpublished draft.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function attachDocumentForUser(
+        string $workspaceSlug,
+        int $parentId,
+        string $documentKey,
+        string $title,
+        string $nodeSlug,
+        string $language,
+        int $versionNumber,
+        array $user,
+    ): array {
+        if (!$this->canCreateDocumentForUser($workspaceSlug, $parentId, $user)) {
+            throw new \RuntimeException(__('Nemate pravo dodavanja stranice u ovo područje.'));
+        }
+
+        $workspace = $this->repository->findWorkspaceBySlug(trim($workspaceSlug));
+        if (!is_array($workspace)) {
+            throw new \RuntimeException(__('Područje nije pronađeno.'));
+        }
+
+        $workspaceId = WorkspaceValue::int($workspace['id'] ?? 0);
+        $node = $this->repository->saveNode(
+            $workspaceId,
+            [
+                'title' => $title,
+                'slug' => $nodeSlug,
+                'node_type' => 'document',
+                'document_key' => $documentKey,
+                'parent_id' => $parentId > 0 ? $parentId : null,
+                'sort_order' => 100,
+                'is_homepage' => !$this->workspaceHasHomepage($workspaceId),
+            ],
+            WorkspaceValue::int($user['id'] ?? 0),
+        );
+        if ($versionNumber > 0) {
+            $this->workflow->markDocumentDraft(
+                $documentKey,
+                $language,
+                $versionNumber,
+                WorkspaceValue::int($user['id'] ?? 0),
+            );
+        }
+
+        $this->access->clearRequestCache();
+        $this->documentContextCache = [];
+        $this->documentPermissionCache = [];
+
+        return $node;
+    }
+
+    /**
+     * HR: Uklanja Workspace čvor dokumenta; neobjavljena nova stranica briše
+     * se fizički, a objavljena stranica koristi soft-delete stabla.
+     *
+     * EN: Removes a document's Workspace node; a never-published new page is
+     * deleted physically, while a published page uses tree soft deletion.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function removeDocumentNodeForUser(
+        string $documentKey,
+        bool $neverPublished,
+        array $user,
+    ): void {
+        $context = $this->documentContext($documentKey);
+        if (
+            !is_array($context)
+            || !$this->canDeleteDocumentForUser($documentKey, $user)
+        ) {
+            throw new \RuntimeException(__('Nemate pravo brisanja ove stranice.'));
+        }
+
+        $workspaceId = WorkspaceValue::int($context['workspace']['id'] ?? 0);
+        $nodeId = WorkspaceValue::int($context['node']['id'] ?? 0);
+        $actorId = WorkspaceValue::int($user['id'] ?? 0);
+        if ($neverPublished) {
+            $this->repository->deleteUnpublishedNodePermanently(
+                $workspaceId,
+                $nodeId,
+                $actorId,
+            );
+        } else {
+            $this->repository->disableNodeTree($workspaceId, $nodeId, $actorId);
+        }
+
+        $this->access->clearRequestCache();
+        $this->documentContextCache = [];
+        $this->documentPermissionCache = [];
     }
 
     /**
@@ -204,11 +394,31 @@ final class WorkspaceEditorAccess
         int $versionNumber,
     ): void {
         $user = $this->access->currentUser();
+        $this->markDocumentDraftForUser(
+            $documentKey,
+            $language,
+            $versionNumber,
+            is_array($user) ? $user : [],
+        );
+    }
+
+    /**
+     * HR: Bilježi novu radnu verziju dokumenta za eksplicitnog API korisnika.
+     * EN: Records a new working document version for an explicit API user.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function markDocumentDraftForUser(
+        string $documentKey,
+        string $language,
+        int $versionNumber,
+        array $user,
+    ): void {
         $this->workflow->markDocumentDraft(
             $documentKey,
             $language,
             $versionNumber,
-            is_array($user) ? WorkspaceValue::int($user['id'] ?? 0) : 0,
+            WorkspaceValue::int($user['id'] ?? 0),
         );
     }
 
@@ -223,23 +433,117 @@ final class WorkspaceEditorAccess
         string $language,
         int $versionNumber,
     ): void {
+        $user = $this->access->currentUser();
+        $this->publishDocumentDraftForUser(
+            $documentKey,
+            $language,
+            $versionNumber,
+            is_array($user) ? $user : [],
+        );
+    }
+
+    /**
+     * HR: Šalje aktualni Workspace nacrt na pregled za prijavljenog korisnika.
+     * EN: Submits the current Workspace draft for review for the authenticated user.
+     */
+    public function submitDocumentDraft(
+        string $documentKey,
+        string $language,
+        int $versionNumber,
+    ): void {
+        $user = $this->access->currentUser();
+        $this->submitDocumentDraftForUser(
+            $documentKey,
+            $language,
+            $versionNumber,
+            is_array($user) ? $user : [],
+        );
+    }
+
+    /**
+     * HR: Šalje Workspace nacrt na pregled uz prava eksplicitnog API korisnika
+     *     i obavještava sve efektivne objavljivače.
+     * EN: Submits a Workspace draft for review with an explicit API user's
+     *     permissions and notifies all effective publishers.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function submitDocumentDraftForUser(
+        string $documentKey,
+        string $language,
+        int $versionNumber,
+        array $user,
+    ): void {
         $context = $this->documentContext($documentKey);
-        if (!is_array($context) || !$this->canPublishDocument($documentKey)) {
+        if (!is_array($context) || !$this->canEditDocumentForUser($documentKey, $user)) {
+            throw new \RuntimeException(__('Nemate pravo uređivanja ove stranice.'));
+        }
+
+        $node = $context['node'];
+        $workspace = $context['workspace'];
+        $permissions = $this->documentPermissionsForUser($documentKey, $user);
+        $actorUserId = WorkspaceValue::int($user['id'] ?? 0);
+        $this->workflow->transition(
+            WorkspaceValue::int($node['id'] ?? 0),
+            $language,
+            'submit',
+            $versionNumber,
+            $actorUserId,
+            (bool)($permissions['can_edit'] ?? false),
+            (bool)($permissions['can_publish'] ?? false),
+            (bool)($permissions['can_manage'] ?? false),
+        );
+        $this->notifications->pageSubmitted(
+            $workspace,
+            $node,
+            $language,
+            $versionNumber,
+            $actorUserId,
+        );
+    }
+
+    /**
+     * HR: Objavljuje Workspace nacrt uz prava eksplicitnog API korisnika.
+     * EN: Publishes a Workspace draft with an explicit API user's permissions.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function publishDocumentDraftForUser(
+        string $documentKey,
+        string $language,
+        int $versionNumber,
+        array $user,
+    ): void {
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context) || !$this->canPublishDocumentForUser($documentKey, $user)) {
             throw new \RuntimeException(__('Nemate pravo objavljivanja ove stranice.'));
         }
 
         $node = $context['node'];
-        $permissions = $this->documentPermissions($documentKey);
-        $user = $this->access->currentUser();
+        $workspace = $context['workspace'];
+        $permissions = $this->documentPermissionsForUser($documentKey, $user);
+        $actorUserId = WorkspaceValue::int($user['id'] ?? 0);
+        $workflowBeforePublish = $this->repository->nodeWorkflow(
+            WorkspaceValue::int($node['id'] ?? 0),
+            $language,
+        );
         $this->workflow->transition(
             WorkspaceValue::int($node['id'] ?? 0),
             $language,
             'publish',
             $versionNumber,
-            is_array($user) ? WorkspaceValue::int($user['id'] ?? 0) : 0,
+            $actorUserId,
             (bool)($permissions['can_edit'] ?? false),
             (bool)($permissions['can_publish'] ?? false),
             (bool)($permissions['can_manage'] ?? false),
+        );
+        $this->notifications->pagePublished(
+            $workspace,
+            $node,
+            $language,
+            $versionNumber,
+            WorkspaceValue::int($workflowBeforePublish['submitted_by_user_id'] ?? 0),
+            $actorUserId,
         );
         unset($this->publicationVersionCache[$documentKey . '|' . $language]);
     }
@@ -255,18 +559,38 @@ final class WorkspaceEditorAccess
         string $language,
         int $currentVersionNumber,
     ): void {
+        $user = $this->access->currentUser();
+        $this->discardDocumentDraftForUser(
+            $documentKey,
+            $language,
+            $currentVersionNumber,
+            is_array($user) ? $user : [],
+        );
+    }
+
+    /**
+     * HR: Odbacuje Workspace nacrt uz prava eksplicitnog API korisnika.
+     * EN: Discards a Workspace draft with an explicit API user's permissions.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function discardDocumentDraftForUser(
+        string $documentKey,
+        string $language,
+        int $currentVersionNumber,
+        array $user,
+    ): void {
         $context = $this->documentContext($documentKey);
-        if (!is_array($context) || !$this->canEditDocument($documentKey)) {
+        if (!is_array($context) || !$this->canEditDocumentForUser($documentKey, $user)) {
             throw new \RuntimeException(__('Nemate pravo uređivanja ove stranice.'));
         }
 
         $node = $context['node'];
-        $user = $this->access->currentUser();
         $this->workflow->discardDraft(
             WorkspaceValue::int($node['id'] ?? 0),
             $language,
             $currentVersionNumber,
-            is_array($user) ? WorkspaceValue::int($user['id'] ?? 0) : 0,
+            WorkspaceValue::int($user['id'] ?? 0),
         );
         unset($this->publicationVersionCache[$documentKey . '|' . $language]);
     }
@@ -317,9 +641,24 @@ final class WorkspaceEditorAccess
     private function documentPermissions(string $documentKey): array
     {
         $user = $this->access->currentUser();
+        return $this->documentPermissionsForUser(
+            $documentKey,
+            is_array($user) ? $user : [],
+        );
+    }
+
+    /**
+     * HR: Računa efektivna prava dokumenta za eksplicitno predanog korisnika.
+     * EN: Calculates effective document permissions for an explicitly supplied user.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,bool>
+     */
+    private function documentPermissionsForUser(string $documentKey, array $user): array
+    {
         $cacheKey = $documentKey
         . '|'
-        . WorkspaceValue::int(is_array($user) ? ($user['id'] ?? 0) : 0)
+        . WorkspaceValue::int($user['id'] ?? 0)
         . '|'
         . (int)$this->access->isAdministrator($user);
         if (array_key_exists($cacheKey, $this->documentPermissionCache)) {
@@ -336,5 +675,23 @@ final class WorkspaceEditorAccess
             $context['node'],
             $user,
         );
+    }
+
+    /**
+     * HR: Provjerava ima li područje aktivnu početnu dokument-stranicu.
+     * EN: Checks whether a Workspace has an active document homepage.
+     */
+    private function workspaceHasHomepage(int $workspaceId): bool
+    {
+        foreach ($this->repository->nodesForWorkspace($workspaceId) as $node) {
+            if (
+                WorkspaceValue::string($node['node_type'] ?? '') === 'document'
+                && (bool)($node['is_homepage'] ?? false)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

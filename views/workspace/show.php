@@ -86,7 +86,10 @@ $workflowIcon = static function (string $action): string {
         class="workspace-sidebar collapse<?= $treeVisibleByDefault ? ' show' : '' ?>"
         aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
     >
-        <nav class="card shadow-sm workspace-tree-card" aria-label="<?= $this->escape(__('Stablo stranica')) ?>">
+        <nav
+            class="card shadow-sm workspace-tree-card hph-sidebar-card"
+            aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
+        >
             <div class="card-body">
                 <div class="workspace-tree-heading mb-3">
                     <?php if ($hasTreeActions) : ?>
@@ -321,8 +324,8 @@ $workflowIcon = static function (string $action): string {
                 $editorView,
             ) ?>
         <?php elseif (is_array($activeNode ?? null)) : ?>
-            <article class="card shadow-sm">
-                <div class="card-body">
+            <article class="card shadow-sm hph-content-card">
+                <div class="card-body" data-hph-content-title-target>
                     <div class="editor-html-view-actions workspace-unpublished-actions">
                     <?php foreach ($fallbackLeadingActions as $action) : ?>
                         <?php $actionType = WorkspaceValue::string($action['type'] ?? ''); ?>

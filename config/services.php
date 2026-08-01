@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
+use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceApiService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
@@ -44,6 +45,13 @@ return [
             $container->get(WorkspaceWorkflowService::class),
         ),
 
+    WorkspaceApiService::class => static fn(ContainerInterface $container): WorkspaceApiService =>
+        new WorkspaceApiService(
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceConfig::class),
+        ),
+
     WorkspaceEditorBridge::class => static fn(ContainerInterface $container): WorkspaceEditorBridge =>
         new WorkspaceEditorBridge(
             $container,
@@ -58,6 +66,7 @@ return [
             $container->get(WorkspaceConfig::class),
             $container->get(UrlGenerator::class),
             $container->get(WorkspaceWorkflowService::class),
+            $container->get(WorkspaceNotificationBridge::class),
         ),
 
     WorkspaceNotificationBridge::class =>

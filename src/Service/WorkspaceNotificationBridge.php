@@ -22,8 +22,11 @@ use function sprintf;
  */
 final readonly class WorkspaceNotificationBridge
 {
+    private const NOTIFICATION_NAMESPACE =
+    'AaiEduHr\\HeartPhrameModuleNotification\\Service\\';
+
     private const NOTIFICATION_SERVICE =
-    'AaiEduHr\\HeartPhrameModuleNotification\\Service\\NotificationService';
+    self::NOTIFICATION_NAMESPACE . 'NotificationService';
 
     /**
      * HR: Prima container, ACL servis i URL generator bez Composer ovisnosti o

@@ -65,6 +65,7 @@ publika kojima pripada i svih njegovih grupa se zbrajaju:
 - `can_view`
 - `can_add`
 - `can_edit`
+- `can_publish`
 - `can_delete`
 - `can_manage`
 
@@ -335,7 +336,44 @@ Korisne putanje sa zadanom konfiguracijom:
 - `/settings/workspaces/all`: administratorski popis
 - `/settings/workspaces/deleted`: vraćanje obrisanih Područja
 
-## 10. Razvojne provjere
+## 10. API integracija
+
+Workspace se i dalje može instalirati samostalno. Izlaže samo neutralni opis
+scopeova i `WorkspaceApiService`; ne uvozi klase API modula. Kada je uključen
+opcionalni API modul, on registrira HTTP adapter:
+
+| Metoda i putanja | Potrebni scope | Domensko pravilo |
+| --- | --- | --- |
+| `GET /api/v1/workspaces` | `workspace:read` | Vraća samo vidljiva područja |
+| `POST /api/v1/workspaces` | `workspace:manage` | Koristi aplikacijsko pravilo kreiranja |
+| `GET/PATCH/DELETE /api/v1/workspaces/{slug}` | read/manage | Ponovno provjerava efektivno pravo |
+| `GET /api/v1/workspaces/{slug}/tree?lang=hr` | `workspace:read` | Filtrira naslijeđeni ACL i objavljeno stanje |
+| `PUT /api/v1/workspaces/{slug}/tree/order` | `workspace:manage` | Atomski provjerava potpuni raspored |
+| `GET/PUT /api/v1/workspaces/{slug}/acl` | `workspace:manage` | Čita ili zamjenjuje potpuni ACL područja |
+| `GET /api/v1/workspaces/{slug}/acl/subjects` | `workspace:manage` | Ograničena pretraga `category=user\|group&q=...` |
+| `POST/PATCH/DELETE .../nodes` | `workspace:manage` | Upravlja samo internim i vanjskim linkovima |
+| `GET/PUT .../nodes/{nodeId}/acl` | `workspace:manage` | Čita ili mijenja izravna ograničenja |
+| `GET /api/v1/workspaces/deleted` | `workspace:manage` | Samo administrator |
+| `POST /api/v1/workspaces/deleted/{id}/restore` | `workspace:manage` | Samo administrator, rješava sukob sluga |
+
+Scope ključa je prva zaštita, a nikada konačna odluka. Servis zatim računa ista
+prava vlasnika, administratora, Workspace ACL-a, grupa, arhive i naslijeđenih
+ograničenja koja koristi web sučelje. Nedostatak prava pregleda skriva se kao
+`404`, a vidljiv resurs bez prava upravljanja vraća `403`.
+
+Pretraga ACL subjekata vraća samo sigurni picker DTO: `id`, `label`, `type`,
+`category`, `is_builtin` i `is_read_only`. Interna Auth polja, uključujući
+hash lozinke i podatke prijave, ne prelaze granicu repozitorija.
+
+Početnička mentalna slika: `workspace:manage` znači „klijent smije zatražiti
+upravljanje područjem”. Korisnik kojem ključ pripada i dalje mora imati pravo
+izvršiti konkretnu operaciju.
+
+Dokument-stranice i privici namjerno nisu dio ovog ugovora. HTML Editor API
+posjedovat će `page:*` i `attachment:*`, a Workspace integracija će dodati
+efektivni ACL stranice kada su oba modula instalirana.
+
+## 11. Razvojne provjere
 
 ```bash
 composer on-commit

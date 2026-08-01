@@ -1,5 +1,7 @@
 # HeartPhrame Workspace Module
 
+[Hrvatska verzija](README_hr.md)
+
 The Workspace module organizes related content into **Workspaces** (`Područja`
 in Croatian). Each Workspace has its own URL, owner, visibility, members,
 permissions, and hierarchical page tree.
@@ -9,7 +11,7 @@ Croatian documentation: [README_hr.md](README_hr.md)
 ## Features
 
 - built-in **Public** and **All signed-in users** audiences plus restricted Workspaces
-- user and group permissions: view, add, edit, delete, and manage
+- user and group permissions: view, add, edit, publish, delete, and manage
 - asynchronous Auth-directory search without listing every user and group
 - page-level restrictions inherited by every descendant
 - hierarchical document, internal-link, and external-link nodes
@@ -21,6 +23,7 @@ Croatian documentation: [README_hr.md](README_hr.md)
 - readers keep seeing the last published immutable version while editors prepare a draft
 - optional in-app and e-mail notifications for review requests and publications
 - optional Menu integration for application and Settings navigation
+- optional versioned REST API for Workspace metadata, ACL, and link-tree operations
 - portable initial schema for SQLite, PostgreSQL, and MySQL/MariaDB
 
 Page restrictions only narrow the permissions granted at Workspace level. They
@@ -41,7 +44,23 @@ search without loading the complete directory.
 - `aaieduhr/heartphrame-module-auth`
 - `aaieduhr/heartphrame-module-orm`
 
-The HTML editor, Menu, Notification, and E-mail modules are optional integrations.
+The HTML editor, API, Menu, Notification, and E-mail modules are optional integrations.
+
+## API Integration
+
+Workspace publishes the neutral `workspace:read` and `workspace:manage`
+descriptors from `config/api.php` without depending on the API module. When
+the API module is also installed, it conditionally exposes versioned Workspace
+routes under `/api/v1/workspaces`.
+
+`workspace:manage` covers Workspace metadata, soft deletion/restoration, ACL,
+tree order, and internal/external link nodes. It does not create or delete
+HTML documents and attachments; those remain the HTML editor's responsibility.
+Every operation checks both the key scope and the effective Workspace ACL of
+the key owner. A broad scope never turns an unauthorized user into a manager.
+
+See [docs/index_en.md](docs/index_en.md#10-api-integration) for the route list
+and response behavior.
 
 ## Installation
 
@@ -108,3 +127,9 @@ The detailed architecture and beginner-oriented operational guide are in
 
 This work is published under the
 [European Union Public License (EUPL) v1.2](LICENSE).
+
+## Dependency policy
+
+The Framework and internal HeartPhrame modules are required from the moving
+`dev-main` branch. This module does not commit `composer.lock`; CI resolves
+the latest development heads and runs the complete `composer on-commit` suite.

@@ -69,6 +69,7 @@ built-in audience they belong to, and all their groups are combined:
 - `can_view`
 - `can_add`
 - `can_edit`
+- `can_publish`
 - `can_delete`
 - `can_manage`
 
@@ -344,7 +345,45 @@ Useful URLs with the default configuration:
 - `/settings/workspaces/all`: administrator list
 - `/settings/workspaces/deleted`: restore screen
 
-## 10. Developer checks
+## 10. API integration
+
+Workspace remains independently installable. It exposes only the neutral scope
+descriptor and `WorkspaceApiService`; it does not import API-module classes.
+When the optional API module is enabled, that module registers the HTTP adapter:
+
+| Method and path | Required scope | Domain rule |
+| --- | --- | --- |
+| `GET /api/v1/workspaces` | `workspace:read` | Returns only visible Workspaces |
+| `POST /api/v1/workspaces` | `workspace:manage` | Uses the application creation policy |
+| `GET/PATCH/DELETE /api/v1/workspaces/{slug}` | read/manage | Rechecks effective view or manage permission |
+| `GET /api/v1/workspaces/{slug}/tree?lang=hr` | `workspace:read` | Filters inherited ACL and publication state |
+| `PUT /api/v1/workspaces/{slug}/tree/order` | `workspace:manage` | Atomically validates the complete arrangement |
+| `GET/PUT /api/v1/workspaces/{slug}/acl` | `workspace:manage` | Reads or replaces the complete Workspace ACL |
+| `GET /api/v1/workspaces/{slug}/acl/subjects` | `workspace:manage` | Bounded `category=user\|group&q=...` search |
+| `POST/PATCH/DELETE .../nodes` | `workspace:manage` | Manages internal/external link nodes only |
+| `GET/PUT .../nodes/{nodeId}/acl` | `workspace:manage` | Reads or replaces direct inherited restrictions |
+| `GET /api/v1/workspaces/deleted` | `workspace:manage` | Administrator only |
+| `POST /api/v1/workspaces/deleted/{id}/restore` | `workspace:manage` | Administrator only, resolves slug conflicts |
+
+The key scope is the first gate, never the final authorization decision. The
+service then evaluates the same owner, administrator, Workspace ACL, group
+membership, archive, and inherited node restrictions used by the web UI.
+Missing view permission is concealed as `404`; a visible resource without
+management permission returns `403`.
+
+The ACL-subject search returns only the safe picker DTO: `id`, `label`, `type`,
+`category`, `is_builtin`, and `is_read_only`. Internal Auth fields, including
+password hashes and login metadata, never cross the repository boundary.
+
+Beginners should think of `workspace:manage` as “the client may ask to manage a
+Workspace.” The user who owns that key must still be allowed to perform the
+specific operation.
+
+Document pages and attachments are intentionally absent from this contract.
+The HTML Editor API will own `page:*` and `attachment:*`, while Workspace
+integration will add its effective page ACL when both modules are installed.
+
+## 11. Developer checks
 
 ```bash
 composer on-commit

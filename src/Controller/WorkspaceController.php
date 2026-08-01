@@ -1106,6 +1106,7 @@ final readonly class WorkspaceController
             'title' => is_array($editorView)
                 ? $this->stringValue($editorView['title'] ?? '')
                 : $this->stringValue($workspace['name'] ?? ''),
+            'themeTitleContext' => 'integrated',
             'workspace' => $workspace,
             'workspacePermissions' => $workspacePermissions,
             'tree' => $tree,

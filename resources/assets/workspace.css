@@ -89,7 +89,7 @@
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
+    scrollbar-gutter: auto;
 }
 
 .workspace-tree-link-level-1 {

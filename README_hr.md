@@ -1,5 +1,7 @@
 # HeartPhrame Workspace modul
 
+[English version](README.md)
+
 Workspace modul organizira povezani sadržaj u **Područja** (`Workspaces` na
 engleskom). Svako Područje ima svoju putanju, vlasnika, vidljivost, članove,
 prava i hijerarhijsko stablo stranica.
@@ -9,7 +11,7 @@ English documentation: [README.md](README.md)
 ## Mogućnosti
 
 - ugrađene publike **Javno** i **Svi prijavljeni** uz ograničena Područja
-- prava korisnika i grupa: pregled, dodavanje, uređivanje, brisanje i upravljanje
+- prava korisnika i grupa: pregled, dodavanje, uređivanje, objavljivanje, brisanje i upravljanje
 - asinkrono pretraživanje Auth imenika bez ispisivanja svih korisnika i grupa
 - ograničenja po stranici koja nasljeđuju svi potomci
 - hijerarhijski čvorovi za dokumente, interne i vanjske linkove
@@ -21,6 +23,7 @@ English documentation: [README.md](README.md)
 - čitatelji i dalje vide zadnju objavljenu nepromjenjivu verziju dok se uređuje nacrt
 - opcionalne in-app i e-mail obavijesti za pregled i objavu
 - opcionalna Menu integracija za glavni izbornik i Postavke
+- opcionalni verzionirani REST API za podatke područja, ACL i linkove u stablu
 - prijenosna inicijalna shema za SQLite, PostgreSQL i MySQL/MariaDB
 
 Ograničenja stranice mogu samo suziti prava dodijeljena na Području. Ne mogu
@@ -41,7 +44,23 @@ pretragom koja ne učitava cijeli imenik.
 - `aaieduhr/heartphrame-module-auth`
 - `aaieduhr/heartphrame-module-orm`
 
-HTML editor, Menu, Notification i E-mail modul su opcionalne integracije.
+HTML editor, API, Menu, Notification i E-mail modul su opcionalne integracije.
+
+## API integracija
+
+Workspace objavljuje neutralne opise scopeova `workspace:read` i
+`workspace:manage` iz `config/api.php` bez ovisnosti o API modulu. Kada je
+instaliran i API modul, uvjetno se izlažu verzionirane Workspace rute ispod
+`/api/v1/workspaces`.
+
+`workspace:manage` obuhvaća podatke područja, soft brisanje i vraćanje, ACL,
+redoslijed stabla te interne i vanjske link-čvorove. Ne kreira niti briše HTML
+dokumente i privitke; oni ostaju odgovornost HTML editora. Svaka operacija
+provjerava i scope ključa i efektivni Workspace ACL njegova vlasnika. Široki
+scope nikada ne pretvara neovlaštenog korisnika u upravitelja.
+
+Popis ruta i ponašanje odgovora nalaze se u
+[docs/index_hr.md](docs/index_hr.md#10-api-integracija).
 
 ## Instalacija
 
@@ -108,3 +127,9 @@ Detaljna arhitektura i upute razumljive početnicima nalaze se u
 
 Modul je objavljen pod
 [European Union Public License (EUPL) v1.2](LICENSE).
+
+## Politika ovisnosti
+
+Framework i interni HeartPhrame moduli zahtijevaju se s pomične grane
+`dev-main`. Ovaj modul ne sprema `composer.lock`; CI dohvaća najnovija
+razvojna stanja i pokreće cijeli skup provjera `composer on-commit`.

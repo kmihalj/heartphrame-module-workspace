@@ -371,6 +371,11 @@ final class WorkspaceAccessServiceTest extends TestCase
             'Ana',
         );
         $this->assertSame('Ana Horvat', $users[0]['label'] ?? null);
+        $this->assertArrayNotHasKey('password_hash', $users[0]);
+        $this->assertSame(
+            ['id', 'label', 'type', 'category', 'is_builtin', 'is_read_only'],
+            array_keys($users[0]),
+        );
 
         $groups = $this->repository->searchDirectorySubjects(
             WorkspaceRepository::SUBJECT_GROUP,
@@ -527,6 +532,7 @@ final class WorkspaceAccessServiceTest extends TestCase
         $schema->create('auth_users', static function (Blueprint $table): void {
             $table->id();
             $table->string('login_identifier');
+            $table->string('password_hash')->nullable();
             $table->boolean('is_active')->default(true);
         });
         $schema->create('auth_groups', static function (Blueprint $table): void {
@@ -550,6 +556,7 @@ final class WorkspaceAccessServiceTest extends TestCase
             $this->database->table('auth_users')->insert([
                 'id' => $userId,
                 'login_identifier' => 'user' . $userId,
+                'password_hash' => 'must-never-leave-the-repository',
                 'is_active' => true,
             ]);
         }

@@ -2,7 +2,8 @@
     "name": "aaieduhr/heartphrame-module-workspace",
     "description": "Workspace and hierarchical content organization module for HeartPhrame",
     "type": "heartphrame-module",
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "license": "EUPL-1.2",
     "repositories": [
         {
@@ -20,12 +21,13 @@
     ],
     "require": {
         "php": ">=8.2",
-        "aaieduhr/heartphrame-framework": ">=0.0.22 <1.0",
-        "aaieduhr/heartphrame-module-auth": "^1.1",
-        "aaieduhr/heartphrame-module-orm": "^1.1.2"
+        "aaieduhr/heartphrame-framework": "dev-main",
+        "aaieduhr/heartphrame-module-auth": "dev-main",
+        "aaieduhr/heartphrame-module-orm": "dev-main"
     },
     "suggest": {
         "aaieduhr/heartphrame-module-editor-html": "Enables Workspace-owned HTML pages and editing.",
+        "aaieduhr/heartphrame-module-api": "Exposes ACL-aware Workspace resources through the versioned HTTP API.",
         "aaieduhr/heartphrame-module-menu": "Adds Workspace entries to the application and settings menus.",
         "aaieduhr/heartphrame-module-notification": "Notifies publishers about review requests and authors about publication.",
         "aaieduhr/heartphrame-module-email": "Sends optional e-mail copies through the Notification module."
@@ -54,6 +56,10 @@
         }
     ],
     "config": {
+        "github-protocols": [
+            "https"
+        ],
+        "use-github-api": false,
         "sort-packages": true,
         "cache-dir": "build/composer",
         "allow-plugins": {
