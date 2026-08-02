@@ -104,6 +104,11 @@ effective permissions are then calculated in memory. This keeps the number of
 ORM queries approximately constant instead of adding several queries for every
 new page, while preserving identical inheritance and security checks.
 
+Workspace listings use the same rule: a regular user's ACL rows for every
+listed Workspace are loaded in one query, while the administrator fast path
+does not read ACL rows it cannot need. Adding Workspaces therefore does not
+create an ACL query-per-row pattern.
+
 Those calculated results live for one request only. After saving Workspace or
 node ACL entries, the controller explicitly clears the short-lived cache, so a
 later check in the same request also sees the new permissions.

@@ -129,8 +129,13 @@ final class WorkspaceAccessService
     public function visibleWorkspaces(?array $user = null): array
     {
         $user ??= $this->currentUser();
+        $workspaces = $this->repository->activeWorkspaces();
+        if (!$this->isAdministrator($user)) {
+            $this->preloadWorkspaceAclRows($workspaces);
+        }
+
         $visible = [];
-        foreach ($this->repository->activeWorkspaces() as $workspace) {
+        foreach ($workspaces as $workspace) {
             $permissions = $this->workspacePermissions($workspace, $user);
             if (!$permissions['can_view']) {
                 continue;
@@ -160,8 +165,20 @@ final class WorkspaceAccessService
             return $this->workspacePermissionCache[$cacheKey];
         }
 
-        $groupIds = $this->groupIds($userId);
         $workspaceId = WorkspaceValue::int($workspace['id'] ?? 0);
+        if (
+            $this->isAdministrator($user)
+            || ($userId > 0 && $userId === WorkspaceValue::int($workspace['owner_user_id'] ?? 0))
+        ) {
+            return $this->workspacePermissionCache[$cacheKey] = $this->workspacePermissionsFromRows(
+                $workspace,
+                $user,
+                [],
+                [],
+            );
+        }
+
+        $groupIds = $this->groupIds($userId);
 
         return $this->workspacePermissionCache[$cacheKey] = $this->workspacePermissionsFromRows(
             $workspace,
@@ -463,6 +480,38 @@ final class WorkspaceAccessService
         }
 
         return $this->workspaceAclCache[$workspaceId];
+    }
+
+    /**
+     * HR: Unaprijed puni request cache ACL retcima svih područja jednim upitom.
+     * EN: Preloads the request cache with ACL rows for all Workspaces in one query.
+     *
+     * @param list<array<string, mixed>> $workspaces
+     */
+    private function preloadWorkspaceAclRows(array $workspaces): void
+    {
+        $workspaceIds = [];
+        foreach ($workspaces as $workspace) {
+            $workspaceId = WorkspaceValue::int($workspace['id'] ?? 0);
+            if ($workspaceId > 0 && !array_key_exists($workspaceId, $this->workspaceAclCache)) {
+                $workspaceIds[$workspaceId] = $workspaceId;
+            }
+        }
+
+        if ($workspaceIds === []) {
+            return;
+        }
+
+        foreach ($workspaceIds as $workspaceId) {
+            $this->workspaceAclCache[$workspaceId] = [];
+        }
+
+        foreach ($this->repository->workspaceAclRowsForWorkspaces(array_values($workspaceIds)) as $row) {
+            $workspaceId = WorkspaceValue::int($row['workspace_id'] ?? 0);
+            if (array_key_exists($workspaceId, $this->workspaceAclCache)) {
+                $this->workspaceAclCache[$workspaceId][] = $row;
+            }
+        }
     }
 
     /**

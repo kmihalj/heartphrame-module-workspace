@@ -304,6 +304,33 @@ final readonly class WorkspaceRepository
     }
 
     /**
+     * HR: Vraća ACL retke više područja jednim upitom kako popisi ne bi
+     *     izvodili zaseban upit za svako područje.
+     * EN: Returns ACL rows for multiple Workspaces in one query so listings do
+     *     not execute a separate query for every Workspace.
+     *
+     * @param list<int> $workspaceIds
+     * @return list<array<string, mixed>>
+     */
+    public function workspaceAclRowsForWorkspaces(array $workspaceIds): array
+    {
+        if ($workspaceIds === []) {
+            return [];
+        }
+
+        $this->assertTablesReady();
+
+        return $this->rows(
+            $this->database->table(ModuleWorkspace::TABLE_WORKSPACE_ACL)
+                ->whereIn('workspace_id', $workspaceIds)
+                ->orderBy('workspace_id', 'ASC')
+                ->orderBy('subject_type', 'ASC')
+                ->orderBy('subject_id', 'ASC')
+                ->get(),
+        );
+    }
+
+    /**
      * HR: Vraća samo ACL subjekte koji su dodani području, s prikaznim nazivima
      *     dohvaćenima grupno. Stara visibility vrijednost se prikazuje kao
      *     ugrađeni subjekt dok se ACL prvi put ne spremi.

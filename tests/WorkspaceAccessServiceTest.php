@@ -6,6 +6,7 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Tests;
 
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Migration\ReversibleMigrationInterface;
+use AaiEduHr\HeartPhrameModuleOrm\Database\QueryExecuted;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Schema\Blueprint;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
@@ -278,6 +279,52 @@ final class WorkspaceAccessServiceTest extends TestCase
         $this->access->clearRequestCache();
 
         $this->assertFalse($this->access->workspacePermissions($workspace)['can_view']);
+    }
+
+    /**
+     * HR: Dokazuje da običan korisnik učitava ACL cijelog popisa jednim upitom,
+     *     dok administrator koristi brzi put bez nepotrebnog ACL čitanja.
+     * EN: Proves that a regular user loads listing ACL in one query while an
+     *     administrator uses the fast path without an unnecessary ACL read.
+     */
+    public function testVisibleWorkspaceListingBatchesAclRowsAndSkipsThemForAdministrator(): void
+    {
+        for ($index = 1; $index <= 3; ++$index) {
+            $workspace = $this->repository->saveWorkspace([
+                'name' => 'Paketno područje ' . $index,
+                'slug' => 'paketno-podrucje-' . $index,
+                'visibility' => 'restricted',
+                'owner_user_id' => 1,
+            ], 1);
+            $this->repository->replaceWorkspaceAcl((int)$workspace['id'], [
+                'user' => [2 => ['can_view' => true]],
+            ]);
+        }
+
+        $aclQueries = [];
+        $this->database->listen(static function (QueryExecuted $query) use (&$aclQueries): void {
+            if (str_contains($query->sql, 'FROM "workspace_acl"')) {
+                $aclQueries[] = $query->sql;
+            }
+        });
+        $this->authn->login(['id' => 2, 'is_admin' => false]);
+
+        $this->assertCount(3, $this->access->visibleWorkspaces());
+        $this->assertCount(1, $aclQueries);
+        $this->assertStringContainsString('"workspace_id" IN (?, ?, ?)', $aclQueries[0]);
+
+        $this->database->forgetQueryListeners();
+        $this->access->clearRequestCache();
+        $administratorAclQueries = [];
+        $this->database->listen(static function (QueryExecuted $query) use (&$administratorAclQueries): void {
+            if (str_contains($query->sql, 'FROM "workspace_acl"')) {
+                $administratorAclQueries[] = $query->sql;
+            }
+        });
+        $this->authn->login(['id' => 3, 'is_admin' => true]);
+
+        $this->assertCount(3, $this->access->visibleWorkspaces());
+        $this->assertSame([], $administratorAclQueries);
     }
 
     /**

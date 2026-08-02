@@ -100,6 +100,11 @@ efektivna prava zatim se računaju u memoriji. Time broj ORM upita ostaje
 približno stalan umjesto da raste za nekoliko upita sa svakom novom stranicom,
 uz potpuno isto nasljeđivanje i sigurnosne provjere.
 
+I popisi Područja slijede isto pravilo: ACL retci svih prikazanih Područja za
+običnog korisnika učitavaju se jednim upitom, dok administratorski brzi put ne
+čita ACL retke koji mu ne mogu trebati. Dodavanje Područja zato ne stvara ACL
+upit za svaki red popisa.
+
 Rezultati tog izračuna vrijede samo tijekom jednog zahtjeva. Nakon spremanja
 Workspace ili čvornog ACL-a controller izričito prazni kratkotrajni cache, pa
 sljedeća provjera u istom zahtjevu također vidi nova prava.
