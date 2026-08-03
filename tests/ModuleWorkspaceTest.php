@@ -18,5 +18,13 @@ final class ModuleWorkspaceTest extends TestCase
     public function testPackageNameIsStable(): void
     {
         $this->assertSame('aaieduhr/heartphrame-module-workspace', ModuleWorkspace::PACKAGE_NAME);
+        $this->assertSame(
+            'workspace_homepage_settings',
+            ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+        );
+        $this->assertSame(
+            'workspace_user_homepages',
+            ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+        );
     }
 }

@@ -3,13 +3,17 @@
 declare(strict_types=1);
 
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
+use AaiEduHr\HeartPhrameModuleWorkspace\Account\WorkspaceHomepageAccountSectionProvider;
 use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceApiService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorAccess;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageRepository;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
@@ -22,6 +26,7 @@ use HeartPhrame\Authn\AuthnHandlerInterface;
 use HeartPhrame\Bridge\ComposerBridge;
 use HeartPhrame\Config\ConfigInterface;
 use HeartPhrame\Http\ResponseFactory;
+use HeartPhrame\Localization\TranslatorInterface;
 use HeartPhrame\Routing\Routes;
 use HeartPhrame\Routing\UrlGenerator;
 use HeartPhrame\View\View;
@@ -33,6 +38,10 @@ return [
 
     WorkspaceRepository::class => static fn(ContainerInterface $container): WorkspaceRepository =>
         new WorkspaceRepository($container->get(Database::class)),
+
+    WorkspaceHomepageRepository::class =>
+        static fn(ContainerInterface $container): WorkspaceHomepageRepository =>
+            new WorkspaceHomepageRepository($container->get(Database::class)),
 
     WorkspaceWorkflowService::class => static fn(ContainerInterface $container): WorkspaceWorkflowService =>
         new WorkspaceWorkflowService($container->get(WorkspaceRepository::class)),
@@ -51,6 +60,24 @@ return [
             $container->get(WorkspaceAccessService::class),
             $container->get(WorkspaceConfig::class),
         ),
+
+    WorkspaceHomepageService::class => static fn(ContainerInterface $container): WorkspaceHomepageService =>
+        new WorkspaceHomepageService(
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceHomepageRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceWorkflowService::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
+            $container->get(TranslatorInterface::class),
+            $container->get(ConfigInterface::class),
+        ),
+
+    // HR: Host aplikacija koristi neutralni servisni ID i zato ne ovisi o Workspace klasi.
+    // EN: The host application uses a neutral service ID and therefore does not depend on a Workspace class.
+    'heartphrame.application_homepage_resolver' =>
+        static fn(ContainerInterface $container): WorkspaceHomepageService =>
+            $container->get(WorkspaceHomepageService::class),
 
     WorkspaceEditorBridge::class => static fn(ContainerInterface $container): WorkspaceEditorBridge =>
         new WorkspaceEditorBridge(
@@ -124,4 +151,22 @@ return [
             $container->get(UrlGenerator::class),
             $container->get(AlertHandler::class),
         ),
+
+    WorkspaceHomepageController::class =>
+        static fn(ContainerInterface $container): WorkspaceHomepageController =>
+            new WorkspaceHomepageController(
+                $container->get(ResponseFactory::class),
+                $container->get(WorkspaceModuleViewRenderer::class),
+                $container->get(WorkspaceAccessService::class),
+                $container->get(WorkspaceHomepageService::class),
+                $container->get(UrlGenerator::class),
+                $container->get(AlertHandler::class),
+            ),
+
+    WorkspaceHomepageAccountSectionProvider::class =>
+        static fn(ContainerInterface $container): WorkspaceHomepageAccountSectionProvider =>
+            new WorkspaceHomepageAccountSectionProvider(
+                $container->get(WorkspaceHomepageService::class),
+                $container->get(UrlGenerator::class),
+            ),
 ];

@@ -265,4 +265,49 @@ return [
     'Vrati u nacrt' => 'Return to draft',
     'Workflow stranice nije moguće spremiti.' =>
         'The page workflow could not be saved.',
+    'Naslovnica aplikacije' => 'Application homepage',
+    'Javna naslovnica' => 'Public homepage',
+    'Naslovnica za prijavljene korisnike' => 'Homepage for signed-in users',
+    'Osobna naslovnica' => 'Personal homepage',
+    'Moja naslovnica' => 'My homepage',
+    'Ugrađena naslovnica aplikacije' => 'Built-in application homepage',
+    'Koristi javnu naslovnicu' => 'Use the public homepage',
+    'Koristi zadanu naslovnicu' => 'Use the default homepage',
+    'Dopusti korisnicima odabir osobne naslovnice' =>
+        'Allow users to choose a personal homepage',
+    'Spremi postavke naslovnice' => 'Save homepage settings',
+    'Spremi osobnu naslovnicu' => 'Save personal homepage',
+    'Postavke naslovnice su spremljene.' => 'Homepage settings were saved.',
+    'Osobna naslovnica je spremljena.' => 'The personal homepage was saved.',
+    'Za osobnu naslovnicu potrebna je prijava.' => 'You must sign in to choose a personal homepage.',
+    'Osobni odabir naslovnice nije omogućen.' => 'Personal homepage selection is not enabled.',
+    'Migracija naslovnice područja nije primijenjena.' =>
+        'The Workspace homepage migration has not been applied.',
+    'Javna naslovnica mora biti objavljena i dostupna gostima.' =>
+        'The public homepage must be published and available to guests.',
+    'Naslovnica za prijavljene mora biti objavljena i dostupna svim prijavljenim korisnicima.' =>
+        'The signed-in homepage must be published and available to every signed-in user.',
+    'Odabrana stranica nije objavljena ili joj nemate pristup.' =>
+        'The selected page is not published or you do not have access to it.',
+    'Odaberite objavljenu stranicu područja za goste i prijavljene korisnike.' =>
+        'Choose a published Workspace page for guests and signed-in users.',
+    'Nedostaje migracija naslovnice područja.' => 'The Workspace homepage migration is missing.',
+    'Primijenite Workspace migraciju za naslovnicu pa ponovno otvorite postavke.' =>
+        'Apply the Workspace homepage migration and reopen these settings.',
+    'Može se odabrati samo stranica dostupna neprijavljenom gostu.' =>
+        'Only a page available to an anonymous guest may be selected.',
+    'Izbor mora biti dostupan svakom prijavljenom korisniku bez grupnih prava.' =>
+        'The choice must be available to every signed-in user without group grants.',
+    'Korisnik će u svom profilu vidjeti samo objavljene stranice kojima ima pristup.' =>
+        'A user sees only published pages they may access in their profile.',
+    'Ako odabrana stranica nestane ili prava budu opozvana, primjenjuje se sljedeća dostupna zadana naslovnica.' =>
+        'If the selected page disappears or access is revoked, the next available default homepage is used.',
+    'Odaberite objavljenu stranicu područja koja će se otvoriti nakon dolaska na naslovnicu.' =>
+        'Choose the published Workspace page that opens when you visit the application homepage.',
+    'Prethodno odabrana stranica više nije dostupna pa se koristi zadana naslovnica.' =>
+        'The previously selected page is no longer available, so the default homepage is used.',
+    'Predložak migracije naslovnice nije pronađen.' =>
+        'The homepage migration template was not found.',
+    'Kreirana je Workspace migracija naslovnice: ' =>
+        'Created Workspace homepage migration: ',
 ];

@@ -670,6 +670,45 @@ final readonly class WorkspaceRepository
     }
 
     /**
+     * HR: Grupno učitava workflow stanja svih jezika za zadane stranice. To
+     * omogućuje naslovnici aplikacije siguran jezični fallback bez N+1 upita.
+     * EN: Loads workflow states for every language of the requested pages in
+     * one batch. This lets the application homepage use a safe locale fallback
+     * without N+1 queries.
+     *
+     * @param list<int> $nodeIds
+     * @return array<int, list<array<string, mixed>>>
+     */
+    public function nodeWorkflowsForNodesAllLanguages(array $nodeIds): array
+    {
+        $this->assertTablesReady();
+        $nodeIds = array_values(array_unique(array_filter(
+            $nodeIds,
+            static fn(int $nodeId): bool => $nodeId > 0,
+        )));
+        if ($nodeIds === []) {
+            return [];
+        }
+
+        $indexed = [];
+        foreach (
+            $this->rows(
+                $this->database->table(ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS)
+                    ->whereIn('node_id', $nodeIds)
+                    ->orderBy('language_code', 'ASC')
+                    ->get(),
+            ) as $workflow
+        ) {
+            $nodeId = $this->intValue($workflow['node_id'] ?? 0);
+            if ($nodeId > 0) {
+                $indexed[$nodeId][] = $workflow;
+            }
+        }
+
+        return $indexed;
+    }
+
+    /**
      * HR: Sprema aktualnu workflow snimku uz jedinstven zapis po stranici i
      *     jeziku. Poslovni servis prije poziva provjerava dopušteni prijelaz.
      * EN: Stores the current workflow snapshot in one unique row per page and

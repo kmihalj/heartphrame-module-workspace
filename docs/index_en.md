@@ -347,8 +347,34 @@ Useful URLs with the default configuration:
 - `/workspace/{workspace}`: Workspace homepage
 - `/workspace/{workspace}/{page}`: page or link node
 - `/settings/workspaces`: administrator settings
+- `/settings/workspaces/homepage`: public, signed-in, and personal homepage policy
 - `/settings/workspaces/all`: administrator list
 - `/settings/workspaces/deleted`: restore screen
+
+### Application homepage policy
+
+Workspace owns this feature because every stored target is a Workspace page
+and must be revalidated through its inherited ACL and publication workflow.
+Auth remains independently usable: Workspace registers its own optional Auth
+account partial and removes it automatically when the module is disabled.
+
+Administrators choose the public and signed-in defaults under the Workspace
+settings group. A user who is allowed to personalize the homepage chooses only
+from published pages currently visible to that user. The root resolver applies
+personal → signed-in → public → host fallback and redirects only to a generated
+internal named route, preventing open redirects and stale ACL access.
+
+Existing installations add the two portable tables with:
+
+```bash
+vendor/bin/hph workspace:install-homepage-migration
+vendor/bin/hph orm-migrate:up
+```
+
+A full site backup includes `workspace_homepage_settings` and
+`workspace_user_homepages`. An individual Workspace import must not silently
+replace the destination site's homepage policy, and Theme export does not own
+these values.
 
 ## 10. API integration
 

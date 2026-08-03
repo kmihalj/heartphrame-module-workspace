@@ -265,4 +265,49 @@ return [
     'Vrati u nacrt' => 'Vrati u nacrt',
     'Workflow stranice nije moguće spremiti.' =>
         'Workflow stranice nije moguće spremiti.',
+    'Naslovnica aplikacije' => 'Naslovnica aplikacije',
+    'Javna naslovnica' => 'Javna naslovnica',
+    'Naslovnica za prijavljene korisnike' => 'Naslovnica za prijavljene korisnike',
+    'Osobna naslovnica' => 'Osobna naslovnica',
+    'Moja naslovnica' => 'Moja naslovnica',
+    'Ugrađena naslovnica aplikacije' => 'Ugrađena naslovnica aplikacije',
+    'Koristi javnu naslovnicu' => 'Koristi javnu naslovnicu',
+    'Koristi zadanu naslovnicu' => 'Koristi zadanu naslovnicu',
+    'Dopusti korisnicima odabir osobne naslovnice' =>
+        'Dopusti korisnicima odabir osobne naslovnice',
+    'Spremi postavke naslovnice' => 'Spremi postavke naslovnice',
+    'Spremi osobnu naslovnicu' => 'Spremi osobnu naslovnicu',
+    'Postavke naslovnice su spremljene.' => 'Postavke naslovnice su spremljene.',
+    'Osobna naslovnica je spremljena.' => 'Osobna naslovnica je spremljena.',
+    'Za osobnu naslovnicu potrebna je prijava.' => 'Za osobnu naslovnicu potrebna je prijava.',
+    'Osobni odabir naslovnice nije omogućen.' => 'Osobni odabir naslovnice nije omogućen.',
+    'Migracija naslovnice područja nije primijenjena.' =>
+        'Migracija naslovnice područja nije primijenjena.',
+    'Javna naslovnica mora biti objavljena i dostupna gostima.' =>
+        'Javna naslovnica mora biti objavljena i dostupna gostima.',
+    'Naslovnica za prijavljene mora biti objavljena i dostupna svim prijavljenim korisnicima.' =>
+        'Naslovnica za prijavljene mora biti objavljena i dostupna svim prijavljenim korisnicima.',
+    'Odabrana stranica nije objavljena ili joj nemate pristup.' =>
+        'Odabrana stranica nije objavljena ili joj nemate pristup.',
+    'Odaberite objavljenu stranicu područja za goste i prijavljene korisnike.' =>
+        'Odaberite objavljenu stranicu područja za goste i prijavljene korisnike.',
+    'Nedostaje migracija naslovnice područja.' => 'Nedostaje migracija naslovnice područja.',
+    'Primijenite Workspace migraciju za naslovnicu pa ponovno otvorite postavke.' =>
+        'Primijenite Workspace migraciju za naslovnicu pa ponovno otvorite postavke.',
+    'Može se odabrati samo stranica dostupna neprijavljenom gostu.' =>
+        'Može se odabrati samo stranica dostupna neprijavljenom gostu.',
+    'Izbor mora biti dostupan svakom prijavljenom korisniku bez grupnih prava.' =>
+        'Izbor mora biti dostupan svakom prijavljenom korisniku bez grupnih prava.',
+    'Korisnik će u svom profilu vidjeti samo objavljene stranice kojima ima pristup.' =>
+        'Korisnik će u svom profilu vidjeti samo objavljene stranice kojima ima pristup.',
+    'Ako odabrana stranica nestane ili prava budu opozvana, primjenjuje se sljedeća dostupna zadana naslovnica.' =>
+        'Ako odabrana stranica nestane ili prava budu opozvana, primjenjuje se sljedeća dostupna zadana naslovnica.',
+    'Odaberite objavljenu stranicu područja koja će se otvoriti nakon dolaska na naslovnicu.' =>
+        'Odaberite objavljenu stranicu područja koja će se otvoriti nakon dolaska na naslovnicu.',
+    'Prethodno odabrana stranica više nije dostupna pa se koristi zadana naslovnica.' =>
+        'Prethodno odabrana stranica više nije dostupna pa se koristi zadana naslovnica.',
+    'Predložak migracije naslovnice nije pronađen.' =>
+        'Predložak migracije naslovnice nije pronađen.',
+    'Kreirana je Workspace migracija naslovnice: ' =>
+        'Kreirana je Workspace migracija naslovnice: ',
 ];

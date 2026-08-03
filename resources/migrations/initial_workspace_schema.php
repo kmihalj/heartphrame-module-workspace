@@ -133,6 +133,32 @@ return new class implements ReversibleMigrationInterface {
                 },
             );
         }
+
+        if (!$schema->hasTable(ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS)) {
+            $schema->create(
+                ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+                static function (Blueprint $table): void {
+                    $table->id();
+                    $table->bigInteger('public_node_id')->unsigned()->nullable()->index();
+                    $table->bigInteger('authenticated_node_id')->unsigned()->nullable()->index();
+                    $table->boolean('allow_user_selection')->default(true)->index();
+                    $table->bigInteger('updated_by_user_id')->unsigned()->nullable()->index();
+                    $table->timestamps();
+                },
+            );
+        }
+
+        if (!$schema->hasTable(ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES)) {
+            $schema->create(
+                ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+                static function (Blueprint $table): void {
+                    $table->id();
+                    $table->bigInteger('user_id')->unsigned()->unique();
+                    $table->bigInteger('node_id')->unsigned()->index();
+                    $table->timestamps();
+                },
+            );
+        }
     }
 
     /**
@@ -148,6 +174,8 @@ return new class implements ReversibleMigrationInterface {
 
         foreach (
             [
+                ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+                ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
                 ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS,
                 ModuleWorkspace::TABLE_WORKSPACE_NODE_ACL,
                 ModuleWorkspace::TABLE_WORKSPACE_NODES,

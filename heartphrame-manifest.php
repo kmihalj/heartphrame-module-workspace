@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use AaiEduHr\HeartPhrameModuleAuth\Account\AuthAccountSectionRegistry;
 use AaiEduHr\HeartPhrameModuleAuth\Middleware\RequireAuthenticatedUserMiddleware;
 use AaiEduHr\HeartPhrameModuleAuth\ModuleAuth;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
+use AaiEduHr\HeartPhrameModuleWorkspace\Account\WorkspaceHomepageAccountSectionProvider;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
@@ -207,6 +210,27 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
             ],
             [
                 'GET',
+                '/settings/workspaces/homepage',
+                WorkspaceHomepageController::class . '@settings',
+                'workspace.settings.homepage',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'POST',
+                '/settings/workspaces/homepage',
+                WorkspaceHomepageController::class . '@saveSettings',
+                'workspace.settings.homepage.save',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'POST',
+                '/workspaces/homepage/preference',
+                WorkspaceHomepageController::class . '@savePreference',
+                'workspace.homepage.preference.save',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'GET',
                 '/settings/workspaces/deleted',
                 WorkspaceSettingsController::class . '@deleted',
                 'workspace.settings.deleted',
@@ -232,6 +256,14 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                 'Copy initial Workspace migration into the host application.',
                 [\AaiEduHr\HeartPhrameModuleWorkspace\Command\HpWorkspaceCommand::class, 'installMigration'],
             ),
+            new CommandDefinition(
+                'workspace:install-homepage-migration',
+                'Copy the Workspace homepage upgrade migration into the host application.',
+                [
+                    \AaiEduHr\HeartPhrameModuleWorkspace\Command\HpWorkspaceCommand::class,
+                    'installHomepageMigration',
+                ],
+            ),
         ];
     }
 
@@ -254,6 +286,16 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                 $integration = $container->get(WorkspaceMenuIntegration::class);
                 if ($integration instanceof WorkspaceMenuIntegration) {
                     $integration->registerMenuItems();
+                }
+            },
+            static function (ContainerInterface $container): void {
+                $registry = $container->get(AuthAccountSectionRegistry::class);
+                $provider = $container->get(WorkspaceHomepageAccountSectionProvider::class);
+                if (
+                    $registry instanceof AuthAccountSectionRegistry
+                    && $provider instanceof WorkspaceHomepageAccountSectionProvider
+                ) {
+                    $registry->register($provider);
                 }
             },
         ];

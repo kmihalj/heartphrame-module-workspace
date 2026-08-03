@@ -46,6 +46,8 @@ final class WorkspaceSchemaTest extends TestCase
                 ModuleWorkspace::TABLE_WORKSPACE_NODES,
                 ModuleWorkspace::TABLE_WORKSPACE_NODE_ACL,
                 ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS,
+                ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+                ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
             ] as $table
         ) {
             $this->assertTrue($schema->hasTable($table), $table . ' was not created.');
@@ -55,6 +57,18 @@ final class WorkspaceSchemaTest extends TestCase
             $schema->hasColumns(
                 ModuleWorkspace::TABLE_WORKSPACES,
                 ['slug', 'visibility', 'owner_user_id', 'is_archived', 'is_deleted'],
+            ),
+        );
+        $this->assertTrue(
+            $schema->hasColumns(
+                ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+                ['public_node_id', 'authenticated_node_id', 'allow_user_selection'],
+            ),
+        );
+        $this->assertTrue(
+            $schema->hasColumns(
+                ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+                ['user_id', 'node_id'],
             ),
         );
         $this->assertTrue(
@@ -90,5 +104,41 @@ final class WorkspaceSchemaTest extends TestCase
 
         $migration->down($database);
         $this->assertFalse($schema->hasTable(ModuleWorkspace::TABLE_WORKSPACES));
+    }
+
+    /**
+     * HR: Provjerava da zasebna nadogradnja radi na postojećoj instalaciji i da je reverzibilna.
+     * EN: Verifies that the standalone upgrade works on an existing installation and is reversible.
+     */
+    public function testHomepageUpgradeMigrationIsPortableAndReversible(): void
+    {
+        $helper = new Helper();
+        $config = new Config($helper, [
+            'database' => [
+                'connections' => [
+                    'default' => [
+                        'driver' => 'sqlite',
+                        'database' => ':memory:',
+                    ],
+                ],
+            ],
+        ]);
+        $database = new Database($config, $helper);
+        $migration = require dirname(__DIR__)
+        . '/resources/migrations/add_workspace_homepage_preferences.php';
+        $this->assertInstanceOf(ReversibleMigrationInterface::class, $migration);
+
+        $migration->up($database);
+        $this->assertTrue(
+            $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS),
+        );
+        $this->assertTrue(
+            $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES),
+        );
+
+        $migration->down($database);
+        $this->assertFalse(
+            $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS),
+        );
     }
 }

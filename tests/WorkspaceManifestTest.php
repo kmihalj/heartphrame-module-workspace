@@ -6,6 +6,7 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Tests;
 
 use AaiEduHr\HeartPhrameModuleAuth\Middleware\RequireAuthenticatedUserMiddleware;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
@@ -27,7 +28,7 @@ final class WorkspaceManifestTest extends TestCase
             $routesByName[$route[3]] = $route;
         }
 
-        $this->assertCount(20, $routesByName);
+        $this->assertCount(23, $routesByName);
         $this->assertSame(
             ['GET', '/workspaces', WorkspaceController::class . '@index', 'workspace.index', []],
             $routesByName['workspace.index'],
@@ -91,6 +92,18 @@ final class WorkspaceManifestTest extends TestCase
         $this->assertContains(
             RequireAuthenticatedUserMiddleware::class,
             $routesByName['workspace.settings'][4],
+        );
+        $this->assertSame(
+            WorkspaceHomepageController::class . '@settings',
+            $routesByName['workspace.settings.homepage'][2],
+        );
+        $this->assertSame(
+            WorkspaceHomepageController::class . '@savePreference',
+            $routesByName['workspace.homepage.preference.save'][2],
+        );
+        $this->assertContains(
+            RequireAuthenticatedUserMiddleware::class,
+            $routesByName['workspace.homepage.preference.save'][4],
         );
     }
 }

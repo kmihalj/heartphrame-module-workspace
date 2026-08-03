@@ -338,8 +338,34 @@ Korisne putanje sa zadanom konfiguracijom:
 - `/workspace/{područje}`: početna stranica Područja
 - `/workspace/{područje}/{stranica}`: stranica ili link čvor
 - `/settings/workspaces`: administratorske postavke
+- `/settings/workspaces/homepage`: javna, prijavljena i osobna politika naslovnice
 - `/settings/workspaces/all`: administratorski popis
 - `/settings/workspaces/deleted`: vraćanje obrisanih Područja
+
+### Politika naslovnice aplikacije
+
+Workspace posjeduje ovu funkcionalnost jer je svaki spremljeni cilj Workspace
+stranica koju treba ponovno provjeriti kroz nasljedni ACL i proces objave. Auth
+i dalje radi potpuno samostalno: Workspace registrira vlastiti opcionalni
+partial korisničkog profila i automatski ga uklanja kada modul nije uključen.
+
+Administrator u grupi postavki Područja bira javnu i prijavljenu zadanu
+stranicu. Korisnik kojem je dopušten osobni izbor vidi samo objavljene stranice
+kojima trenutačno smije pristupiti. Resolver početne rute primjenjuje osobna →
+prijavljena → javna → host naslovnica i preusmjerava samo na generiranu internu
+named rutu, čime sprječava otvoreni redirect i pristup kroz zastarjeli ACL.
+
+Postojeća instalacija dodaje dvije prijenosne tablice naredbama:
+
+```bash
+vendor/bin/hph workspace:install-homepage-migration
+vendor/bin/hph orm-migrate:up
+```
+
+Potpuni backup sitea obuhvaća `workspace_homepage_settings` i
+`workspace_user_homepages`. Uvoz pojedinačnog Područja ne smije neprimjetno
+zamijeniti politiku naslovnice odredišnog sitea, a izvoz teme ne posjeduje ove
+vrijednosti.
 
 ## 10. API integracija
 

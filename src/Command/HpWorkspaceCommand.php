@@ -14,6 +14,8 @@ final readonly class HpWorkspaceCommand
 
     private const TEMPLATE_FILE = 'resources/migrations/initial_workspace_schema.php';
 
+    private const HOMEPAGE_TEMPLATE_FILE = 'resources/migrations/add_workspace_homepage_preferences.php';
+
     /**
      * HR: Prima konfiguraciju host aplikacije za određivanje cilja migracije.
      * EN: Receives host-application configuration for resolving the migration target.
@@ -37,6 +39,8 @@ final readonly class HpWorkspaceCommand
         return match ($subcommand) {
             'install', 'migration:install', 'install-migration', 'scaffold' =>
             $this->installMigration($subArguments, $options),
+            'homepage', 'homepage:install', 'install-homepage-migration' =>
+            $this->installHomepageMigration($subArguments, $options),
             'help', '--help', '-h' => $this->help(),
             default => $this->unknownSubcommand($subcommand),
         };
@@ -80,6 +84,46 @@ final readonly class HpWorkspaceCommand
     }
 
     /**
+     * HR: Kopira nadogradnju naslovnice u postojeću host aplikaciju.
+     * EN: Copies the homepage upgrade into an existing host application.
+     *
+     * @param array<int, string> $arguments
+     * @param array<string, mixed> $options
+     */
+    public function installHomepageMigration(array $arguments = [], array $options = []): int
+    {
+        $targetDirectory = $this->targetDirectory($options);
+        $template = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . self::HOMEPAGE_TEMPLATE_FILE;
+        if (!is_file($template)) {
+            throw new RuntimeException(__('Predložak migracije naslovnice nije pronađen.'));
+        }
+
+        $options['name'] = $this->option($options, ['name'])
+        ?? trim((string)($arguments[0] ?? ''))
+        ?: 'add_workspace_homepage_preferences';
+        $suffix = $this->migrationSuffix([], $options);
+        $target = rtrim($targetDirectory, DIRECTORY_SEPARATOR)
+        . DIRECTORY_SEPARATOR
+        . date('YmdHis')
+        . '_'
+        . $suffix
+        . '.php';
+        if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0777, true) && !is_dir($targetDirectory)) {
+            throw new RuntimeException(__('Nije moguće kreirati direktorij migracija.'));
+        }
+
+        $content = file_get_contents($template);
+        if (!is_string($content) || $content === '' || file_put_contents($target, $content) === false) {
+            throw new RuntimeException(__('Nije moguće kopirati Workspace migraciju.'));
+        }
+
+        $this->write(__('Kreirana je Workspace migracija naslovnice: ') . $target);
+        $this->write(__('Sljedeći korak: pokreni `vendor/bin/hph orm-migrate:up`.'));
+
+        return 0;
+    }
+
+    /**
      * HR: Ispisuje kratke upute za CLI helper.
      * EN: Prints brief CLI helper usage.
      */
@@ -87,6 +131,7 @@ final readonly class HpWorkspaceCommand
     {
         $this->write('hph workspace <install|help>');
         $this->write('  vendor/bin/hph workspace:install-migration');
+        $this->write('  vendor/bin/hph workspace:install-homepage-migration');
 
         return 0;
     }

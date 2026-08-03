@@ -8,6 +8,7 @@ declare(strict_types=1);
  *
  * @var \HeartPhrame\View\View $this
  * @var string $settingsPath
+ * @var string $homepagePath
  * @var string $allPath
  * @var string $deletedPath
  * @var string $settingsMenuActiveSection
@@ -37,6 +38,14 @@ if (isset($menuRenderer) && is_object($menuRenderer)) {
     <?= $settingsMenuActiveSection === 'workspace.settings' ? 'aria-current="page"' : '' ?>
                 >
     <?= $this->escape(__('Postavke područja')) ?>
+                </a>
+                <a
+                    class="list-group-item list-group-item-action ps-4
+    <?= $settingsMenuActiveSection === 'workspace.settings.homepage' ? 'active' : '' ?>"
+                    href="<?= $this->escape($homepagePath) ?>"
+    <?= $settingsMenuActiveSection === 'workspace.settings.homepage' ? 'aria-current="page"' : '' ?>
+                >
+    <?= $this->escape(__('Naslovnica aplikacije')) ?>
                 </a>
                 <div class="list-group-item text-muted small fw-semibold">
     <?= $this->escape(__('Područja')) ?>

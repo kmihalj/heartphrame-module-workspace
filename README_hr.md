@@ -44,6 +44,7 @@ English documentation: [README.md](README.md)
 - čitatelji i dalje vide zadnju objavljenu nepromjenjivu verziju dok se uređuje nacrt
 - opcionalne in-app i e-mail obavijesti za pregled i objavu
 - opcionalna Menu integracija za glavni izbornik i Postavke
+- javni, prijavljeni i osobni odabir naslovnice aplikacije uz siguran ACL fallback
 - opcionalni verzionirani REST API za podatke područja, ACL i linkove u stablu
 - prijenosna inicijalna shema za SQLite, PostgreSQL i MySQL/MariaDB
 
@@ -101,6 +102,37 @@ Kopirajte `config/workspace.php` u host aplikaciju ako želite promijeniti
 zadane vrijednosti.
 
 Migracija ne kreira probno Područje, korisnike, grupe ni stranice.
+
+U aplikaciji koja je već pokrenula stariju Workspace migraciju jednom instalirajte
+dodatnu migraciju naslovnice:
+
+```bash
+vendor/bin/hph workspace:install-homepage-migration
+vendor/bin/hph orm-migrate:up
+```
+
+## Naslovnica aplikacije
+
+Administrator postavlja naslovnicu u **Postavke → Područja → Naslovnica
+aplikacije**. Može odabrati objavljenu stranicu za neprijavljene goste, drugu
+stranicu dostupnu svim prijavljenim korisnicima i dopuštenje osobnog izbora u
+Auth profilu korisnika.
+
+Za prijavljenog korisnika redoslijed je osobna stranica, zadana za prijavljene,
+javna zadana te ugrađena naslovnica host aplikacije. Gost koristi javnu pa
+ugrađenu naslovnicu. Svaki zahtjev ponovno provjerava aktualni Workspace ACL i
+stanje objave; obrisana, neobjavljena ili naknadno ograničena stranica preskače
+se umjesto prikaza greške `403` na naslovnici.
+
+Host aplikacija na ruti `/` može koristiti neutralni servis
+`heartphrame.application_homepage_resolver` i napraviti privremeni redirect
+bez cacheiranja na kanonsku Workspace stranicu. Auth ne ovisi o Workspaceu:
+profilnu sekciju registrira isključivo Workspace dok je uključen.
+
+Postavke i osobni izbori spremaju se u tablice
+`workspace_homepage_settings` i `workspace_user_homepages`. Potpuni backup
+baze/sitea mora obuhvatiti obje tablice. To su sadržajne postavke sitea i
+namjerno ne pripadaju izvozu paketa teme.
 
 ## Integracija s HTML editorom
 

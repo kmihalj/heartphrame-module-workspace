@@ -44,6 +44,7 @@ Croatian documentation: [README_hr.md](README_hr.md)
 - readers keep seeing the last published immutable version while editors prepare a draft
 - optional in-app and e-mail notifications for review requests and publications
 - optional Menu integration for application and Settings navigation
+- public, signed-in, and personal application-homepage selection with ACL-safe fallback
 - optional versioned REST API for Workspace metadata, ACL, and link-tree operations
 - portable initial schema for SQLite, PostgreSQL, and MySQL/MariaDB
 
@@ -101,6 +102,38 @@ Copy `config/workspace.php` into the host application when its defaults need
 to be changed.
 
 No sample Workspace, user, group, or page is created by the migration.
+
+For an application that already ran the older Workspace migration, install the
+additive homepage migration once:
+
+```bash
+vendor/bin/hph workspace:install-homepage-migration
+vendor/bin/hph orm-migrate:up
+```
+
+## Application homepage
+
+Administrators configure the homepage under **Settings → Workspaces →
+Application homepage**. They may select a published page for anonymous guests,
+a different page available to every signed-in user, and whether users may
+choose a personal page in their Auth profile.
+
+Resolution order for a signed-in user is personal page, signed-in default,
+public default, and finally the host application's built-in homepage. Guests
+use the public default and then the built-in homepage. Every request rechecks
+the current Workspace ACL and publication state; a deleted, unpublished, or
+newly restricted page is skipped instead of producing a homepage `403`.
+
+The host application may consume the neutral
+`heartphrame.application_homepage_resolver` service at `/` and issue a
+temporary, non-cacheable redirect to the canonical Workspace page. Auth has no
+dependency on Workspace: the profile section is registered only by Workspace
+while that module is enabled.
+
+The settings and personal preferences are stored in
+`workspace_homepage_settings` and `workspace_user_homepages`. A complete
+database/site backup must include both tables. These values are site content
+configuration and intentionally do not belong to Theme package export.
 
 ## HTML Editor Integration
 

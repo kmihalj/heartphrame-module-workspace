@@ -55,6 +55,10 @@ final readonly class WorkspaceSettingsController
             'settings' => $this->settings->settingsForForm(),
             'savePath' => $this->pathFor('workspace.settings.save', '/settings/workspaces'),
             'settingsPath' => $this->pathFor('workspace.settings', '/settings/workspaces'),
+            'homepagePath' => $this->pathFor(
+                'workspace.settings.homepage',
+                '/settings/workspaces/homepage',
+            ),
             'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
             'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
             'settingsMenuActiveSection' => 'workspace.settings',
@@ -153,6 +157,10 @@ final readonly class WorkspaceSettingsController
             'deleted' => $deleted,
             'restorePath' => $this->pathFor('workspace.restore', '/workspaces/restore'),
             'settingsPath' => $this->pathFor('workspace.settings', '/settings/workspaces'),
+            'homepagePath' => $this->pathFor(
+                'workspace.settings.homepage',
+                '/settings/workspaces/homepage',
+            ),
             'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
             'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
             'newPath' => $this->pathFor('workspace.manage', '/workspaces/manage'),
