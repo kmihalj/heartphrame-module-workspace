@@ -191,7 +191,14 @@ The page supports three independent controls:
 The `all` option is enabled only below 100 eligible articles. The controller
 rejects a crafted `limit=all` at 100 or more and falls back to the configured
 numeric default. Defaults live under the `shorts` key in
-`config/workspace.php` and are editable in **Settings → Workspaces**.
+`config/workspace.php` and are editable in **Settings → Workspaces**. The
+shipped defaults are levels 1–2, 10 articles, and newest first.
+
+The **Page tree** and **Display options** buttons are always rendered. Direct
+links may use `tree=0` and `options=0` to start the corresponding collapsible
+regions closed; omitting them uses site configuration. The filter form
+preserves both values, which makes the same route suitable for a normal page
+or a compact homepage.
 
 Security filtering happens before HTML is loaded: the service starts from
 `visibleTree()`, applies inherited node ACL, keeps only document nodes within
@@ -200,7 +207,10 @@ published version pointer. This rule also applies to owners and administrators,
 so their access to drafts never leaks draft text into Shorts. The Editor
 receives only the already limited document/version map and batch-loads those
 exact immutable versions. The view renders Editor-sanitized HTML inside a
-six-line, theme-aware fade and links to the canonical Workspace page.
+twelve-line, theme-aware fade and links to the canonical Workspace page. For
+every page it requests the active locale first and falls back only to an
+exactly published version in the site default locale from
+`app.localization.locale`. Draft content is never a language fallback.
 
 Shorts adds no database table. Its defaults are host-site configuration, so a
 complete backup includes `config/workspace.php`; Theme package export does not
@@ -397,9 +407,11 @@ and must be revalidated through its inherited ACL and publication workflow.
 Auth remains independently usable: Workspace registers its own optional Auth
 account partial and removes it automatically when the module is disabled.
 
-Administrators choose the public and signed-in defaults under the Workspace
-settings group. A user who is allowed to personalize the homepage chooses only
-from published pages currently visible to that user. The root resolver applies
+Administrators choose a published page or a Workspace Summaries view for the
+public and signed-in defaults under the Workspace settings group. A Summaries
+target has structured **Page tree visible** and **Display options visible**
+switches. A user who is allowed to personalize the homepage chooses only from
+published pages and Summaries views currently visible to that user. The root resolver applies
 personal → signed-in → public → host fallback and redirects only to a generated
 internal named route, preventing open redirects and stale ACL access.
 
@@ -410,8 +422,17 @@ vendor/bin/hph workspace:install-homepage-migration
 vendor/bin/hph orm-migrate:up
 ```
 
+An installation that already has those two tables adds structured Summaries
+targets without replacing existing page choices:
+
+```bash
+vendor/bin/hph workspace:install-homepage-view-options-migration
+vendor/bin/hph orm-migrate:up
+```
+
 A full site backup includes `workspace_homepage_settings` and
-`workspace_user_homepages`. An individual Workspace import must not silently
+`workspace_user_homepages`, including target type, Workspace ID, and the two
+visibility switches. An individual Workspace import must not silently
 replace the destination site's homepage policy, and Theme export does not own
 these values.
 

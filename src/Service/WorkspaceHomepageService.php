@@ -67,6 +67,7 @@ final readonly class WorkspaceHomepageService
 
         return [
             'settings' => $settings,
+            'view_options_ready' => $this->homepages->viewOptionsReady(),
             'public_option_groups' => $this->selectablePageGroups(null),
             'authenticated_option_groups' => $this->selectablePageGroups([
                 'id' => self::GENERIC_AUTHENTICATED_USER_ID,
@@ -87,16 +88,22 @@ final readonly class WorkspaceHomepageService
             throw new RuntimeException(__('Migracija naslovnice područja nije primijenjena.'));
         }
 
-        $publicNodeId = WorkspaceValue::int($input['public_node_id'] ?? 0);
-        $authenticatedNodeId = WorkspaceValue::int($input['authenticated_node_id'] ?? 0);
-        if ($publicNodeId > 0 && !$this->groupsContainNode($this->selectablePageGroups(null), $publicNodeId)) {
+        $publicTarget = $this->targetFromInput($input, 'public');
+        $authenticatedTarget = $this->targetFromInput($input, 'authenticated');
+        if (
+            $publicTarget['type'] !== 'default'
+            && !$this->groupsContainTarget($this->selectablePageGroups(null), $publicTarget)
+        ) {
             throw new RuntimeException(__('Javna naslovnica mora biti objavljena i dostupna gostima.'));
         }
 
         $genericUser = ['id' => self::GENERIC_AUTHENTICATED_USER_ID, 'is_admin' => false];
         if (
-            $authenticatedNodeId > 0
-            && !$this->groupsContainNode($this->selectablePageGroups($genericUser), $authenticatedNodeId)
+            $authenticatedTarget['type'] !== 'default'
+            && !$this->groupsContainTarget(
+                $this->selectablePageGroups($genericUser),
+                $authenticatedTarget,
+            )
         ) {
             throw new RuntimeException(
                 __('Naslovnica za prijavljene mora biti objavljena i dostupna svim prijavljenim korisnicima.'),
@@ -104,8 +111,8 @@ final readonly class WorkspaceHomepageService
         }
 
         $this->homepages->saveSettings(
-            $publicNodeId,
-            $authenticatedNodeId,
+            $publicTarget,
+            $authenticatedTarget,
             $this->boolValue($input['allow_user_selection'] ?? false),
             $actorUserId,
         );
@@ -134,21 +141,29 @@ final readonly class WorkspaceHomepageService
         }
 
         $groups = $this->selectablePageGroups($currentUser);
-        $selectedNodeId = $this->homepages->userNodeId($userId);
-        $selectionUnavailable = $selectedNodeId > 0 && !$this->groupsContainNode($groups, $selectedNodeId);
+        $selectedTarget = $this->homepages->userTarget($userId);
+        $selectionUnavailable = $selectedTarget['type'] !== 'default'
+        && !$this->groupsContainTarget($groups, $selectedTarget);
 
         return [
-            'selectedNodeId' => $selectionUnavailable ? 0 : $selectedNodeId,
+            'selectedNodeId' => $selectionUnavailable ? 0 : $selectedTarget['node_id'],
+            'selectedTarget' => $selectionUnavailable ? $this->defaultTarget() : $selectedTarget,
+            'selectedTargetValue' => $selectionUnavailable
+            ? 'default'
+            : $this->targetValue($selectedTarget),
             'selectionUnavailable' => $selectionUnavailable,
             'optionGroups' => $groups,
+            'viewOptionsReady' => $this->homepages->viewOptionsReady(),
         ];
     }
 
     /**
      * HR: Sprema osobni odabir samo ako ga korisnik trenutno smije otvoriti.
      * EN: Stores a personal selection only when the user may currently open it.
+     *
+     * @param array<string, mixed>|int $selection
      */
-    public function saveUserSelection(int $userId, int $nodeId): void
+    public function saveUserSelection(int $userId, array|int $selection): void
     {
         if (!$this->tablesReady()) {
             throw new RuntimeException(__('Migracija naslovnice područja nije primijenjena.'));
@@ -163,11 +178,19 @@ final readonly class WorkspaceHomepageService
             throw new RuntimeException(__('Osobni odabir naslovnice nije omogućen.'));
         }
 
-        if ($nodeId > 0 && !$this->groupsContainNode($this->selectablePageGroups($currentUser), $nodeId)) {
+        $target = is_int($selection)
+        ? ($selection > 0
+            ? [...$this->defaultTarget(), 'type' => 'page', 'node_id' => $selection]
+            : $this->defaultTarget())
+        : $this->targetFromInput(WorkspaceValue::stringKeyArray($selection), '');
+        if (
+            $target['type'] !== 'default'
+            && !$this->groupsContainTarget($this->selectablePageGroups($currentUser), $target)
+        ) {
             throw new RuntimeException(__('Odabrana stranica nije objavljena ili joj nemate pristup.'));
         }
 
-        $this->homepages->saveUserNodeId($userId, $nodeId);
+        $this->homepages->saveUserTarget($userId, $target);
     }
 
     /**
@@ -183,22 +206,35 @@ final readonly class WorkspaceHomepageService
         $settings = $this->homepages->settings();
         $user = $this->access->currentUser();
         $userId = $this->userId($user);
-        $candidateNodeIds = [];
+        $candidateTargets = [];
         if ($userId > 0 && $settings['allow_user_selection']) {
-            $candidateNodeIds[] = $this->homepages->userNodeId($userId);
+            $candidateTargets[] = $this->homepages->userTarget($userId);
         }
 
         if ($userId > 0) {
-            $candidateNodeIds[] = $settings['authenticated_node_id'];
+            $candidateTargets[] = WorkspaceValue::stringKeyArray(
+                $settings['authenticated_target'] ?? null,
+            );
         }
 
-        $candidateNodeIds[] = $settings['public_node_id'];
-        foreach (array_values(array_unique($candidateNodeIds)) as $nodeId) {
-            if ($nodeId <= 0) {
+        $candidateTargets[] = WorkspaceValue::stringKeyArray($settings['public_target'] ?? null);
+        $seen = [];
+        foreach ($candidateTargets as $target) {
+            $target = $this->normalizedTarget($target);
+            $key = $this->targetValue($target)
+            . ':' . ($target['show_tree'] ? '1' : '0')
+            . ':' . ($target['show_display_options'] ? '1' : '0');
+            if ($target['type'] === 'default') {
                 continue;
             }
 
-            $path = $this->targetPath($nodeId, $user);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+
+            $path = $this->targetPath($target, $user);
             if ($path !== null) {
                 return $path;
             }
@@ -212,7 +248,7 @@ final readonly class WorkspaceHomepageService
      * EN: Builds grouped options of published document pages visible to the audience.
      *
      * @param array<string, mixed>|null $user
-     * @return list<array{name:string,options:list<array{id:int,title:string}>}>
+     * @return list<array{name:string,options:list<array<string,mixed>>}>
      */
     private function selectablePageGroups(?array $user): array
     {
@@ -237,6 +273,16 @@ final readonly class WorkspaceHomepageService
 
             $workflows = $this->repository->nodeWorkflowsForNodesAllLanguages($documentNodeIds);
             $options = [];
+            if ($this->homepages->viewOptionsReady()) {
+                $options[] = [
+                    'id' => 0,
+                    'value' => 'shorts:' . WorkspaceValue::int($workspace['id'] ?? 0),
+                    'type' => 'shorts',
+                    'workspace_id' => WorkspaceValue::int($workspace['id'] ?? 0),
+                    'title' => __('Sažetci'),
+                ];
+            }
+
             foreach ($nodes as $node) {
                 $nodeId = WorkspaceValue::int($node['id'] ?? 0);
                 if (WorkspaceValue::string($node['node_type'] ?? '') !== 'document') {
@@ -253,6 +299,9 @@ final readonly class WorkspaceHomepageService
 
                 $options[] = [
                     'id' => $nodeId,
+                    'value' => 'page:' . $nodeId,
+                    'type' => 'page',
+                    'workspace_id' => WorkspaceValue::int($workspace['id'] ?? 0),
                     'title' => WorkspaceValue::string($node['title'] ?? ''),
                 ];
             }
@@ -273,9 +322,49 @@ final readonly class WorkspaceHomepageService
      * EN: Validates the node, workspace, ACL, and published locale before building an internal URL.
      *
      * @param array<string, mixed>|null $user
+     * @param array{type:string,node_id:int,workspace_id:int,show_tree:bool,show_display_options:bool} $target
      */
-    private function targetPath(int $nodeId, ?array $user): ?string
+    private function targetPath(array $target, ?array $user): ?string
     {
+        if ($target['type'] === 'shorts') {
+            $workspace = $this->repository->findWorkspaceById($target['workspace_id']);
+            if (
+                !is_array($workspace)
+                || !$this->access->workspacePermissions($workspace, $user)['can_view']
+            ) {
+                return null;
+            }
+
+            $workspaceSlug = WorkspaceValue::string($workspace['slug'] ?? '');
+            if ($workspaceSlug === '') {
+                return null;
+            }
+
+            $language = WorkspaceValue::string($this->languagePreference()[0] ?? '')
+            ?: $this->workspaceConfig->siteDefaultLanguage();
+            $query = [
+                'lang' => $language,
+                'tree' => $target['show_tree'] ? '1' : '0',
+                'options' => $target['show_display_options'] ? '1' : '0',
+            ];
+            if ($this->urlGenerator->namedRouteExists('workspace.shorts')) {
+                return $this->urlGenerator->getPathFor(
+                    'workspace.shorts',
+                    ['workspaceSlug' => $workspaceSlug],
+                    $query,
+                );
+            }
+
+            return rtrim($this->urlGenerator->getBasePath(), '/')
+            . '/'
+            . trim($this->workspaceConfig->rootPath(), '/')
+            . '/'
+            . rawurlencode($workspaceSlug)
+            . '/shorts?'
+            . http_build_query($query);
+        }
+
+        $nodeId = $target['node_id'];
         $node = $this->repository->findNodeById($nodeId);
         if (!is_array($node) || WorkspaceValue::string($node['node_type'] ?? '') !== 'document') {
             return null;
@@ -359,7 +448,10 @@ final readonly class WorkspaceHomepageService
     {
         $languages = [
             $this->normalizeLanguage($this->translator->getLocale()),
-            $this->normalizeLanguage($this->config->getAsString('app.localization.fallback_locale', 'en') ?? 'en'),
+            $this->workspaceConfig->siteDefaultLanguage(),
+            $this->normalizeLanguage(
+                $this->config->getAsString('app.localization.fallback_locale', 'en') ?? 'en',
+            ),
         ];
         $supportedLocales = $this->config->getAsArrayWithValuesAsNonEmptyStrings(
             'app.localization.supported_locales',
@@ -372,22 +464,120 @@ final readonly class WorkspaceHomepageService
     }
 
     /**
-     * HR: Provjerava postoji li ID u grupiranim opcijama forme.
-     * EN: Checks whether an ID exists in grouped form options.
+     * HR: Provjerava nalazi li se strukturirani cilj u ACL-filtriranim opcijama.
+     * EN: Checks whether a structured target exists in ACL-filtered options.
      *
-     * @param list<array{name:string,options:list<array{id:int,title:string}>}> $groups
+     * @param list<array{name:string,options:list<array<string,mixed>>}> $groups
+     * @param array<string, mixed> $target
      */
-    private function groupsContainNode(array $groups, int $nodeId): bool
+    private function groupsContainTarget(array $groups, array $target): bool
     {
+        $value = $this->targetValue($this->normalizedTarget($target));
         foreach ($groups as $group) {
             foreach ($group['options'] as $option) {
-                if ($option['id'] === $nodeId) {
+                if (WorkspaceValue::string($option['value'] ?? '') === $value) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    /**
+     * HR: Čita strukturirani cilj iz forme uz kompatibilnost sa starim node ID poljima.
+     * EN: Reads a structured form target while remaining compatible with legacy node-ID fields.
+     *
+     * @param array<string, mixed> $input
+     * @return array{type:string,node_id:int,workspace_id:int,show_tree:bool,show_display_options:bool}
+     */
+    private function targetFromInput(array $input, string $prefix): array
+    {
+        $fieldPrefix = $prefix !== '' ? $prefix . '_' : '';
+        $value = WorkspaceValue::string(
+            $input[$fieldPrefix . 'target'] ?? '',
+        );
+        if ($value === '') {
+            $legacyNodeId = WorkspaceValue::int($input[$fieldPrefix . 'node_id'] ?? 0);
+            $value = $legacyNodeId > 0 ? 'page:' . $legacyNodeId : 'default';
+        }
+
+        $target = $this->defaultTarget();
+        if (preg_match('/^(page|shorts):([1-9]\d*)$/', $value, $matches) === 1) {
+            $target['type'] = $matches[1];
+            if ($target['type'] === 'page') {
+                $target['node_id'] = (int)$matches[2];
+            } else {
+                $target['workspace_id'] = (int)$matches[2];
+            }
+        }
+
+        $target['show_tree'] = $this->boolValue($input[$fieldPrefix . 'show_tree'] ?? false);
+        $target['show_display_options'] = $this->boolValue(
+            $input[$fieldPrefix . 'show_display_options'] ?? false,
+        );
+
+        return $target;
+    }
+
+    /**
+     * HR: Normalizira strukturirani cilj i odbacuje nepotpune ID vrijednosti.
+     * EN: Normalizes a structured target and rejects incomplete ID values.
+     *
+     * @param array<string, mixed> $target
+     * @return array{type:string,node_id:int,workspace_id:int,show_tree:bool,show_display_options:bool}
+     */
+    private function normalizedTarget(array $target): array
+    {
+        $type = WorkspaceValue::string($target['type'] ?? 'default');
+        if (!in_array($type, ['page', 'shorts'], true)) {
+            return $this->defaultTarget();
+        }
+
+        $normalized = [
+            'type' => $type,
+            'node_id' => $type === 'page' ? WorkspaceValue::int($target['node_id'] ?? 0) : 0,
+            'workspace_id' => $type === 'shorts' ? WorkspaceValue::int($target['workspace_id'] ?? 0) : 0,
+            'show_tree' => (bool)($target['show_tree'] ?? true),
+            'show_display_options' => (bool)($target['show_display_options'] ?? true),
+        ];
+
+        return ($type === 'page' && $normalized['node_id'] > 0)
+        || ($type === 'shorts' && $normalized['workspace_id'] > 0)
+        ? $normalized
+        : $this->defaultTarget();
+    }
+
+    /**
+     * HR: Pretvara strukturirani cilj u stabilnu vrijednost HTML select kontrole.
+     * EN: Converts a structured target into a stable HTML select value.
+     *
+     * @param array{type:string,node_id:int,workspace_id:int,show_tree:bool,show_display_options:bool} $target
+     */
+    private function targetValue(array $target): string
+    {
+        return match ($target['type']) {
+            'page' => 'page:' . $target['node_id'],
+            'shorts' => 'shorts:' . $target['workspace_id'],
+            default => 'default',
+        };
+    }
+
+    /**
+     * HR: Vraća neutralni cilj sa sigurnim zadanim opcijama prikaza.
+     * EN: Returns a neutral target with safe default display options.
+     *
+     * @return array{type:string,node_id:int,workspace_id:int,show_tree:bool,show_display_options:bool}
+     */
+    private function defaultTarget(): array
+    {
+        return [
+            'type' => 'default',
+            'node_id' => 0,
+            'workspace_id' => 0,
+            'show_tree' => true,
+            'show_display_options' => true,
+        ];
     }
 
     /**

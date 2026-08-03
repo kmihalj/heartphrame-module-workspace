@@ -46,6 +46,7 @@ final readonly class WorkspaceSettingsService
             'shorts_depth' => $this->config->shortsDefaultDepth(),
             'shorts_limit' => $this->config->shortsDefaultLimit(),
             'shorts_order' => $this->config->shortsDefaultOrder(),
+            'shorts_display_options_visible' => $this->config->shortsDisplayOptionsVisibleByDefault(),
             'settings_file_path' => $this->config->settingsFilePath(),
         ];
     }
@@ -81,16 +82,19 @@ final readonly class WorkspaceSettingsService
                 ),
             ],
             'shorts' => [
-                'depth' => $this->allowedInt($input['shorts_depth'] ?? 1, [1, 2, 3], 1),
+                'depth' => $this->allowedInt($input['shorts_depth'] ?? 2, [1, 2, 3], 2),
                 'limit' => $this->allowedInt(
                     $input['shorts_limit'] ?? 10,
                     [5, 10, 25, 50],
                     10,
                 ),
                 'order' => $this->allowedString(
-                    $input['shorts_order'] ?? 'hierarchy',
+                    $input['shorts_order'] ?? 'newest',
                     ['hierarchy', 'newest', 'oldest'],
-                    'hierarchy',
+                    'newest',
+                ),
+                'display_options_visible' => $this->boolValue(
+                    $input['shorts_display_options_visible'] ?? false,
                 ),
             ],
             'menu' => [

@@ -105,6 +105,12 @@ final class WorkspaceHomepageServiceTest extends TestCase
             'test-handler',
             'workspace.node.show',
         );
+        $routes->addRoute(
+            'GET',
+            '/workspace/{workspaceSlug}/shorts',
+            'test-handler',
+            'workspace.shorts',
+        );
         $translator = new class implements TranslatorInterface {
             /**
              * HR: Test ne prevodi tekst, nego samo izlaže aktivni jezik.
@@ -192,6 +198,45 @@ final class WorkspaceHomepageServiceTest extends TestCase
         $this->authn->login(['id' => 2, 'is_admin' => false]);
         $this->assertNull($this->service->accountData(2));
         $this->assertSame('/workspace/portal/prijavljeni?lang=en', $this->service->resolvePath());
+    }
+
+    /**
+     * HR: Shorts naslovnica sprema vlastite postavke prikaza bez slobodnog URL polja.
+     * EN: A Shorts homepage stores its own display settings without a free-form URL field.
+     */
+    public function testStructuredShortsHomepagePreservesTreeAndDisplayOptions(): void
+    {
+        $this->publishedPages();
+        $workspace = $this->repository->findWorkspaceBySlug('portal');
+        $this->assertIsArray($workspace);
+        $workspaceId = (int)$workspace['id'];
+
+        $this->authn->login(['id' => 1, 'is_admin' => true]);
+        $this->service->saveSettings([
+            'public_target' => 'shorts:' . $workspaceId,
+            'public_show_tree' => '0',
+            'public_show_display_options' => '0',
+            'authenticated_target' => 'default',
+            'allow_user_selection' => '1',
+        ], 1);
+
+        $this->authn->logout();
+        $this->assertSame(
+            '/workspace/portal/shorts?lang=en&tree=0&options=0',
+            $this->service->resolvePath(),
+        );
+
+        $this->authn->login(['id' => 2, 'is_admin' => false]);
+        $this->service->saveUserSelection(2, [
+            'target' => 'shorts:' . $workspaceId,
+            'show_tree' => '1',
+            'show_display_options' => '0',
+        ]);
+        $this->assertSame(
+            '/workspace/portal/shorts?lang=en&tree=1&options=0',
+            $this->service->resolvePath(),
+        );
+        $this->assertSame('shorts:' . $workspaceId, $this->service->accountData(2)['selectedTargetValue']);
     }
 
     /**

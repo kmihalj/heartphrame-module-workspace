@@ -895,6 +895,39 @@
     }
 
     /**
+     * HR: Prikazuje postavke stabla i opcija samo kada je cilj naslovnice Shorts.
+     * EN: Shows tree and display settings only when the homepage target is Shorts.
+     *
+     * @returns {void}
+     */
+    function initializeHomepageTargets() {
+        document.querySelectorAll('[data-workspace-homepage-target]').forEach((control) => {
+            if (!(control instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const key = String(control.dataset.workspaceHomepageTarget || '');
+            const options = document.querySelector(
+                `[data-workspace-homepage-view-options="${CSS.escape(key)}"]`,
+            );
+            if (!(options instanceof HTMLElement)) {
+                return;
+            }
+
+            const synchronize = () => {
+                const visible = control.value.startsWith('shorts:');
+                options.hidden = !visible;
+                options.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.disabled = !visible;
+                });
+            };
+
+            control.addEventListener('change', synchronize);
+            synchronize();
+        });
+    }
+
+    /**
      * HR: Inicijalizira sve Workspace kontrole nakon što je DOM spreman.
      * EN: Initializes every Workspace control after the DOM is ready.
      *
@@ -906,6 +939,7 @@
         initializeTreeEditModes();
         initializeNodeDialog();
         initializeAclControls();
+        initializeHomepageTargets();
     }
 
     if (document.readyState === 'loading') {

@@ -72,4 +72,31 @@ final class WorkspaceValue
 
         return $rows;
     }
+
+    /**
+     * HR: Zadržava string ključeve i pozitivne cjelobrojne vrijednosti mape.
+     * EN: Retains string keys and positive integer values from a map.
+     *
+     * @return array<string, int>
+     */
+    public static function intMap(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $key => $item) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            $number = self::int($item);
+            if ($number > 0) {
+                $result[$key] = $number;
+            }
+        }
+
+        return $result;
+    }
 }

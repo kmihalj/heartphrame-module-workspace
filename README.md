@@ -117,12 +117,22 @@ vendor/bin/hph workspace:install-homepage-migration
 vendor/bin/hph orm-migrate:up
 ```
 
+If that homepage migration was already applied before structured Shorts targets
+were introduced, add its backward-compatible view-option columns as well:
+
+```bash
+vendor/bin/hph workspace:install-homepage-view-options-migration
+vendor/bin/hph orm-migrate:up
+```
+
 ## Workspace Shorts
 
 Every visible Workspace tree exposes a **Shorts** icon. The page at
 `/{workspace-root}/{workspace}/shorts` renders the exact published Editor
-version of every eligible page as a six-line fading excerpt with a **Read
-more** link. Drafts, archived publications, inaccessible pages, and every
+version of every eligible page as a twelve-line fading excerpt with a **Read
+more** link. This leaves room for roughly five to six additional text lines
+even when the article begins with a compact image. Drafts, archived
+publications, inaccessible pages, and every
 descendant of an inaccessible page are excluded before content is loaded.
 
 Visitors may select tree levels 1, 1–2, or 1–3; 5, 10, 25, 50, or all
@@ -135,11 +145,19 @@ application's `config/workspace.php`:
 
 ```php
 'shorts' => [
-    'depth' => 1,
+    'depth' => 2,
     'limit' => 10,
-    'order' => 'hierarchy',
+    'order' => 'newest',
+    'display_options_visible' => true,
 ],
 ```
+
+The page tree and **Display options** panel are expanded by default. A direct
+link can start either one collapsed with `tree=0` or `options=0`; both toggle
+buttons remain available. The filter form preserves these values. Article
+content first uses an exact published version for the active locale, then the
+site default from `app.localization.locale` in `config/app.php`. It never falls
+back to a draft.
 
 These are site configuration, not Theme design data. Include
 `config/workspace.php` in a complete site backup; Theme package export does
@@ -148,9 +166,11 @@ not and should not own these values.
 ## Application homepage
 
 Administrators configure the homepage under **Settings → Workspaces →
-Application homepage**. They may select a published page for anonymous guests,
-a different page available to every signed-in user, and whether users may
-choose a personal page in their Auth profile.
+Application homepage**. They may select a published page or a Workspace
+**Summaries** view for anonymous guests, a different target available to every
+signed-in user, and whether users may choose a personal target in their Auth
+profile. A selected Summaries target exposes structured **Page tree visible**
+and **Display options visible** switches instead of a free-form query string.
 
 Resolution order for a signed-in user is personal page, signed-in default,
 public default, and finally the host application's built-in homepage. Guests
@@ -167,7 +187,10 @@ while that module is enabled.
 The settings and personal preferences are stored in
 `workspace_homepage_settings` and `workspace_user_homepages`. A complete
 database/site backup must include both tables. These values are site content
-configuration and intentionally do not belong to Theme package export.
+configuration and intentionally do not belong to Theme package export. The
+structured target type, Workspace ID, and both visibility switches are stored
+in those tables, so ordinary database backup and restore preserves the exact
+homepage behavior.
 
 ## HTML Editor Integration
 

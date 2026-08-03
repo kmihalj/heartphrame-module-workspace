@@ -56,6 +56,7 @@ final readonly class WorkspaceHomepageController
         return $this->viewRenderer->render('settings/homepage', [
             'title' => __('Naslovnica aplikacije'),
             'tablesReady' => $this->homepages->tablesReady(),
+            'viewOptionsReady' => $form['view_options_ready'],
             'settings' => $form['settings'],
             'publicOptionGroups' => $form['public_option_groups'],
             'authenticatedOptionGroups' => $form['authenticated_option_groups'],
@@ -75,6 +76,7 @@ final readonly class WorkspaceHomepageController
             ),
             'settingsMenuActiveSection' => 'workspace.settings.homepage',
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+            'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
         ], true, $this->homepages->tablesReady() ? 200 : 503);
     }
 
@@ -116,7 +118,7 @@ final readonly class WorkspaceHomepageController
         try {
             $this->homepages->saveUserSelection(
                 $this->currentUserId(),
-                WorkspaceValue::int($body['node_id'] ?? 0),
+                $body,
             );
             $this->alertHandler->add(new Alert(
                 __('Osobna naslovnica je spremljena.'),

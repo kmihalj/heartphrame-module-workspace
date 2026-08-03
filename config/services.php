@@ -150,6 +150,7 @@ return [
             $container->get(AlertHandler::class),
             $container->get(WorkspaceWorkflowService::class),
             $container->get(WorkspaceNotificationBridge::class),
+            $container->get(TranslatorInterface::class),
         ),
 
     WorkspaceSettingsController::class => static fn(ContainerInterface $container): WorkspaceSettingsController =>
@@ -172,6 +173,7 @@ return [
             $container->get(WorkspaceShortsService::class),
             $container->get(WorkspaceConfig::class),
             $container->get(UrlGenerator::class),
+            $container->get(TranslatorInterface::class),
         ),
 
     WorkspaceHomepageController::class =>

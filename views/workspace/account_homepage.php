@@ -2,17 +2,24 @@
 
 declare(strict_types=1);
 
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
+
 /**
  * HR: Osobna Workspace naslovnica prikazana kroz modularni Auth profil.
  * EN: Personal Workspace homepage displayed through the modular Auth profile.
  *
  * @var \HeartPhrame\View\View $this
  * @var int $selectedNodeId
+ * @var array<string, mixed> $selectedTarget
+ * @var string $selectedTargetValue
  * @var bool $selectionUnavailable
- * @var list<array{name:string,options:list<array{id:int,title:string}>}> $optionGroups
+ * @var list<array{name:string,options:list<array<string,mixed>>}> $optionGroups
+ * @var bool $viewOptionsReady
  * @var string $savePath
+ * @var string $assetsJsPath
  */
 ?>
+<script src="<?= $this->escape($assetsJsPath) ?>" defer></script>
 <div class="card shadow-sm">
     <div class="card-body p-4">
         <h2 class="h5 mb-2"><?= $this->escape(__('Osobna naslovnica')) ?></h2>
@@ -38,22 +45,61 @@ declare(strict_types=1);
             <select
                 id="workspace-personal-homepage"
                 class="form-select"
-                name="node_id"
+                name="target"
+                data-workspace-homepage-target="personal"
             >
-                <option value="0"><?= $this->escape(__('Koristi zadanu naslovnicu')) ?></option>
+                <option value="default"><?= $this->escape(__('Koristi zadanu naslovnicu')) ?></option>
                 <?php foreach ($optionGroups as $group) : ?>
-                    <optgroup label="<?= $this->escape($group['name']) ?>">
+                    <optgroup label="<?= $this->escape(WorkspaceValue::string($group['name'] ?? '')) ?>">
                     <?php foreach ($group['options'] as $option) : ?>
                             <option
-                                value="<?= $option['id'] ?>"
-                        <?= $option['id'] === $selectedNodeId ? 'selected' : '' ?>
+                                value="<?= $this->escape(WorkspaceValue::string(
+                                    $option['value'] ?? '',
+                                )) ?>"
+                        <?= WorkspaceValue::string($option['value'] ?? '') === $selectedTargetValue
+                        ? 'selected'
+                        : '' ?>
                             >
-                        <?= $this->escape($option['title']) ?>
+                        <?= $this->escape(WorkspaceValue::string($option['title'] ?? '')) ?>
                             </option>
                     <?php endforeach; ?>
                     </optgroup>
                 <?php endforeach; ?>
             </select>
+            <?php if ($viewOptionsReady) : ?>
+                <div class="mt-3" data-workspace-homepage-view-options="personal">
+                    <div class="form-check form-switch">
+                        <input
+                            id="workspace-personal-show-tree"
+                            class="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            name="show_tree"
+                            value="1"
+                <?= (bool)($selectedTarget['show_tree'] ?? true) ? 'checked' : '' ?>
+                        >
+                        <label class="form-check-label" for="workspace-personal-show-tree">
+                <?= $this->escape(__('Vidljivo stablo stranica')) ?>
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mt-2">
+                        <input
+                            id="workspace-personal-show-options"
+                            class="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            name="show_display_options"
+                            value="1"
+                <?= (bool)($selectedTarget['show_display_options'] ?? true)
+                ? 'checked'
+                : '' ?>
+                        >
+                        <label class="form-check-label" for="workspace-personal-show-options">
+                <?= $this->escape(__('Vidljive opcije prikaza')) ?>
+                        </label>
+                    </div>
+                </div>
+            <?php endif; ?>
             <button type="submit" class="btn btn-primary mt-3">
                 <?= $this->escape(__('Spremi osobnu naslovnicu')) ?>
             </button>

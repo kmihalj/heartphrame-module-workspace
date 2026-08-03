@@ -205,6 +205,8 @@ return [
     'Uredi stranicu' => 'Uredi stranicu',
     'Vanjski URL nije valjan.' => 'Vanjski URL nije valjan.',
     'Vidljivost' => 'Vidljivost',
+    'Vidljivo stablo stranica' => 'Vidljivo stablo stranica',
+    'Vidljive opcije prikaza' => 'Vidljive opcije prikaza',
     'Vlasnik' => 'Vlasnik',
     'Vlasnik područja nije valjan.' => 'Vlasnik područja nije valjan.',
     'Vrsta stavke' => 'Vrsta stavke',
@@ -265,6 +267,42 @@ return [
     'Vrati u nacrt' => 'Vrati u nacrt',
     'Workflow stranice nije moguće spremiti.' =>
         'Workflow stranice nije moguće spremiti.',
+    'Sažetci' => 'Sažetci',
+    'Sažetci stranica' => 'Sažetci stranica',
+    'Objavljene stranice koje smijete vidjeti, prikazane kao kratki isječci.' =>
+        'Objavljene stranice koje smijete vidjeti, prikazane kao kratki isječci.',
+    'Zadani prikaz javne zbirke isječaka objavljenih stranica svakog područja.' =>
+        'Zadani prikaz javne zbirke isječaka objavljenih stranica svakog područja.',
+    'Opcije prikaza' => 'Opcije prikaza',
+    'Opcije prikaza su početno prikazane' => 'Opcije prikaza su početno prikazane',
+    'Prikazane razine' => 'Prikazane razine',
+    'Samo 1. razina' => 'Samo 1. razina',
+    'Razine 1–' => 'Razine 1–',
+    'Broj članaka' => 'Broj članaka',
+    'Prema hijerarhiji' => 'Prema hijerarhiji',
+    'Najnovije prvo' => 'Najnovije prvo',
+    'Najstarije prvo' => 'Najstarije prvo',
+    'Prikaži' => 'Prikaži',
+    'Sve' => 'Sve',
+    'Dostupnih članaka:' => 'Dostupnih članaka:',
+    'Opcija „Sve” isključena je za 100 ili više članaka.' =>
+        'Opcija „Sve” isključena je za 100 ili više članaka.',
+    'U odabranim razinama nema objavljenih stranica koje smijete vidjeti.' =>
+        'U odabranim razinama nema objavljenih stranica koje smijete vidjeti.',
+    'Pročitaj više' => 'Pročitaj više',
+    'Posjetitelj može privremeno promijeniti ove filtre. Opcija „Sve” dostupna je samo kada postoji manje od 100 vidljivih članaka.' =>
+        'Posjetitelj može privremeno promijeniti ove filtre. Opcija „Sve” dostupna je samo kada postoji manje od 100 vidljivih članaka.',
+    'Legenda ovlasti' => 'Legenda ovlasti',
+    'Zeleno prikazuje pravo naslijeđeno iz područja i nadređenih stranica. Crveno prikazuje pravo koje je zadržano izravnim ograničenjem ove stranice.' =>
+        'Zeleno prikazuje pravo naslijeđeno iz područja i nadređenih stranica. Crveno prikazuje pravo koje je zadržano izravnim ograničenjem ove stranice.',
+    'Naslijeđeno iz područja i predaka' => 'Naslijeđeno iz područja i predaka',
+    'Izravno ograničenje stranice' => 'Izravno ograničenje stranice',
+    'Ovlasti su prikazane samo za čitanje. Za promjenu je potrebno pravo upravljanja.' =>
+        'Ovlasti su prikazane samo za čitanje. Za promjenu je potrebno pravo upravljanja.',
+    'Stranica trenutačno potpuno nasljeđuje ovlasti područja.' =>
+        'Stranica trenutačno potpuno nasljeđuje ovlasti područja.',
+    'Uklonite sve crvene oznake za potpuno nasljeđivanje ovlasti područja.' =>
+        'Uklonite sve crvene oznake za potpuno nasljeđivanje ovlasti područja.',
     'Naslovnica aplikacije' => 'Naslovnica aplikacije',
     'Javna naslovnica' => 'Javna naslovnica',
     'Naslovnica za prijavljene korisnike' => 'Naslovnica za prijavljene korisnike',
@@ -283,6 +321,10 @@ return [
     'Osobni odabir naslovnice nije omogućen.' => 'Osobni odabir naslovnice nije omogućen.',
     'Migracija naslovnice područja nije primijenjena.' =>
         'Migracija naslovnice područja nije primijenjena.',
+    'Migracija opcija prikaza naslovnice nije primijenjena.' =>
+        'Migracija opcija prikaza naslovnice nije primijenjena.',
+    'Primijenite migraciju opcija prikaza za Shorts naslovnice.' =>
+        'Primijenite migraciju opcija prikaza za Shorts naslovnice.',
     'Javna naslovnica mora biti objavljena i dostupna gostima.' =>
         'Javna naslovnica mora biti objavljena i dostupna gostima.',
     'Naslovnica za prijavljene mora biti objavljena i dostupna svim prijavljenim korisnicima.' =>
@@ -308,6 +350,48 @@ return [
         'Prethodno odabrana stranica više nije dostupna pa se koristi zadana naslovnica.',
     'Predložak migracije naslovnice nije pronađen.' =>
         'Predložak migracije naslovnice nije pronađen.',
+    'Predložak migracije opcija naslovnice nije pronađen.' =>
+        'Predložak migracije opcija naslovnice nije pronađen.',
     'Kreirana je Workspace migracija naslovnice: ' =>
         'Kreirana je Workspace migracija naslovnice: ',
+    'Kreirana je migracija opcija Workspace naslovnice: ' =>
+        'Kreirana je migracija opcija Workspace naslovnice: ',
+    'Nemate pravo pregledavati ovo područje.' => 'Nemate pravo pregledavati ovo područje.',
+    'Područje nije pronađeno' => 'Područje nije pronađeno',
+    'Traženo područje ne postoji ili više nije aktivno.' =>
+        'Traženo područje ne postoji ili više nije aktivno.',
+    'Nemate pravo kreirati područja.' => 'Nemate pravo kreirati područja.',
+    'Workspace API kreira samo linkove; dokument-stranice kreira Editor API.' =>
+        'Workspace API kreira samo linkove; dokument-stranice kreira Editor API.',
+    'Dokument-stranicu briše Editor API kako bi sačuvao verzije i privitke.' =>
+        'Dokument-stranicu briše Editor API kako bi sačuvao verzije i privitke.',
+    'Područje nije pronađeno.' => 'Područje nije pronađeno.',
+    'Nemate potrebno pravo nad područjem.' => 'Nemate potrebno pravo nad područjem.',
+    'Stavka stabla nije pronađena.' => 'Stavka stabla nije pronađena.',
+    'Operacija zahtijeva administratora.' => 'Operacija zahtijeva administratora.',
+    'Polje "subjects" mora biti JSON lista.' => 'Polje "subjects" mora biti JSON lista.',
+    'Svaki ACL subjekt mora biti JSON objekt.' => 'Svaki ACL subjekt mora biti JSON objekt.',
+    'ACL subjekt ima nepoznatu vrstu.' => 'ACL subjekt ima nepoznatu vrstu.',
+    'ACL subjekt nema valjani ID.' => 'ACL subjekt nema valjani ID.',
+    'API ključ nije povezan s aktivnim korisnikom.' =>
+        'API ključ nije povezan s aktivnim korisnikom.',
+    'Predložak Workspace migracije nije pronađen.' =>
+        'Predložak Workspace migracije nije pronađen.',
+    'Nije moguće kreirati direktorij migracija.' => 'Nije moguće kreirati direktorij migracija.',
+    'Nije moguće kopirati Workspace migraciju.' => 'Nije moguće kopirati Workspace migraciju.',
+    'Kreirana je početna Workspace migracija: ' => 'Kreirana je početna Workspace migracija: ',
+    'Sljedeći korak: pokreni `vendor/bin/hph orm-migrate:up`.' =>
+        'Sljedeći korak: pokreni `vendor/bin/hph orm-migrate:up`.',
+    'Nepoznata Workspace podnaredba: %s' => 'Nepoznata Workspace podnaredba: %s',
+    'Naziv migracije ne smije biti prazan.' => 'Naziv migracije ne smije biti prazan.',
+    'Nemate pravo dodavanja stranice u ovo područje.' =>
+        'Nemate pravo dodavanja stranice u ovo područje.',
+    'Nemate pravo brisanja ove stranice.' => 'Nemate pravo brisanja ove stranice.',
+    'Nemate pravo uređivanja ove stranice.' => 'Nemate pravo uređivanja ove stranice.',
+    'Nemate pravo objavljivanja ove stranice.' => 'Nemate pravo objavljivanja ove stranice.',
+    'HTML editor ne podržava nacrte područja.' => 'HTML editor ne podržava nacrte područja.',
+    'HTML editor ne podržava objavljivanje nacrta.' =>
+        'HTML editor ne podržava objavljivanje nacrta.',
+    'HTML editor ne podržava odbacivanje nacrta.' =>
+        'HTML editor ne podržava odbacivanje nacrta.',
 ];

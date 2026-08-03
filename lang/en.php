@@ -205,6 +205,8 @@ return [
     'Uredi stranicu' => 'Edit page',
     'Vanjski URL nije valjan.' => 'The external URL is invalid.',
     'Vidljivost' => 'Visibility',
+    'Vidljivo stablo stranica' => 'Show page tree',
+    'Vidljive opcije prikaza' => 'Show display options',
     'Vlasnik' => 'Owner',
     'Vlasnik područja nije valjan.' => 'The workspace owner is invalid.',
     'Vrsta stavke' => 'Item type',
@@ -265,6 +267,42 @@ return [
     'Vrati u nacrt' => 'Return to draft',
     'Workflow stranice nije moguće spremiti.' =>
         'The page workflow could not be saved.',
+    'Sažetci' => 'Summaries',
+    'Sažetci stranica' => 'Page summaries',
+    'Objavljene stranice koje smijete vidjeti, prikazane kao kratki isječci.' =>
+        'Published pages you may view, shown as short excerpts.',
+    'Zadani prikaz javne zbirke isječaka objavljenih stranica svakog područja.' =>
+        'Default view of each Workspace public collection of published-page excerpts.',
+    'Opcije prikaza' => 'Display options',
+    'Opcije prikaza su početno prikazane' => 'Show display options initially',
+    'Prikazane razine' => 'Displayed levels',
+    'Samo 1. razina' => 'Level 1 only',
+    'Razine 1–' => 'Levels 1–',
+    'Broj članaka' => 'Number of articles',
+    'Prema hijerarhiji' => 'By hierarchy',
+    'Najnovije prvo' => 'Newest first',
+    'Najstarije prvo' => 'Oldest first',
+    'Prikaži' => 'Apply',
+    'Sve' => 'All',
+    'Dostupnih članaka:' => 'Available articles:',
+    'Opcija „Sve” isključena je za 100 ili više članaka.' =>
+        'The “All” option is disabled for 100 or more articles.',
+    'U odabranim razinama nema objavljenih stranica koje smijete vidjeti.' =>
+        'The selected levels contain no published pages you may view.',
+    'Pročitaj više' => 'Read more',
+    'Posjetitelj može privremeno promijeniti ove filtre. Opcija „Sve” dostupna je samo kada postoji manje od 100 vidljivih članaka.' =>
+        'A visitor may temporarily change these filters. “All” is available only when fewer than 100 articles are visible.',
+    'Legenda ovlasti' => 'Permission legend',
+    'Zeleno prikazuje pravo naslijeđeno iz područja i nadređenih stranica. Crveno prikazuje pravo koje je zadržano izravnim ograničenjem ove stranice.' =>
+        'Green shows a permission inherited from the Workspace and parent pages. Red shows a permission retained by this page’s direct restriction.',
+    'Naslijeđeno iz područja i predaka' => 'Inherited from Workspace and ancestors',
+    'Izravno ograničenje stranice' => 'Direct page restriction',
+    'Ovlasti su prikazane samo za čitanje. Za promjenu je potrebno pravo upravljanja.' =>
+        'Permissions are read-only. Manage permission is required to change them.',
+    'Stranica trenutačno potpuno nasljeđuje ovlasti područja.' =>
+        'The page currently inherits all Workspace permissions.',
+    'Uklonite sve crvene oznake za potpuno nasljeđivanje ovlasti područja.' =>
+        'Clear every red mark to inherit all Workspace permissions.',
     'Naslovnica aplikacije' => 'Application homepage',
     'Javna naslovnica' => 'Public homepage',
     'Naslovnica za prijavljene korisnike' => 'Homepage for signed-in users',
@@ -283,6 +321,10 @@ return [
     'Osobni odabir naslovnice nije omogućen.' => 'Personal homepage selection is not enabled.',
     'Migracija naslovnice područja nije primijenjena.' =>
         'The Workspace homepage migration has not been applied.',
+    'Migracija opcija prikaza naslovnice nije primijenjena.' =>
+        'The homepage display-options migration has not been applied.',
+    'Primijenite migraciju opcija prikaza za Shorts naslovnice.' =>
+        'Apply the display-options migration to enable Summaries homepages.',
     'Javna naslovnica mora biti objavljena i dostupna gostima.' =>
         'The public homepage must be published and available to guests.',
     'Naslovnica za prijavljene mora biti objavljena i dostupna svim prijavljenim korisnicima.' =>
@@ -308,6 +350,49 @@ return [
         'The previously selected page is no longer available, so the default homepage is used.',
     'Predložak migracije naslovnice nije pronađen.' =>
         'The homepage migration template was not found.',
+    'Predložak migracije opcija naslovnice nije pronađen.' =>
+        'The homepage display-options migration template was not found.',
     'Kreirana je Workspace migracija naslovnice: ' =>
         'Created Workspace homepage migration: ',
+    'Kreirana je migracija opcija Workspace naslovnice: ' =>
+        'Created Workspace homepage display-options migration: ',
+    'Nemate pravo pregledavati ovo područje.' => 'You do not have permission to view this Workspace.',
+    'Područje nije pronađeno' => 'Workspace not found',
+    'Traženo područje ne postoji ili više nije aktivno.' =>
+        'The requested Workspace does not exist or is no longer active.',
+    'Nemate pravo kreirati područja.' => 'You do not have permission to create Workspaces.',
+    'Workspace API kreira samo linkove; dokument-stranice kreira Editor API.' =>
+        'The Workspace API creates links only; document pages are created through the Editor API.',
+    'Dokument-stranicu briše Editor API kako bi sačuvao verzije i privitke.' =>
+        'The Editor API deletes document pages so versions and attachments remain consistent.',
+    'Područje nije pronađeno.' => 'The Workspace was not found.',
+    'Nemate potrebno pravo nad područjem.' => 'You do not have the required Workspace permission.',
+    'Stavka stabla nije pronađena.' => 'The tree item was not found.',
+    'Operacija zahtijeva administratora.' => 'This operation requires an administrator.',
+    'Polje "subjects" mora biti JSON lista.' => 'The "subjects" field must be a JSON list.',
+    'Svaki ACL subjekt mora biti JSON objekt.' => 'Every ACL subject must be a JSON object.',
+    'ACL subjekt ima nepoznatu vrstu.' => 'The ACL subject has an unknown type.',
+    'ACL subjekt nema valjani ID.' => 'The ACL subject does not have a valid ID.',
+    'API ključ nije povezan s aktivnim korisnikom.' =>
+        'The API key is not associated with an active user.',
+    'Predložak Workspace migracije nije pronađen.' =>
+        'The Workspace migration template was not found.',
+    'Nije moguće kreirati direktorij migracija.' => 'The migration directory could not be created.',
+    'Nije moguće kopirati Workspace migraciju.' => 'The Workspace migration could not be copied.',
+    'Kreirana je početna Workspace migracija: ' => 'Created initial Workspace migration: ',
+    'Sljedeći korak: pokreni `vendor/bin/hph orm-migrate:up`.' =>
+        'Next step: run `vendor/bin/hph orm-migrate:up`.',
+    'Nepoznata Workspace podnaredba: %s' => 'Unknown Workspace subcommand: %s',
+    'Naziv migracije ne smije biti prazan.' => 'The migration name must not be empty.',
+    'Nemate pravo dodavanja stranice u ovo područje.' =>
+        'You do not have permission to add a page to this Workspace.',
+    'Nemate pravo brisanja ove stranice.' => 'You do not have permission to delete this page.',
+    'Nemate pravo uređivanja ove stranice.' => 'You do not have permission to edit this page.',
+    'Nemate pravo objavljivanja ove stranice.' =>
+        'You do not have permission to publish this page.',
+    'HTML editor ne podržava nacrte područja.' => 'The HTML editor does not support Workspace drafts.',
+    'HTML editor ne podržava objavljivanje nacrta.' =>
+        'The HTML editor does not support draft publication.',
+    'HTML editor ne podržava odbacivanje nacrta.' =>
+        'The HTML editor does not support discarding drafts.',
 ];

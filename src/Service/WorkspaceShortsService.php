@@ -7,9 +7,12 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Service;
 use HeartPhrame\Routing\UrlGenerator;
 
 use function array_slice;
+use function array_unique;
+use function array_values;
 use function count;
 use function in_array;
 use function is_scalar;
+use function preg_match;
 use function rawurlencode;
 use function rtrim;
 use function strcmp;
@@ -54,8 +57,16 @@ final readonly class WorkspaceShortsService
      * @param array<mixed, mixed> $query
      * @return array<string, mixed>
      */
-    public function viewModel(array $workspace, string $language, array $query): array
-    {
+    public function viewModel(
+        array $workspace,
+        string $language,
+        array $query,
+        ?string $defaultLanguage = null,
+    ): array {
+        $defaultLanguage = $this->normalizedLanguage(
+            $defaultLanguage ?? $this->config->siteDefaultLanguage(),
+            $this->config->siteDefaultLanguage(),
+        );
         $depth = $this->allowedInt(
             $query['depth'] ?? null,
             self::DEPTHS,
@@ -70,7 +81,11 @@ final readonly class WorkspaceShortsService
         ? strtolower(trim((string)$query['limit']))
         : '';
 
-        $visibleTree = $this->access->visibleTree($workspace, null, $language);
+        $visibleTree = $this->access->visibleTreeForLanguages(
+            $workspace,
+            null,
+            array_values(array_unique([$language, $defaultLanguage])),
+        );
         $flatNodes = $this->flattenTree($visibleTree);
         $candidateIds = [];
         foreach ($flatNodes as $entry) {
@@ -83,7 +98,7 @@ final readonly class WorkspaceShortsService
             }
         }
 
-        $workflows = $this->repository->nodeWorkflowsForNodes($candidateIds, $language);
+        $workflows = $this->repository->nodeWorkflowsForNodesAllLanguages($candidateIds);
         $eligible = [];
         foreach ($flatNodes as $entry) {
             $node = WorkspaceValue::stringKeyArray($entry['node'] ?? null);
@@ -96,14 +111,19 @@ final readonly class WorkspaceShortsService
                 continue;
             }
 
-            if (!$this->workflow->isReadableWorkflow($workflows[$nodeId] ?? null)) {
+            $workflow = $this->preferredReadableWorkflow(
+                WorkspaceValue::rows($workflows[$nodeId] ?? null),
+                $language,
+                $defaultLanguage,
+            );
+            if ($workflow === null) {
                 continue;
             }
 
-            $workflow = $workflows[$nodeId];
             $eligible[] = [
                 'node' => $node,
                 'workflow' => $workflow,
+                'language' => WorkspaceValue::string($workflow['language_code'] ?? $language),
                 'hierarchy_index' => WorkspaceValue::int($entry['index'] ?? 0),
                 'published_at' => WorkspaceValue::string($workflow['published_at'] ?? ''),
             ];
@@ -143,18 +163,28 @@ final readonly class WorkspaceShortsService
             $workflow = WorkspaceValue::stringKeyArray($entry['workflow'] ?? null);
             $documentKey = WorkspaceValue::string($node['document_key'] ?? '');
             $versionNumber = WorkspaceValue::int($workflow['published_version_number'] ?? 0);
+            $contentLanguage = WorkspaceValue::string($entry['language'] ?? $language);
             if ($documentKey !== '' && $versionNumber > 0) {
-                $requestedVersions[$documentKey] = $versionNumber;
+                $requestedVersions[$contentLanguage][$documentKey] = $versionNumber;
             }
         }
 
-        $versions = $this->editor->publishedVersions($requestedVersions, $language);
+        $versions = [];
+        foreach ($requestedVersions as $contentLanguage => $versionNumbers) {
+            $versions[$contentLanguage] = $this->editor->publishedVersions(
+                WorkspaceValue::intMap($versionNumbers),
+                $contentLanguage,
+            );
+        }
+
         $workspaceSlug = WorkspaceValue::string($workspace['slug'] ?? '');
         $articles = [];
         foreach ($selectedEntries as $entry) {
             $node = WorkspaceValue::stringKeyArray($entry['node'] ?? null);
             $documentKey = WorkspaceValue::string($node['document_key'] ?? '');
-            $version = WorkspaceValue::stringKeyArray($versions[$documentKey] ?? null);
+            $contentLanguage = WorkspaceValue::string($entry['language'] ?? $language);
+            $languageVersions = WorkspaceValue::stringKeyArray($versions[$contentLanguage] ?? null);
+            $version = WorkspaceValue::stringKeyArray($languageVersions[$documentKey] ?? null);
             if ($version === []) {
                 continue;
             }
@@ -169,8 +199,9 @@ final readonly class WorkspaceShortsService
                 'href' => $this->nodePath(
                     $workspaceSlug,
                     WorkspaceValue::string($node['slug'] ?? ''),
-                    $language,
+                    $contentLanguage,
                 ),
+                'language' => $contentLanguage,
             ];
         }
 
@@ -319,5 +350,52 @@ final readonly class WorkspaceShortsService
         $normalized = is_scalar($value) ? strtolower(trim((string)$value)) : '';
 
         return in_array($normalized, $allowed, true) ? $normalized : $fallback;
+    }
+
+    /**
+     * HR: Bira čitljivu objavu traženog jezika, a zatim zadanog jezika sitea.
+     * EN: Chooses a readable publication in the requested locale, then the site default locale.
+     *
+     * @param list<array<string, mixed>> $workflows
+     * @return array<string, mixed>|null
+     */
+    private function preferredReadableWorkflow(
+        array $workflows,
+        string $requestedLanguage,
+        string $defaultLanguage,
+    ): ?array {
+        $indexed = [];
+        foreach ($workflows as $workflow) {
+            if (!$this->workflow->isReadableWorkflow($workflow)) {
+                continue;
+            }
+
+            $workflowLanguage = $this->normalizedLanguage(
+                WorkspaceValue::string($workflow['language_code'] ?? ''),
+                '',
+            );
+            if ($workflowLanguage !== '') {
+                $indexed[$workflowLanguage] = $workflow;
+            }
+        }
+
+        foreach (array_values(array_unique([$requestedLanguage, $defaultLanguage])) as $language) {
+            if (isset($indexed[$language])) {
+                return $indexed[$language];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * HR: Normalizira kratku BCP-47 oznaku jezika ili vraća zadanu vrijednost.
+     * EN: Normalizes a short BCP-47 locale tag or returns the supplied fallback.
+     */
+    private function normalizedLanguage(string $language, string $fallback): string
+    {
+        $language = strtolower(trim($language));
+
+        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : $fallback;
     }
 }

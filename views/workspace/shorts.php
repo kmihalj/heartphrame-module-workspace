@@ -19,6 +19,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
  * @var string $language
  * @var string $shortsPath
  * @var bool $treeVisibleByDefault
+ * @var bool $displayOptionsVisibleByDefault
  * @var string $assetsCssPath
  */
 $orderOptions = [
@@ -88,23 +89,41 @@ $orderOptions = [
                     ) ?>
                 </p>
             </div>
-            <button
-                class="btn btn-outline-secondary btn-sm"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#workspace-page-tree"
-                aria-controls="workspace-page-tree"
-                aria-expanded="<?= $treeVisibleByDefault ? 'true' : 'false' ?>"
-            >
-                <?= $this->escape(__('Stablo stranica')) ?>
-            </button>
+            <div class="d-flex flex-wrap gap-2">
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#workspace-page-tree"
+                    aria-controls="workspace-page-tree"
+                    aria-expanded="<?= $treeVisibleByDefault ? 'true' : 'false' ?>"
+                >
+                    <?= $this->escape(__('Stablo stranica')) ?>
+                </button>
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#workspace-shorts-display-options"
+                    aria-controls="workspace-shorts-display-options"
+                    aria-expanded="<?= $displayOptionsVisibleByDefault ? 'true' : 'false' ?>"
+                >
+                    <?= $this->escape(__('Opcije prikaza')) ?>
+                </button>
+            </div>
         </header>
 
-        <form class="card card-body workspace-shorts-filters mb-4" method="get" action="<?= $this->escape(
-            $shortsPath,
-        ) ?>">
-            <input type="hidden" name="lang" value="<?= $this->escape($language) ?>">
-            <div class="row g-3 align-items-end">
+        <div
+            id="workspace-shorts-display-options"
+            class="collapse<?= $displayOptionsVisibleByDefault ? ' show' : '' ?>"
+        >
+            <form class="card card-body workspace-shorts-filters mb-4" method="get" action="<?= $this->escape(
+                $shortsPath,
+            ) ?>">
+                <input type="hidden" name="lang" value="<?= $this->escape($language) ?>">
+                <input type="hidden" name="tree" value="<?= $treeVisibleByDefault ? '1' : '0' ?>">
+                <input type="hidden" name="options" value="<?= $displayOptionsVisibleByDefault ? '1' : '0' ?>">
+                <div class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">
                     <label class="form-label" for="workspace-shorts-depth">
                         <?= $this->escape(__('Prikazane razine')) ?>
@@ -153,14 +172,15 @@ $orderOptions = [
                         <?= $this->escape(__('Prikaži')) ?>
                     </button>
                 </div>
-            </div>
-            <p class="small text-body-secondary mt-3 mb-0">
-                <?= $this->escape(__('Dostupnih članaka:')) ?> <?= $total ?>.
-                <?php if (!$allAvailable) : ?>
-                    <?= $this->escape(__('Opcija „Sve” isključena je za 100 ili više članaka.')) ?>
-                <?php endif; ?>
-            </p>
-        </form>
+                </div>
+                <p class="small text-body-secondary mt-3 mb-0">
+                    <?= $this->escape(__('Dostupnih članaka:')) ?> <?= $total ?>.
+                    <?php if (!$allAvailable) : ?>
+                        <?= $this->escape(__('Opcija „Sve” isključena je za 100 ili više članaka.')) ?>
+                    <?php endif; ?>
+                </p>
+            </form>
+        </div>
 
         <?php if ($articles === []) : ?>
             <div class="alert alert-info">

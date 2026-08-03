@@ -18,9 +18,10 @@ return [
     'shorts' => [
         // HR: Zadane vrijednosti javnog popisa sažetaka unutar svakog područja.
         // EN: Default values for each Workspace's public Shorts listing.
-        'depth' => 1,
+        'depth' => 2,
         'limit' => 10,
-        'order' => 'hierarchy',
+        'order' => 'newest',
+        'display_options_visible' => true,
     ],
     'menu' => [
         'auto_register_top' => true,

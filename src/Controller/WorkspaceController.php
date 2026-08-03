@@ -16,6 +16,7 @@ use HeartPhrame\Alert\Alert;
 use HeartPhrame\Alert\AlertHandler;
 use HeartPhrame\CodeBook\AlertLevelEnum;
 use HeartPhrame\Http\ResponseFactory;
+use HeartPhrame\Localization\TranslatorInterface;
 use HeartPhrame\Routing\UrlGenerator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -50,6 +51,7 @@ final readonly class WorkspaceController
         private AlertHandler $alertHandler,
         private WorkspaceWorkflowService $workflow,
         private WorkspaceNotificationBridge $notifications,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -1872,15 +1874,19 @@ final readonly class WorkspaceController
     }
 
     /**
-     * HR: Čita odabrani jezik dokumenta uz hrvatski fallback.
-     * EN: Reads the selected document language with a Croatian fallback.
+     * HR: Čita odabrani jezik dokumenta, zatim aktivni jezik sučelja i na kraju zadani jezik sitea.
+     * EN: Reads the selected document locale, then the active UI locale, and finally the site default locale.
      */
     private function language(ServerRequestInterface $request): string
     {
         $query = $request->getQueryParams();
-        $language = strtolower($this->stringValue($query['lang'] ?? 'hr'));
+        $language = strtolower($this->stringValue(
+            $query['lang'] ?? $this->translator->getLocale(),
+        ));
 
-        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : 'hr';
+        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1
+        ? $language
+        : $this->config->siteDefaultLanguage();
     }
 
     /**

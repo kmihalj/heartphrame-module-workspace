@@ -117,12 +117,21 @@ vendor/bin/hph workspace:install-homepage-migration
 vendor/bin/hph orm-migrate:up
 ```
 
+Ako je ta migracija naslovnice već bila primijenjena prije uvođenja
+strukturiranih ciljeva Sažetaka, dodajte i kompatibilne stupce prikaza:
+
+```bash
+vendor/bin/hph workspace:install-homepage-view-options-migration
+vendor/bin/hph orm-migrate:up
+```
+
 ## Sažetci Područja
 
 Svako vidljivo stablo Područja prikazuje ikonu **Sažetci**. Stranica na
 `/{korijen-područja}/{područje}/shorts` renderira točno objavljenu Editor
-verziju svake dopuštene stranice kao isječak od približno šest redaka s fade
-završetkom i poveznicom **Pročitaj više**. Nacrti, arhivirane objave,
+verziju svake dopuštene stranice kao isječak visine dvanaest redaka s fade
+završetkom i poveznicom **Pročitaj više**. Tako ostaje mjesta za približno pet
+do šest dodatnih redaka teksta i kada članak počinje kompaktnom slikom. Nacrti, arhivirane objave,
 nedostupne stranice i svi potomci nedostupne stranice uklanjaju se prije
 učitavanja sadržaja.
 
@@ -136,11 +145,19 @@ aplikacijski `config/workspace.php`:
 
 ```php
 'shorts' => [
-    'depth' => 1,
+    'depth' => 2,
     'limit' => 10,
-    'order' => 'hierarchy',
+    'order' => 'newest',
+    'display_options_visible' => true,
 ],
 ```
+
+Stablo i ploča **Opcije prikaza** početno su otvoreni. Izravna poveznica može
+početno sklopiti jedan ili oba dijela parametrima `tree=0` i `options=0`, dok
+oba gumba ostaju dostupna. Obrazac filtra čuva te vrijednosti. Sadržaj prvo
+koristi točno objavljenu verziju aktivnog jezika, a zatim zadani jezik sitea iz
+`app.localization.locale` u `config/app.php`; nikada ne koristi nacrt kao
+jezični fallback.
 
 To su postavke sitea, a ne dizajn teme. Potpuni backup sitea treba uključiti
 `config/workspace.php`; izvoz paketa teme ne preuzima i ne treba preuzimati te
@@ -149,9 +166,11 @@ vrijednosti.
 ## Naslovnica aplikacije
 
 Administrator postavlja naslovnicu u **Postavke → Područja → Naslovnica
-aplikacije**. Može odabrati objavljenu stranicu za neprijavljene goste, drugu
-stranicu dostupnu svim prijavljenim korisnicima i dopuštenje osobnog izbora u
-Auth profilu korisnika.
+aplikacije**. Može odabrati objavljenu stranicu ili prikaz **Sažetaka** za
+neprijavljene goste, drugi cilj dostupan svim prijavljenim korisnicima i
+dopuštenje osobnog izbora u Auth profilu korisnika. Kada je cilj prikaz
+Sažetaka, prikazuju se strukturirani prekidači **Vidljivo stablo stranica** i
+**Vidljive opcije prikaza**, a ne slobodno tekstualno polje query parametara.
 
 Za prijavljenog korisnika redoslijed je osobna stranica, zadana za prijavljene,
 javna zadana te ugrađena naslovnica host aplikacije. Gost koristi javnu pa
@@ -167,7 +186,9 @@ profilnu sekciju registrira isključivo Workspace dok je uključen.
 Postavke i osobni izbori spremaju se u tablice
 `workspace_homepage_settings` i `workspace_user_homepages`. Potpuni backup
 baze/sitea mora obuhvatiti obje tablice. To su sadržajne postavke sitea i
-namjerno ne pripadaju izvozu paketa teme.
+namjerno ne pripadaju izvozu paketa teme. Vrsta strukturiranog cilja, ID
+Područja i oba prekidača vidljivosti spremaju se u te tablice pa ih standardni
+backup i povrat baze čuvaju bez gubitka ponašanja naslovnice.
 
 ## Integracija s HTML editorom
 

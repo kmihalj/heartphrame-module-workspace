@@ -10,13 +10,17 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceShortsService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
+use HeartPhrame\Localization\TranslatorInterface;
 use HeartPhrame\Routing\UrlGenerator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+use function in_array;
 use function is_array;
+use function is_scalar;
 use function preg_match;
 use function strtolower;
+use function trim;
 
 /**
  * HR: Poslužuje javnu, ACL-filtriranu stranicu Sažetaka jednog područja.
@@ -35,6 +39,7 @@ final readonly class WorkspaceShortsController
         private WorkspaceShortsService $shorts,
         private WorkspaceConfig $config,
         private UrlGenerator $urlGenerator,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -63,7 +68,21 @@ final readonly class WorkspaceShortsController
         }
 
         $language = $this->language($request);
-        $model = $this->shorts->viewModel($workspace, $language, $request->getQueryParams());
+        $query = $request->getQueryParams();
+        $model = $this->shorts->viewModel(
+            $workspace,
+            $language,
+            $query,
+            $this->config->siteDefaultLanguage(),
+        );
+        $treeVisible = $this->queryVisibility(
+            $query['tree'] ?? null,
+            $this->config->treeVisibleByDefault(),
+        );
+        $displayOptionsVisible = $this->queryVisibility(
+            $query['options'] ?? null,
+            $this->config->shortsDisplayOptionsVisibleByDefault(),
+        );
 
         return $this->viewRenderer->render('workspace/shorts', [
             'title' => __('Sažetci') . ' · ' . WorkspaceValue::string($workspace['name'] ?? ''),
@@ -78,21 +97,44 @@ final readonly class WorkspaceShortsController
             'allAvailable' => $model['all_available'],
             'language' => $language,
             'shortsPath' => $model['shorts_path'],
-            'treeVisibleByDefault' => $this->config->treeVisibleByDefault(),
+            'treeVisibleByDefault' => $treeVisible,
+            'displayOptionsVisibleByDefault' => $displayOptionsVisible,
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
         ]);
     }
 
     /**
-     * HR: Čita odabrani jezik sa sigurnim hrvatskim fallbackom.
-     * EN: Reads the selected locale with a safe Croatian fallback.
+     * HR: Čita odabrani ili aktivni jezik uz sigurni fallback na zadani jezik sitea.
+     * EN: Reads the selected or active locale with a safe site-default fallback.
      */
     private function language(ServerRequestInterface $request): string
     {
         $query = $request->getQueryParams();
-        $language = strtolower(WorkspaceValue::string($query['lang'] ?? 'hr'));
+        $language = strtolower(WorkspaceValue::string(
+            $query['lang'] ?? $this->translator->getLocale(),
+        ));
 
-        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : 'hr';
+        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1
+        ? $language
+        : $this->config->siteDefaultLanguage();
+    }
+
+    /**
+     * HR: Čita `1/0`, `true/false`, `yes/no` i `on/off` bez dvosmislenog PHP castanja.
+     * EN: Reads `1/0`, `true/false`, `yes/no`, and `on/off` without ambiguous PHP casting.
+     */
+    private function queryVisibility(mixed $value, bool $fallback): bool
+    {
+        if (!is_scalar($value)) {
+            return $fallback;
+        }
+
+        $normalized = strtolower(trim((string)$value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+            return true;
+        }
+
+        return in_array($normalized, ['0', 'false', 'no', 'off'], true) ? false : $fallback;
     }
 
     /**

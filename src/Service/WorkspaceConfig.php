@@ -10,6 +10,7 @@ use function array_replace_recursive;
 use function in_array;
 use function is_file;
 use function is_scalar;
+use function preg_match;
 use function preg_replace;
 use function rtrim;
 use function strtolower;
@@ -91,9 +92,9 @@ final readonly class WorkspaceConfig
     public function shortsDefaultDepth(): int
     {
         $shorts = $this->section('shorts');
-        $depth = WorkspaceValue::int($shorts['depth'] ?? 1);
+        $depth = WorkspaceValue::int($shorts['depth'] ?? 2);
 
-        return in_array($depth, [1, 2, 3], true) ? $depth : 1;
+        return in_array($depth, [1, 2, 3], true) ? $depth : 2;
     }
 
     /**
@@ -121,7 +122,31 @@ final readonly class WorkspaceConfig
 
         return in_array($order, ['hierarchy', 'newest', 'oldest'], true)
         ? $order
-        : 'hierarchy';
+        : 'newest';
+    }
+
+    /**
+     * HR: Određuje jesu li opcije prikaza Sažetaka početno otvorene.
+     * EN: Determines whether the Shorts display options are initially expanded.
+     */
+    public function shortsDisplayOptionsVisibleByDefault(): bool
+    {
+        $shorts = $this->section('shorts');
+
+        return (bool)($shorts['display_options_visible'] ?? true);
+    }
+
+    /**
+     * HR: Vraća zadani jezik sadržaja sitea za siguran fallback objavljenih stranica.
+     * EN: Returns the site's default content locale for safe published-page fallback.
+     */
+    public function siteDefaultLanguage(): string
+    {
+        $language = strtolower(trim(
+            $this->config->getAsString('app.localization.locale', 'en') ?? 'en',
+        ));
+
+        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : 'en';
     }
 
     /**

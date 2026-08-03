@@ -369,11 +369,36 @@ final class WorkspaceAccessService
         ?array $user = null,
         string $language = '',
     ): array {
+        return $this->visibleTreeForLanguages(
+            $workspace,
+            $user,
+            $language !== '' ? [$language] : [],
+        );
+    }
+
+    /**
+     * HR: Vraća stablo čitljivo u prvom objavljenom jeziku iz zadanog prioriteta.
+     * EN: Returns the tree readable in the first published locale from the supplied priority.
+     *
+     * @param array<string, mixed> $workspace
+     * @param array<string, mixed>|null $user
+     * @param list<string> $languages
+     * @return list<array<string, mixed>>
+     */
+    public function visibleTreeForLanguages(
+        array $workspace,
+        ?array $user,
+        array $languages,
+    ): array {
         $user ??= $this->currentUser();
+        $languages = array_values(array_unique(array_filter(array_map(
+            static fn(string $language): string => strtolower(trim($language)),
+            $languages,
+        ))));
         $nodes = $this->nodesForWorkspace(WorkspaceValue::int($workspace['id'] ?? 0));
         $permissionsByNode = $this->nodePermissionsForNodes($workspace, $nodes, $user);
-        $workflowStates = $language !== ''
-        ? $this->repository->nodeWorkflowsForNodes(
+        $workflowStates = $languages !== []
+        ? $this->repository->nodeWorkflowsForNodesAllLanguages(
             array_values(array_filter(array_map(
                 static fn(array $node): int =>
                     WorkspaceValue::string($node['node_type'] ?? '') === 'document'
@@ -381,7 +406,6 @@ final class WorkspaceAccessService
                         : 0,
                 $nodes,
             ))),
-            $language,
         )
         : [];
         $visible = [];
@@ -393,12 +417,15 @@ final class WorkspaceAccessService
             }
 
             if (
-                $language !== ''
+                $languages !== []
                 && WorkspaceValue::string($node['node_type'] ?? '') === 'document'
                 && !$permissions['can_edit']
                 && !$permissions['can_publish']
                 && !$permissions['can_manage']
-                && !$this->workflow->isReadableWorkflow($workflowStates[$nodeId] ?? null)
+                && !$this->hasReadableLanguage(
+                    WorkspaceValue::rows($workflowStates[$nodeId] ?? null),
+                    $languages,
+                )
             ) {
                 continue;
             }
@@ -408,6 +435,31 @@ final class WorkspaceAccessService
         }
 
         return $this->buildTree($visible, null);
+    }
+
+    /**
+     * HR: Provjerava postoji li čitljiva objava u dopuštenom jezičnom prioritetu.
+     * EN: Checks whether a readable publication exists in the allowed locale priority.
+     *
+     * @param list<array<string, mixed>> $workflows
+     * @param list<string> $languages
+     */
+    private function hasReadableLanguage(array $workflows, array $languages): bool
+    {
+        foreach ($workflows as $workflow) {
+            if (
+                in_array(
+                    strtolower(WorkspaceValue::string($workflow['language_code'] ?? '')),
+                    $languages,
+                    true,
+                )
+                && $this->workflow->isReadableWorkflow($workflow)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

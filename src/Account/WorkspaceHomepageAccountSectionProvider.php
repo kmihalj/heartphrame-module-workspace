@@ -43,6 +43,9 @@ final readonly class WorkspaceHomepageAccountSectionProvider implements AuthAcco
         $data['savePath'] = $this->urlGenerator->namedRouteExists('workspace.homepage.preference.save')
         ? $this->urlGenerator->getPathFor('workspace.homepage.preference.save')
         : rtrim($this->urlGenerator->getBasePath(), '/') . '/workspaces/homepage/preference';
+        $data['assetsJsPath'] = $this->urlGenerator->namedRouteExists('workspace.assets.js')
+        ? $this->urlGenerator->getPathFor('workspace.assets.js')
+        : rtrim($this->urlGenerator->getBasePath(), '/') . '/workspaces/assets.js';
 
         return [
             'key' => 'workspace-homepage',

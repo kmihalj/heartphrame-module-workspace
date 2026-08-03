@@ -62,13 +62,32 @@ final class WorkspaceSchemaTest extends TestCase
         $this->assertTrue(
             $schema->hasColumns(
                 ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
-                ['public_node_id', 'authenticated_node_id', 'allow_user_selection'],
+                [
+                    'public_node_id',
+                    'public_target_type',
+                    'public_workspace_id',
+                    'public_show_tree',
+                    'public_show_display_options',
+                    'authenticated_node_id',
+                    'authenticated_target_type',
+                    'authenticated_workspace_id',
+                    'authenticated_show_tree',
+                    'authenticated_show_display_options',
+                    'allow_user_selection',
+                ],
             ),
         );
         $this->assertTrue(
             $schema->hasColumns(
                 ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
-                ['user_id', 'node_id'],
+                [
+                    'user_id',
+                    'node_id',
+                    'target_type',
+                    'workspace_id',
+                    'show_tree',
+                    'show_display_options',
+                ],
             ),
         );
         $this->assertTrue(
@@ -140,5 +159,61 @@ final class WorkspaceSchemaTest extends TestCase
         $this->assertFalse(
             $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS),
         );
+    }
+
+    /**
+     * HR: Nadogradnja opcija radi nad starim tablicama bez gubitka odabira stranica.
+     * EN: The view-options upgrade works on legacy tables without losing page selections.
+     */
+    public function testHomepageViewOptionsUpgradePreservesLegacyTables(): void
+    {
+        $helper = new Helper();
+        $config = new Config($helper, [
+            'database' => [
+                'connections' => [
+                    'default' => ['driver' => 'sqlite', 'database' => ':memory:'],
+                ],
+            ],
+        ]);
+        $database = new Database($config, $helper);
+        $schema = $database->schema();
+        $schema->create(
+            ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+            static function (\AaiEduHr\HeartPhrameModuleOrm\Database\Schema\Blueprint $table): void {
+                $table->id();
+                $table->bigInteger('public_node_id')->unsigned()->nullable();
+                $table->bigInteger('authenticated_node_id')->unsigned()->nullable();
+                $table->boolean('allow_user_selection')->default(true);
+                $table->timestamps();
+            },
+        );
+        $schema->create(
+            ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+            static function (\AaiEduHr\HeartPhrameModuleOrm\Database\Schema\Blueprint $table): void {
+                $table->id();
+                $table->bigInteger('user_id')->unsigned()->unique();
+                $table->bigInteger('node_id')->unsigned();
+                $table->timestamps();
+            },
+        );
+        $migration = require dirname(__DIR__)
+        . '/resources/migrations/add_workspace_homepage_view_options.php';
+        $this->assertInstanceOf(ReversibleMigrationInterface::class, $migration);
+
+        $migration->up($database);
+
+        $this->assertTrue($schema->hasColumn(
+            ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+            'public_show_display_options',
+        ));
+        $this->assertTrue($schema->hasColumn(
+            ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+            'show_display_options',
+        ));
+        $migration->down($database);
+        $this->assertFalse($schema->hasColumn(
+            ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
+            'public_target_type',
+        ));
     }
 }

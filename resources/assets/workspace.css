@@ -154,7 +154,7 @@
 .workspace-short-excerpt {
     --workspace-short-line-height: 1.55rem;
     line-height: var(--workspace-short-line-height);
-    max-height: calc(var(--workspace-short-line-height) * 6);
+    max-height: calc(var(--workspace-short-line-height) * 12);
     overflow: hidden;
     position: relative;
 }
@@ -163,7 +163,7 @@
     background: linear-gradient(to bottom, transparent, var(--bs-body-bg));
     bottom: 0;
     content: '';
-    height: calc(var(--workspace-short-line-height) * 2.25);
+    height: calc(var(--workspace-short-line-height) * 2.5);
     left: 0;
     pointer-events: none;
     position: absolute;
@@ -171,7 +171,7 @@
 }
 
 .workspace-short-excerpt :is(img, video, iframe, figure) {
-    max-height: calc(var(--workspace-short-line-height) * 4);
+    max-height: calc(var(--workspace-short-line-height) * 7);
     max-width: 100%;
     object-fit: cover;
 }

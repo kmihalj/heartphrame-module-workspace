@@ -186,7 +186,13 @@ Stranica ima tri neovisna odabira:
 Opcija `all` uključena je samo ispod 100 dopuštenih članaka. Controller na 100
 ili više odbija i ručno sastavljen `limit=all` te koristi konfiguriranu
 brojčanu zadanu vrijednost. Zadane postavke žive pod ključem `shorts` u
-`config/workspace.php`, a uređuju se pod **Postavke → Područja**.
+`config/workspace.php`, a uređuju se pod **Postavke → Područja**. Isporučene
+zadane vrijednosti su razine 1–2, 10 članaka i najnoviji prvo.
+
+Gumbi **Stablo stranica** i **Opcije prikaza** uvijek su dostupni. Izravna
+poveznica može parametrima `tree=0` i `options=0` početno sklopiti pripadajuće
+dijelove; bez parametara koristi se konfiguracija sitea. Obrazac filtra čuva
+obje vrijednosti pa ista ruta može biti obična stranica ili kompaktna naslovnica.
 
 Sigurnosno filtriranje izvršava se prije učitavanja HTML-a: servis kreće od
 `visibleTree()`, primjenjuje nasljedni ACL čvorova, zadržava dokument-čvorove
@@ -194,8 +200,11 @@ odabrane dubine pa traži nearhivirani workflow s pozitivnim pokazivačem na
 objavljenu verziju. Isto pravilo vrijedi vlasniku i administratoru, pa njihovo
 pravo pregleda nacrta nikada ne izlaže nacrt u Sažetcima. Editor dobiva samo već
 ograničenu mapu dokument/verzija i skupno učitava točno te nepromjenjive
-verzije. View renderira Editorom sanitizirani HTML unutar isječka od šest
-redaka s fadeom prilagođenim temi i vodi na kanonsku Workspace stranicu.
+verzije. View renderira Editorom sanitizirani HTML unutar isječka od dvanaest
+redaka s fadeom prilagođenim temi i vodi na kanonsku Workspace stranicu. Za
+svaku stranicu prvo traži aktivni jezik, a zatim isključivo točno objavljenu
+verziju zadanog jezika sitea iz `app.localization.locale`. Nacrt nikada nije
+jezični fallback.
 
 Sažetci ne dodaju tablicu baze. Zadane vrijednosti pripadaju konfiguraciji
 sitea, pa potpuni backup uključuje `config/workspace.php`; izvoz paketa teme
@@ -388,9 +397,11 @@ stranica koju treba ponovno provjeriti kroz nasljedni ACL i proces objave. Auth
 i dalje radi potpuno samostalno: Workspace registrira vlastiti opcionalni
 partial korisničkog profila i automatski ga uklanja kada modul nije uključen.
 
-Administrator u grupi postavki Područja bira javnu i prijavljenu zadanu
-stranicu. Korisnik kojem je dopušten osobni izbor vidi samo objavljene stranice
-kojima trenutačno smije pristupiti. Resolver početne rute primjenjuje osobna →
+Administrator u grupi postavki Područja bira objavljenu stranicu ili prikaz
+Sažetaka kao javni i prijavljeni zadani cilj. Cilj Sažetaka ima strukturirane
+prekidače **Vidljivo stablo stranica** i **Vidljive opcije prikaza**. Korisnik
+kojem je dopušten osobni izbor vidi samo objavljene stranice i Sažetke kojima
+trenutačno smije pristupiti. Resolver početne rute primjenjuje osobna →
 prijavljena → javna → host naslovnica i preusmjerava samo na generiranu internu
 named rutu, čime sprječava otvoreni redirect i pristup kroz zastarjeli ACL.
 
@@ -401,8 +412,17 @@ vendor/bin/hph workspace:install-homepage-migration
 vendor/bin/hph orm-migrate:up
 ```
 
+Instalacija koja već ima te dvije tablice dodaje strukturirane ciljeve Sažetaka
+bez zamjene postojećih izbora stranica:
+
+```bash
+vendor/bin/hph workspace:install-homepage-view-options-migration
+vendor/bin/hph orm-migrate:up
+```
+
 Potpuni backup sitea obuhvaća `workspace_homepage_settings` i
-`workspace_user_homepages`. Uvoz pojedinačnog Područja ne smije neprimjetno
+`workspace_user_homepages`, uključujući vrstu cilja, ID Područja i oba
+prekidača vidljivosti. Uvoz pojedinačnog Područja ne smije neprimjetno
 zamijeniti politiku naslovnice odredišnog sitea, a izvoz teme ne posjeduje ove
 vrijednosti.
 

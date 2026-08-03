@@ -250,6 +250,39 @@ final class WorkspaceShortsServiceTest extends TestCase
     }
 
     /**
+     * HR: Nedostajući aktivni jezik koristi samo objavljenu inačicu zadanog jezika sitea.
+     * EN: A missing active locale falls back only to the published site-default locale.
+     */
+    public function testMissingRequestedLanguageFallsBackToPublishedSiteDefaultLanguage(): void
+    {
+        $workspace = $this->repository->saveWorkspace([
+            'name' => 'Višejezični sažetci',
+            'slug' => 'multilingual-summaries',
+            'visibility' => 'public',
+            'owner_user_id' => 1,
+        ], 1);
+        $node = $this->node((int)$workspace['id'], 'Default language', 'root-doc');
+        $this->repository->saveNodeWorkflow((int)$node['id'], 'en', [
+            'status' => 'published',
+            'current_version_number' => 1,
+            'published_version_number' => 1,
+            'published_by_user_id' => 1,
+            'published_at' => '2026-08-03 10:00:00',
+        ], 1);
+
+        $model = $this->shorts->viewModel($workspace, 'hr', [], 'en');
+
+        $this->assertSame(2, $model['depth']);
+        $this->assertSame('10', $model['limit']);
+        $this->assertSame('newest', $model['order']);
+        $this->assertSame('en', $model['articles'][0]['language']);
+        $this->assertSame(
+            '/workspace/multilingual-summaries/root-doc?lang=en',
+            $model['articles'][0]['href'],
+        );
+    }
+
+    /**
      * @return array{title:string,html:string,createdAt:string}
      */
     private function editorDocument(string $title, string $content): array

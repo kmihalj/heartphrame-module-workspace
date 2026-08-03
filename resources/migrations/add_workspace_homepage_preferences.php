@@ -24,7 +24,15 @@ return new class implements ReversibleMigrationInterface {
                 static function (Blueprint $table): void {
                     $table->id();
                     $table->bigInteger('public_node_id')->unsigned()->nullable()->index();
+                    $table->string('public_target_type', 16)->default('page')->index();
+                    $table->bigInteger('public_workspace_id')->unsigned()->nullable()->index();
+                    $table->boolean('public_show_tree')->default(true);
+                    $table->boolean('public_show_display_options')->default(true);
                     $table->bigInteger('authenticated_node_id')->unsigned()->nullable()->index();
+                    $table->string('authenticated_target_type', 16)->default('page')->index();
+                    $table->bigInteger('authenticated_workspace_id')->unsigned()->nullable()->index();
+                    $table->boolean('authenticated_show_tree')->default(true);
+                    $table->boolean('authenticated_show_display_options')->default(true);
                     $table->boolean('allow_user_selection')->default(true)->index();
                     $table->bigInteger('updated_by_user_id')->unsigned()->nullable()->index();
                     $table->timestamps();
@@ -39,6 +47,10 @@ return new class implements ReversibleMigrationInterface {
                     $table->id();
                     $table->bigInteger('user_id')->unsigned()->unique();
                     $table->bigInteger('node_id')->unsigned()->index();
+                    $table->string('target_type', 16)->default('page')->index();
+                    $table->bigInteger('workspace_id')->unsigned()->nullable()->index();
+                    $table->boolean('show_tree')->default(true);
+                    $table->boolean('show_display_options')->default(true);
                     $table->timestamps();
                 },
             );

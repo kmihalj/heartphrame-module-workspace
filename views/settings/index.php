@@ -135,7 +135,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                                     <?php foreach ([1, 2, 3] as $depth) : ?>
                                         <option
                                             value="<?= $depth ?>"
-                                        <?= WorkspaceValue::int($settings['shorts_depth'] ?? 1) === $depth
+                                        <?= WorkspaceValue::int($settings['shorts_depth'] ?? 2) === $depth
                                         ? 'selected'
                                         : '' ?>
                                         >
@@ -176,7 +176,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                                         <option
                                             value="<?= $order ?>"
     <?= WorkspaceValue::string(
-        $settings['shorts_order'] ?? 'hierarchy',
+        $settings['shorts_order'] ?? 'newest',
     ) === $order
     ? 'selected'
     : '' ?>
@@ -184,6 +184,25 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                        </div>
+                        <div class="form-check form-switch mt-3">
+                            <input
+                                id="workspace-shorts-display-options-visible"
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                name="shorts_display_options_visible"
+                                value="1"
+                                <?= (bool)($settings['shorts_display_options_visible'] ?? true)
+                                ? 'checked'
+                                : '' ?>
+                            >
+                            <label
+                                class="form-check-label"
+                                for="workspace-shorts-display-options-visible"
+                            >
+                                <?= $this->escape(__('Opcije prikaza su početno prikazane')) ?>
+                            </label>
                         </div>
                         <div class="form-text mt-2">
                             <?= $this->escape(
