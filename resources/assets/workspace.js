@@ -486,6 +486,19 @@
             return;
         }
 
+        /*
+         * HR: Modal mora biti izravan potomak bodyja. Hero i tematski layouti
+         * mogu stvarati vlastiti stacking context pa bi lokalni modal završio
+         * ispod Bootstrap backdroppa i postao potpuno neklikabilan.
+         *
+         * EN: The modal must be a direct body child. Hero and theme layouts may
+         * create their own stacking contexts, leaving a nested modal below the
+         * Bootstrap backdrop and therefore completely unclickable.
+         */
+        if (modal.parentElement !== document.body) {
+            document.body.append(modal);
+        }
+
         const content = modal.querySelector('.modal-content');
         if (!(content instanceof HTMLElement)) {
             return;

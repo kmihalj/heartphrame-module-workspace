@@ -15,6 +15,13 @@ return [
     'creation' => [
         'authenticated_users' => false,
     ],
+    'shorts' => [
+        // HR: Zadane vrijednosti javnog popisa sažetaka unutar svakog područja.
+        // EN: Default values for each Workspace's public Shorts listing.
+        'depth' => 1,
+        'limit' => 10,
+        'order' => 'hierarchy',
+    ],
     'menu' => [
         'auto_register_top' => true,
         'auto_register_settings' => true,

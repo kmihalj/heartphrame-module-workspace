@@ -21,7 +21,7 @@ final readonly class WorkspaceEditorBridge
 {
     private const EDITOR_PACKAGE = 'aaieduhr/heartphrame-module-editor-html';
 
-    private const EDITOR_SERVICE = 'AaiEduHr\\HeartPhrameModuleEditorHtml\\Service\\EditorService';
+    private const EDITOR_SERVICE_NAMESPACE = 'AaiEduHr\\HeartPhrameModuleEditorHtml\\Service\\';
 
     private const DOCUMENT_VIEW_BUILDER =
     'AaiEduHr\\HeartPhrameModuleEditorHtml\\Service\\EditorDocumentViewBuilder';
@@ -185,6 +185,87 @@ final readonly class WorkspaceEditorBridge
     }
 
     /**
+     * HR: Učitava točno objavljene verzije članaka za Sažetke. Novi Editor
+     *     koristi jedan skupni poziv, a starija kompatibilna verzija sigurno
+     *     pada na pojedinačno učitavanje.
+     *
+     * EN: Loads exact published article versions for Shorts. A current Editor
+     *     uses one batch call, while an older compatible version safely falls
+     *     back to per-document loading.
+     *
+     * @param array<string, int> $versionNumbersByDocument
+     * @return array<string, array{
+     *     documentId:string,
+     *     versionNumber:int,
+     *     title:string,
+     *     html:string,
+     *     createdAt:string
+     * }>
+     */
+    public function publishedVersions(array $versionNumbersByDocument, string $language): array
+    {
+        $editor = $this->editorService();
+        if ($editor === null) {
+            return [];
+        }
+
+        try {
+            if (method_exists($editor, 'loadVersions')) {
+                $versions = $editor->loadVersions($versionNumbersByDocument, $language);
+            } elseif (method_exists($editor, 'loadVersion')) {
+                $versions = [];
+                foreach ($versionNumbersByDocument as $documentKey => $versionNumber) {
+                    $version = $editor->loadVersion($documentKey, $language, $versionNumber);
+                    if (is_object($version)) {
+                        $versions[$documentKey] = $version;
+                    }
+                }
+            } else {
+                return [];
+            }
+        } catch (Throwable) {
+            return [];
+        }
+
+        if (!is_array($versions)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($versions as $documentKey => $version) {
+            if (!is_object($version)) {
+                continue;
+            }
+
+            $id = is_scalar($version->documentId ?? null)
+            ? trim((string)$version->documentId)
+            : trim((string)$documentKey);
+            $versionNumber = is_numeric($version->versionNumber ?? null)
+            ? (int)$version->versionNumber
+            : 0;
+            if ($id === '') {
+                continue;
+            }
+
+            if ($versionNumber <= 0) {
+                continue;
+            }
+
+            $result[$id] = [
+                'documentId' => $id,
+                'versionNumber' => $versionNumber,
+                'title' => is_scalar($version->title ?? null) ? trim((string)$version->title) : '',
+                'html' => is_scalar($version->html ?? null) ? (string)$version->html : '',
+                'createdAt' => is_scalar($version->createdAt ?? null)
+                    ? trim((string)$version->createdAt)
+                    : '',
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * HR: Početnu Editor verziju upravo povezane stranice pretvara u
      *     neobjavljeni nacrt.
      * EN: Converts the initial Editor version of a newly linked page into an
@@ -293,12 +374,13 @@ final readonly class WorkspaceEditorBridge
      */
     private function editorService(): ?object
     {
-        if (!$this->composerBridge->isInstalled(self::EDITOR_PACKAGE) || !class_exists(self::EDITOR_SERVICE)) {
+        $serviceId = self::EDITOR_SERVICE_NAMESPACE . 'EditorService';
+        if (!$this->composerBridge->isInstalled(self::EDITOR_PACKAGE) || !class_exists($serviceId)) {
             return null;
         }
 
         try {
-            $service = $this->container->get(self::EDITOR_SERVICE);
+            $service = $this->container->get($serviceId);
         } catch (Throwable) {
             return null;
         }

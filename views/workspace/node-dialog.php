@@ -24,6 +24,8 @@ $workspaceId = WorkspaceValue::int($workspace['id'] ?? 0);
 $nodeId = WorkspaceValue::int($node['id'] ?? 0);
 $permissions = WorkspaceValue::stringKeyArray($node['permissions'] ?? null);
 $restrictions = WorkspaceValue::rows($node['restrictions'] ?? null);
+$canManageRestrictions = (bool)($permissions['can_manage'] ?? false);
+$hasDirectRestrictions = $restrictions !== [];
 
 /**
  * HR: Provjerava jedno spremljeno pravo u ACL recima čvora.
@@ -96,20 +98,54 @@ $hasPermission = static function (
         </form>
     <?php endif; ?>
 
-    <?php if ((bool)($permissions['can_manage'] ?? false)) : ?>
+    <?php if ($workspaceAclSubjects !== []) : ?>
         <hr class="my-4">
-        <form method="post" action="<?= $this->escape($nodeAclSavePath) ?>">
+        <?php if ($canManageRestrictions) : ?>
+            <form method="post" action="<?= $this->escape($nodeAclSavePath) ?>">
             <?= $this->csrfHandler->generateCsrfTokenInputField() ?>
             <input type="hidden" name="workspace_id" value="<?= $workspaceId ?>">
             <input type="hidden" name="node_id" value="<?= $nodeId ?>">
             <input type="hidden" name="return_context" value="workspace">
             <input type="hidden" name="return_node_id" value="<?= $returnNodeId ?>">
-            <h3 class="h6"><?= $this->escape(__('Nasljedna ograničenja')) ?></h3>
+        <?php else : ?>
+            <section aria-labelledby="workspace-node-acl-title">
+        <?php endif; ?>
+            <h3 id="workspace-node-acl-title" class="h6">
+                <?= $this->escape(__('Nasljedna ograničenja')) ?>
+            </h3>
             <p class="small text-body-secondary">
                 <?= $this->escape(
-                    __('Prazna tablica znači da čvor nasljeđuje prava područja bez dodatnog ograničenja.'),
+                    __(
+                        'Zeleno prikazuje pravo naslijeđeno iz područja. Crveno prikazuje pravo '
+                        . 'koje je zadržano izravnim ograničenjem ove stranice.',
+                    ),
                 ) ?>
             </p>
+            <div class="workspace-node-acl-legend small mb-3" aria-label="<?= $this->escape(
+                __('Legenda ovlasti'),
+            ) ?>">
+                <span>
+                    <span class="workspace-acl-legend-swatch workspace-acl-legend-inherited"></span>
+                    <?= $this->escape(__('Naslijeđeno iz područja')) ?>
+                </span>
+                <span>
+                    <span class="workspace-acl-legend-swatch workspace-acl-legend-direct"></span>
+                    <?= $this->escape(__('Izravno ograničenje stranice')) ?>
+                </span>
+            </div>
+            <?php if (!$canManageRestrictions) : ?>
+                <div class="alert alert-secondary py-2" role="note">
+                    <?= $this->escape(
+                        __('Ovlasti su prikazane samo za čitanje. Za promjenu je potrebno pravo upravljanja.'),
+                    ) ?>
+                </div>
+            <?php elseif (!$hasDirectRestrictions) : ?>
+                <div class="alert alert-success py-2" role="note">
+                    <?= $this->escape(
+                        __('Stranica trenutačno potpuno nasljeđuje ovlasti područja.'),
+                    ) ?>
+                </div>
+            <?php endif; ?>
             <?php foreach (['user', 'group'] as $category) : ?>
                 <?php
                 $eligibleSubjects = array_values(array_filter(
@@ -146,27 +182,50 @@ $hasPermission = static function (
                                     <tr>
                                         <th scope="row"><?= $this->escape($label) ?></th>
                                         <?php foreach (['can_view', 'can_add', 'can_edit', 'can_publish', 'can_delete', 'can_manage'] as $permission) : ?>
+                                            <?php
+                                            $inherited = (bool)($subject[$permission] ?? false);
+                                            $direct = $hasPermission(
+                                                $restrictions,
+                                                $subjectType,
+                                                $subjectId,
+                                                $permission,
+                                            );
+                                            ?>
                                             <td class="text-center">
-                                                <input
-                                                    class="form-check-input"
-                                                    type="checkbox"
-                                                    name="acl[<?= $subjectType ?>][<?= $subjectId ?>][<?= $permission ?>]"
-                                                    value="1"
-                                                    <?= $publicReadOnly && $permission !== 'can_view' ? 'disabled' : '' ?>
-                                                    aria-label="<?= $this->escape(
-                                                        __('Nasljedna ograničenja')
-                                                        . ' - '
-                                                        . __($permission)
-                                                        . ': '
-                                                        . $label,
-                                                    ) ?>"
-                                                    <?= $hasPermission(
-                                                        $restrictions,
-                                                        $subjectType,
-                                                        $subjectId,
-                                                        $permission,
-                                                    ) ? 'checked' : '' ?>
-                                                >
+                                                <span class="workspace-node-acl-cell">
+                                                    <input
+                                                        class="form-check-input workspace-acl-checkbox-inherited"
+                                                        type="checkbox"
+                                                        <?= $inherited ? 'checked' : '' ?>
+                                                        disabled
+                                                        aria-label="<?= $this->escape(
+                                                            __('Naslijeđeno iz područja')
+                                                            . ' - '
+                                                            . __($permission)
+                                                            . ': '
+                                                            . $label,
+                                                        ) ?>"
+                                                    >
+                                                    <input
+                                                        class="form-check-input workspace-acl-checkbox-direct"
+                                                        type="checkbox"
+                                                        name="acl[<?= $subjectType ?>][<?= $subjectId ?>][<?= $permission ?>]"
+                                                        value="1"
+                                                        <?= (!$canManageRestrictions
+                                                            || !$inherited
+                                                            || ($publicReadOnly && $permission !== 'can_view'))
+                                                            ? 'disabled'
+                                                            : '' ?>
+                                                        aria-label="<?= $this->escape(
+                                                            __('Izravno ograničenje stranice')
+                                                            . ' - '
+                                                            . __($permission)
+                                                            . ': '
+                                                            . $label,
+                                                        ) ?>"
+                                                        <?= $direct ? 'checked' : '' ?>
+                                                    >
+                                                </span>
                                             </td>
                                         <?php endforeach; ?>
                                     </tr>
@@ -176,12 +235,21 @@ $hasPermission = static function (
                     </div>
                 <?php endif; ?>
             <?php endforeach; ?>
-            <div class="d-flex justify-content-end">
-                <button class="btn btn-secondary" type="submit">
-                    <?= $this->escape(__('Spremi ograničenja')) ?>
-                </button>
-            </div>
-        </form>
+            <?php if ($canManageRestrictions) : ?>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <p class="small text-body-secondary mb-0">
+                        <?= $this->escape(
+                            __('Uklonite sve crvene oznake za potpuno nasljeđivanje ovlasti područja.'),
+                        ) ?>
+                    </p>
+                    <button class="btn btn-secondary" type="submit">
+                        <?= $this->escape(__('Spremi ograničenja')) ?>
+                    </button>
+                </div>
+            </form>
+            <?php else : ?>
+            </section>
+            <?php endif; ?>
     <?php endif; ?>
 
     <?php if ((bool)($permissions['can_delete'] ?? false)) : ?>

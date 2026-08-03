@@ -43,6 +43,9 @@ final readonly class WorkspaceSettingsService
             'default_visibility' => $this->config->defaultVisibility(),
             'tree_visible' => $this->config->treeVisibleByDefault(),
             'authenticated_users_may_create' => $this->config->authenticatedUsersMayCreate(),
+            'shorts_depth' => $this->config->shortsDefaultDepth(),
+            'shorts_limit' => $this->config->shortsDefaultLimit(),
+            'shorts_order' => $this->config->shortsDefaultOrder(),
             'settings_file_path' => $this->config->settingsFilePath(),
         ];
     }
@@ -75,6 +78,19 @@ final readonly class WorkspaceSettingsService
             'creation' => [
                 'authenticated_users' => $this->boolValue(
                     $input['authenticated_users_may_create'] ?? false,
+                ),
+            ],
+            'shorts' => [
+                'depth' => $this->allowedInt($input['shorts_depth'] ?? 1, [1, 2, 3], 1),
+                'limit' => $this->allowedInt(
+                    $input['shorts_limit'] ?? 10,
+                    [5, 10, 25, 50],
+                    10,
+                ),
+                'order' => $this->allowedString(
+                    $input['shorts_order'] ?? 'hierarchy',
+                    ['hierarchy', 'newest', 'oldest'],
+                    'hierarchy',
                 ),
             ],
             'menu' => [
@@ -159,5 +175,31 @@ final readonly class WorkspaceSettingsService
         }
 
         return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /**
+     * HR: Prihvaća samo jednu od izričito dopuštenih brojčanih postavki.
+     * EN: Accepts only one of the explicitly allowed numeric settings.
+     *
+     * @param list<int> $allowed
+     */
+    private function allowedInt(mixed $value, array $allowed, int $fallback): int
+    {
+        $number = is_scalar($value) ? (int)$value : 0;
+
+        return in_array($number, $allowed, true) ? $number : $fallback;
+    }
+
+    /**
+     * HR: Prihvaća samo jednu od izričito dopuštenih tekstualnih postavki.
+     * EN: Accepts only one of the explicitly allowed string settings.
+     *
+     * @param list<string> $allowed
+     */
+    private function allowedString(mixed $value, array $allowed, string $fallback): string
+    {
+        $normalized = is_scalar($value) ? strtolower(trim((string)$value)) : '';
+
+        return in_array($normalized, $allowed, true) ? $normalized : $fallback;
     }
 }

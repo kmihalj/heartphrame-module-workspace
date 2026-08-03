@@ -98,6 +98,15 @@ Node ACL is deliberately restrictive:
 An empty node ACL means “inherit without an additional restriction.” A
 restriction on a parent automatically applies to every descendant.
 
+In the open Workspace, select **Edit tree** and then the pencil beside a node.
+The modal shows inherited Workspace grants in green and direct page
+restrictions in red. Red checks can only retain a permission already granted
+in green; they can never broaden it. Removing every red check and saving
+returns the node to unrestricted inheritance. Users with `can_edit` but not
+`can_manage` may inspect the matrix, while only `can_manage` may change it.
+The modal is attached directly to the document body so Theme or Hero stacking
+contexts cannot place it behind Bootstrap's backdrop.
+
 When rendering a large tree, the module batch-loads nodes, Workspace ACL,
 the user's groups, node restrictions, and workflow states. Ancestor chains and
 effective permissions are then calculated in memory. This keeps the number of
@@ -166,6 +175,36 @@ by `external_link`.
 
 One active HTML editor document may be linked to only one active Workspace
 node. This keeps URL and ACL ownership unambiguous.
+
+### 5.1 Workspace Shorts
+
+The list icon in every visible tree header opens
+`/{workspace-root}/{workspaceSlug}/shorts`. It is visible to every user who can
+view that Workspace; it is not a management action.
+
+The page supports three independent controls:
+
+- levels 1, 1–2, or 1–3 of the visible tree;
+- 5, 10, 25, 50, or all articles;
+- hierarchy, newest-first, or oldest-first order.
+
+The `all` option is enabled only below 100 eligible articles. The controller
+rejects a crafted `limit=all` at 100 or more and falls back to the configured
+numeric default. Defaults live under the `shorts` key in
+`config/workspace.php` and are editable in **Settings → Workspaces**.
+
+Security filtering happens before HTML is loaded: the service starts from
+`visibleTree()`, applies inherited node ACL, keeps only document nodes within
+the selected depth, then requires a non-archived workflow with a positive
+published version pointer. This rule also applies to owners and administrators,
+so their access to drafts never leaks draft text into Shorts. The Editor
+receives only the already limited document/version map and batch-loads those
+exact immutable versions. The view renders Editor-sanitized HTML inside a
+six-line, theme-aware fade and links to the canonical Workspace page.
+
+Shorts adds no database table. Its defaults are host-site configuration, so a
+complete backup includes `config/workspace.php`; Theme package export does not
+own them.
 
 ## 6. HTML editor integration
 

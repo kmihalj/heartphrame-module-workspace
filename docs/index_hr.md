@@ -94,6 +94,15 @@ ACL čvora namjerno samo ograničava:
 Prazan ACL čvora znači “naslijedi bez dodatnog ograničenja”. Ograničenje
 roditeljske stranice automatski vrijedi za sve potomke.
 
+U otvorenom Području uključite **Uredi stablo** pa odaberite olovku uz čvor.
+Modal zeleno prikazuje prava naslijeđena iz Područja, a crveno izravna
+ograničenja stranice. Crvena oznaka može samo zadržati pravo koje već postoji
+zeleno; nikada ga ne može proširiti. Uklanjanje svih crvenih oznaka i spremanje
+vraća potpuno nasljeđivanje. Korisnik s `can_edit`, ali bez `can_manage`, smije
+pregledati matricu, dok je mijenjati smije samo `can_manage`. Modal se premješta
+izravno pod body dokumenta kako ga stacking context teme ili Hero elementa ne
+bi smjestio ispod Bootstrap backdroppa.
+
 Kod prikaza velikog stabla modul grupno učitava čvorove, Workspace ACL,
 korisnikove grupe, ograničenja čvorova i workflow stanja. Lanci predaka i
 efektivna prava zatim se računaju u memoriji. Time broj ORM upita ostaje
@@ -161,6 +170,36 @@ su samo tipu `external_link`.
 
 Jedan aktivni HTML dokument može pripadati samo jednom aktivnom Workspace
 čvoru. Tako su vlasništvo URL-a i ACL-a nedvosmisleni.
+
+### 5.1 Sažetci Područja
+
+Ikona popisa u zaglavlju svakog vidljivog stabla otvara
+`/{korijen-područja}/{slugPodručja}/shorts`. Vidi je svaki korisnik koji smije
+vidjeti Područje; to nije upravljačka akcija.
+
+Stranica ima tri neovisna odabira:
+
+- samo 1., razine 1–2 ili razine 1–3 vidljivog stabla;
+- 5, 10, 25, 50 ili sve članke;
+- hijerarhijski redoslijed, najnovije ili najstarije prvo.
+
+Opcija `all` uključena je samo ispod 100 dopuštenih članaka. Controller na 100
+ili više odbija i ručno sastavljen `limit=all` te koristi konfiguriranu
+brojčanu zadanu vrijednost. Zadane postavke žive pod ključem `shorts` u
+`config/workspace.php`, a uređuju se pod **Postavke → Područja**.
+
+Sigurnosno filtriranje izvršava se prije učitavanja HTML-a: servis kreće od
+`visibleTree()`, primjenjuje nasljedni ACL čvorova, zadržava dokument-čvorove
+odabrane dubine pa traži nearhivirani workflow s pozitivnim pokazivačem na
+objavljenu verziju. Isto pravilo vrijedi vlasniku i administratoru, pa njihovo
+pravo pregleda nacrta nikada ne izlaže nacrt u Sažetcima. Editor dobiva samo već
+ograničenu mapu dokument/verzija i skupno učitava točno te nepromjenjive
+verzije. View renderira Editorom sanitizirani HTML unutar isječka od šest
+redaka s fadeom prilagođenim temi i vodi na kanonsku Workspace stranicu.
+
+Sažetci ne dodaju tablicu baze. Zadane vrijednosti pripadaju konfiguraciji
+sitea, pa potpuni backup uključuje `config/workspace.php`; izvoz paketa teme
+nije njihov vlasnik.
 
 ## 6. Integracija s HTML editorom
 

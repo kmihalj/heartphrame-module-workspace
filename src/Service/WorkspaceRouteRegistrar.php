@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AaiEduHr\HeartPhrameModuleWorkspace\Service;
 
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceShortsController;
 use HeartPhrame\Routing\Routes;
 
 use function ltrim;
@@ -41,6 +42,13 @@ final readonly class WorkspaceRouteRegistrar
             '/' . $rootPath . '/{workspaceSlug}',
             WorkspaceController::class . '@show',
             'workspace.show',
+            [],
+        );
+        $this->routes->addRoute(
+            'GET',
+            '/' . $rootPath . '/{workspaceSlug}/shorts',
+            WorkspaceShortsController::class . '@index',
+            'workspace.shorts',
             [],
         );
         $this->routes->addRoute(

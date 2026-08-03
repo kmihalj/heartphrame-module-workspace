@@ -116,6 +116,85 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                         </div>
                     </div>
 
+                    <hr class="my-4">
+                    <section aria-labelledby="workspace-shorts-settings-title">
+                        <h2 id="workspace-shorts-settings-title" class="h5 mb-1">
+                            <?= $this->escape(__('Sažetci stranica')) ?>
+                        </h2>
+                        <p class="text-body-secondary mb-3">
+                            <?= $this->escape(
+                                __('Zadani prikaz javne zbirke isječaka objavljenih stranica svakog područja.'),
+                            ) ?>
+                        </p>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="workspace-shorts-depth">
+                                    <?= $this->escape(__('Prikazane razine')) ?>
+                                </label>
+                                <select id="workspace-shorts-depth" class="form-select" name="shorts_depth">
+                                    <?php foreach ([1, 2, 3] as $depth) : ?>
+                                        <option
+                                            value="<?= $depth ?>"
+                                        <?= WorkspaceValue::int($settings['shorts_depth'] ?? 1) === $depth
+                                        ? 'selected'
+                                        : '' ?>
+                                        >
+                                        <?= $this->escape($depth === 1
+                                                ? __('Samo 1. razina')
+                                                : __('Razine 1–') . $depth) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="workspace-shorts-limit">
+                                    <?= $this->escape(__('Broj članaka')) ?>
+                                </label>
+                                <select id="workspace-shorts-limit" class="form-select" name="shorts_limit">
+                                    <?php foreach ([5, 10, 25, 50] as $limit) : ?>
+                                        <option
+                                            value="<?= $limit ?>"
+                                        <?= WorkspaceValue::int($settings['shorts_limit'] ?? 10) === $limit
+                                        ? 'selected'
+                                        : '' ?>
+                                        ><?= $limit ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="workspace-shorts-order">
+                                    <?= $this->escape(__('Redoslijed')) ?>
+                                </label>
+                                <select id="workspace-shorts-order" class="form-select" name="shorts_order">
+                                    <?php foreach (
+                                        [
+                                            'hierarchy' => __('Prema hijerarhiji'),
+                                            'newest' => __('Najnovije prvo'),
+                                            'oldest' => __('Najstarije prvo'),
+                                        ] as $order => $label
+) : ?>
+                                        <option
+                                            value="<?= $order ?>"
+    <?= WorkspaceValue::string(
+        $settings['shorts_order'] ?? 'hierarchy',
+    ) === $order
+    ? 'selected'
+    : '' ?>
+                                        ><?= $this->escape($label) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            <?= $this->escape(
+                                __(
+                                    'Posjetitelj može privremeno promijeniti ove filtre. Opcija „Sve” '
+                                    . 'dostupna je samo kada postoji manje od 100 vidljivih članaka.',
+                                ),
+                            ) ?>
+                        </div>
+                    </section>
+
                     <div class="alert alert-info mt-4 mb-0" role="note">
                         <strong><?= $this->escape(__('Integracija s HTML editorom')) ?></strong>
                         <div>

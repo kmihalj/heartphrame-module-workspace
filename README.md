@@ -35,6 +35,7 @@ Croatian documentation: [README_hr.md](README_hr.md)
 - user and group permissions: view, add, edit, publish, delete, and manage
 - asynchronous Auth-directory search without listing every user and group
 - page-level restrictions inherited by every descendant
+- ACL-filtered Workspace Shorts with rendered article excerpts, depth, count, and ordering controls
 - hierarchical document, internal-link, and external-link nodes
 - collapsible and responsive page tree
 - page creation directly from an open Workspace
@@ -53,6 +54,11 @@ never grant access to a user or group that is not already a Workspace member.
 The Workspace owner and application administrators retain management access.
 In an archived Workspace, add, edit, and delete are disabled for them as well
 until they reactivate it.
+
+Open **Edit tree**, then the pencil beside a page, to inspect page restrictions.
+Green checkboxes show permissions inherited from the Workspace; red checkboxes
+show permissions retained by a direct restriction on that page. Saving no red
+checkboxes removes the direct restriction and returns to full inheritance.
 
 `Public` is a built-in view-only audience. `All signed-in users` is not a real
 Auth group either, but it may receive broader permissions. The form renders
@@ -111,6 +117,34 @@ vendor/bin/hph workspace:install-homepage-migration
 vendor/bin/hph orm-migrate:up
 ```
 
+## Workspace Shorts
+
+Every visible Workspace tree exposes a **Shorts** icon. The page at
+`/{workspace-root}/{workspace}/shorts` renders the exact published Editor
+version of every eligible page as a six-line fading excerpt with a **Read
+more** link. Drafts, archived publications, inaccessible pages, and every
+descendant of an inaccessible page are excluded before content is loaded.
+
+Visitors may select tree levels 1, 1–2, or 1–3; 5, 10, 25, 50, or all
+articles; and hierarchy, newest-first, or oldest-first ordering. **All** is
+available only when fewer than 100 articles pass publication and ACL checks.
+The server enforces the same limit even for a hand-crafted query string.
+
+Defaults are configured under **Settings → Workspaces** and stored in the host
+application's `config/workspace.php`:
+
+```php
+'shorts' => [
+    'depth' => 1,
+    'limit' => 10,
+    'order' => 'hierarchy',
+],
+```
+
+These are site configuration, not Theme design data. Include
+`config/workspace.php` in a complete site backup; Theme package export does
+not and should not own these values.
+
 ## Application homepage
 
 Administrators configure the homepage under **Settings → Workspaces →
@@ -165,7 +199,9 @@ When both modules are enabled:
   notifies the submitting author; the Notification inbox is primary and the
   E-mail module may queue an optional SMTP copy;
 - the tree marks new unpublished pages, while its header exposes permission-aware
-  lists of new pages and pages submitted for review;
+  lists of new pages, pages submitted for review, and the Shorts page;
+- Shorts requests exact published versions through one optional batch Editor
+  service call after applying depth, publication, ACL, ordering, and count filters;
 - an editor document can belong to only one active Workspace page.
 
 The HTML editor continues to work independently when Workspaces are absent.

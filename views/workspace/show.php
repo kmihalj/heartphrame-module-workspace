@@ -20,6 +20,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
  * @var list<array<string, mixed>> $fallbackLeadingActions
  * @var string $language
  * @var bool $treeVisibleByDefault
+ * @var string $shortsPath
  * @var string $managePath
  * @var string $pageCreatePath
  * @var list<array{id:int,label:string}> $pageParentOptions
@@ -46,7 +47,8 @@ $manageLabel = ($workspacePermissions['can_manage'] ?? false)
 : __('Upravljaj sadržajem');
 $reviewQueue = is_array($reviewQueue ?? null) ? array_values($reviewQueue) : [];
 $unpublishedPages = is_array($unpublishedPages ?? null) ? array_values($unpublishedPages) : [];
-$hasTreeActions = $canCreatePage
+$hasTreeActions = WorkspaceValue::string($shortsPath ?? '') !== ''
+    || $canCreatePage
     || $canManageContent
     || $reviewQueue !== []
     || $unpublishedPages !== [];
@@ -97,6 +99,22 @@ $workflowIcon = static function (string $action): string {
                             class="workspace-tree-card-actions"
                             aria-label="<?= $this->escape(__('Akcije područja')) ?>"
                         >
+                        <a
+                            class="btn btn-outline-secondary btn-sm workspace-tree-card-action"
+                            href="<?= $this->escape($shortsPath) ?>"
+                            title="<?= $this->escape(__('Sažetci')) ?>"
+                            aria-label="<?= $this->escape(__('Sažetci')) ?>"
+                        >
+                            <svg
+                                class="workspace-tree-card-action-icon"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                                focusable="false"
+                            >
+                                <path d="M4 4h16v16H4z"/>
+                                <path d="M8 8h8M8 12h8M8 16h5"/>
+                            </svg>
+                        </a>
                         <?php if ($unpublishedPages !== []) : ?>
                                 <button
                                     class="btn btn-outline-info btn-sm workspace-tree-card-action

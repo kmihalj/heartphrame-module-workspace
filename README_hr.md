@@ -35,6 +35,7 @@ English documentation: [README.md](README.md)
 - prava korisnika i grupa: pregled, dodavanje, uređivanje, objavljivanje, brisanje i upravljanje
 - asinkrono pretraživanje Auth imenika bez ispisivanja svih korisnika i grupa
 - ograničenja po stranici koja nasljeđuju svi potomci
+- ACL-filtrirani Sažetci s renderiranim isječcima, razinama, brojem i redoslijedom članaka
 - hijerarhijski čvorovi za dokumente, interne i vanjske linkove
 - sakrivo i responzivno stablo stranica
 - kreiranje nove stranice izravno iz otvorenog Područja
@@ -53,6 +54,11 @@ dati pristup korisniku ili grupi koji već nemaju prava na Području. Vlasnik
 Područja i administratori aplikacije zadržavaju pravo upravljanja. U
 arhiviranom Području i njima su isključeni dodavanje, uređivanje i brisanje
 sadržaja dok ga ponovno ne aktiviraju.
+
+Za pregled ograničenja uključite **Uredi stablo** i odaberite olovku uz
+stranicu. Zeleni checkbox prikazuje pravo naslijeđeno iz Područja, a crveni
+pravo zadržano izravnim ograničenjem te stranice. Spremanje bez ijedne crvene
+oznake uklanja izravno ograničenje i vraća potpuno nasljeđivanje.
 
 `Javno` je ugrađena publika samo za čitanje. `Svi prijavljeni` također nije
 stvarna Auth grupa, ali može dobiti šira prava. Obrazac prikazuje samo
@@ -111,6 +117,35 @@ vendor/bin/hph workspace:install-homepage-migration
 vendor/bin/hph orm-migrate:up
 ```
 
+## Sažetci Područja
+
+Svako vidljivo stablo Područja prikazuje ikonu **Sažetci**. Stranica na
+`/{korijen-područja}/{područje}/shorts` renderira točno objavljenu Editor
+verziju svake dopuštene stranice kao isječak od približno šest redaka s fade
+završetkom i poveznicom **Pročitaj više**. Nacrti, arhivirane objave,
+nedostupne stranice i svi potomci nedostupne stranice uklanjaju se prije
+učitavanja sadržaja.
+
+Posjetitelj bira samo 1., razine 1–2 ili razine 1–3; 5, 10, 25, 50 ili sve
+članke; te hijerarhijski redoslijed, najnovije ili najstarije prvo. **Sve** je
+dostupno samo kada manje od 100 članaka prođe provjeru objave i ACL-a. Server
+isto pravilo provodi i za ručno sastavljen query string.
+
+Zadane vrijednosti postavljaju se pod **Postavke → Područja** i spremaju u
+aplikacijski `config/workspace.php`:
+
+```php
+'shorts' => [
+    'depth' => 1,
+    'limit' => 10,
+    'order' => 'hierarchy',
+],
+```
+
+To su postavke sitea, a ne dizajn teme. Potpuni backup sitea treba uključiti
+`config/workspace.php`; izvoz paketa teme ne preuzima i ne treba preuzimati te
+vrijednosti.
+
 ## Naslovnica aplikacije
 
 Administrator postavlja naslovnicu u **Postavke → Područja → Naslovnica
@@ -164,7 +199,9 @@ Kada su oba modula uključena:
   je nacrt poslao; Notification inbox je primaran, dok E-mail modul može staviti
   opcionalnu SMTP kopiju u red;
 - stablo označava nove neobjavljene stranice, a zaglavlje stabla nudi popise novih
-  stranica i stranica poslanih na pregled prema pravima trenutnog korisnika;
+  stranica, stranica poslanih na pregled i poveznicu na Sažetke;
+- Sažetci nakon filtriranja razina, objave, ACL-a, redoslijeda i količine jednim
+  opcionalnim batch pozivom traže točno objavljene Editor verzije;
 - jedan editor dokument može pripadati samo jednoj aktivnoj Workspace stranici.
 
 HTML editor nastavlja samostalno raditi kada Workspace modul nije instaliran.

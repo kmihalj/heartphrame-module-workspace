@@ -142,6 +142,44 @@
     min-width: 0;
 }
 
+.workspace-shorts-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.workspace-short-card {
+    overflow: hidden;
+}
+
+.workspace-short-excerpt {
+    --workspace-short-line-height: 1.55rem;
+    line-height: var(--workspace-short-line-height);
+    max-height: calc(var(--workspace-short-line-height) * 6);
+    overflow: hidden;
+    position: relative;
+}
+
+.workspace-short-excerpt::after {
+    background: linear-gradient(to bottom, transparent, var(--bs-body-bg));
+    bottom: 0;
+    content: '';
+    height: calc(var(--workspace-short-line-height) * 2.25);
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+}
+
+.workspace-short-excerpt :is(img, video, iframe, figure) {
+    max-height: calc(var(--workspace-short-line-height) * 4);
+    max-width: 100%;
+    object-fit: cover;
+}
+
+.workspace-short-excerpt > :last-child {
+    margin-bottom: 0;
+}
+
 .workspace-workflow-toolbar {
     align-items: center;
     display: flex;
@@ -206,6 +244,54 @@
 .workspace-acl-table .workspace-acl-action-column,
 .workspace-acl-table tr:not(.workspace-acl-empty) td:last-child {
     width: 2.75rem;
+}
+
+.workspace-node-acl-cell {
+    align-items: center;
+    display: inline-flex;
+    gap: .35rem;
+    justify-content: center;
+    min-width: 2.9rem;
+}
+
+.workspace-node-acl-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+}
+
+.workspace-node-acl-legend > span {
+    align-items: center;
+    display: inline-flex;
+    gap: .35rem;
+}
+
+.workspace-acl-legend-swatch {
+    border: var(--bs-border-width) solid currentColor;
+    border-radius: .2rem;
+    display: inline-block;
+    height: .85rem;
+    width: .85rem;
+}
+
+.workspace-acl-legend-inherited,
+.workspace-acl-checkbox-inherited:checked {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+    color: var(--bs-success);
+    opacity: 1;
+}
+
+.workspace-acl-legend-direct,
+.workspace-acl-checkbox-direct:checked {
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+    color: var(--bs-danger);
+}
+
+.workspace-acl-checkbox-direct:focus {
+    border-color: var(--bs-danger);
+    box-shadow: 0 0 0 .25rem rgba(var(--bs-danger-rgb), .25);
 }
 
 .workspace-acl-remove {

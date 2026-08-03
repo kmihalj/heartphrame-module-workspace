@@ -85,6 +85,46 @@ final readonly class WorkspaceConfig
     }
 
     /**
+     * HR: Vraća zadanu najveću dubinu stabla na stranici Sažetaka.
+     * EN: Returns the default maximum tree depth on the Shorts page.
+     */
+    public function shortsDefaultDepth(): int
+    {
+        $shorts = $this->section('shorts');
+        $depth = WorkspaceValue::int($shorts['depth'] ?? 1);
+
+        return in_array($depth, [1, 2, 3], true) ? $depth : 1;
+    }
+
+    /**
+     * HR: Vraća zadani broj članaka na stranici Sažetaka.
+     * EN: Returns the default article count on the Shorts page.
+     */
+    public function shortsDefaultLimit(): int
+    {
+        $shorts = $this->section('shorts');
+        $limit = WorkspaceValue::int($shorts['limit'] ?? 10);
+
+        return in_array($limit, [5, 10, 25, 50], true) ? $limit : 10;
+    }
+
+    /**
+     * HR: Vraća zadani redoslijed članaka na stranici Sažetaka.
+     * EN: Returns the default article order on the Shorts page.
+     */
+    public function shortsDefaultOrder(): string
+    {
+        $shorts = $this->section('shorts');
+        $order = is_scalar($shorts['order'] ?? null)
+        ? strtolower(trim((string)$shorts['order']))
+        : '';
+
+        return in_array($order, ['hierarchy', 'newest', 'oldest'], true)
+        ? $order
+        : 'hierarchy';
+    }
+
+    /**
      * HR: Vraća treba li modul automatski dodati glavnu menu stavku.
      * EN: Returns whether the module should automatically add its main menu item.
      */

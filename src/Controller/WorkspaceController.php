@@ -499,9 +499,9 @@ final readonly class WorkspaceController
 
         $isAdministrator = $this->access->isAdministrator();
         $node['permissions'] = $permissions;
-        $node['restrictions'] = $permissions['can_manage']
-        ? $this->repository->nodeAclRows($this->intValue($node['id'] ?? 0))
-        : [];
+        $node['restrictions'] = $this->repository->nodeAclRows(
+            $this->intValue($node['id'] ?? 0),
+        );
 
         $html = $this->viewRenderer->renderPartial('workspace/node-dialog', [
             'workspace' => $workspace,
@@ -1118,6 +1118,10 @@ final readonly class WorkspaceController
             'unpublishedPages' => $unpublishedPages,
             'language' => $language,
             'treeVisibleByDefault' => $this->config->treeVisibleByDefault(),
+            'shortsPath' => $this->shortsPath(
+                $this->stringValue($workspace['slug'] ?? ''),
+                $language,
+            ),
             'managePath' => $this->managePath($this->stringValue($workspace['slug'] ?? '')),
             'pageCreatePath' => $this->pathFor('workspace.page.create', '/workspaces/page/create'),
             'pageParentOptions' => $this->pageParentOptions($tree),
@@ -1765,6 +1769,25 @@ final readonly class WorkspaceController
         }
 
         return $this->workspacePath($workspaceSlug) . '/' . rawurlencode($nodeSlug);
+    }
+
+    /**
+     * HR: Gradi poveznicu na ACL-filtrirane Sažetke područja.
+     * EN: Builds the link to the Workspace's ACL-filtered Shorts page.
+     */
+    private function shortsPath(string $workspaceSlug, string $language): string
+    {
+        if ($this->urlGenerator->namedRouteExists('workspace.shorts')) {
+            return $this->urlGenerator->getPathFor(
+                'workspace.shorts',
+                ['workspaceSlug' => $workspaceSlug],
+                ['lang' => $language],
+            );
+        }
+
+        return $this->workspacePath($workspaceSlug)
+        . '/shorts?lang='
+        . rawurlencode($language);
     }
 
     /**

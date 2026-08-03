@@ -8,6 +8,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceApiService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceShortsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorAccess;
@@ -20,6 +21,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRouteRegistrar;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceSettingsService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceShortsService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceWorkflowService;
 use HeartPhrame\Alert\AlertHandler;
 use HeartPhrame\Authn\AuthnHandlerInterface;
@@ -110,6 +112,16 @@ return [
             $container->get(Routes::class),
         ),
 
+    WorkspaceShortsService::class => static fn(ContainerInterface $container): WorkspaceShortsService =>
+        new WorkspaceShortsService(
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceWorkflowService::class),
+            $container->get(WorkspaceEditorBridge::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
+        ),
+
     WorkspaceRouteRegistrar::class => static fn(ContainerInterface $container): WorkspaceRouteRegistrar =>
         new WorkspaceRouteRegistrar(
             $container->get(WorkspaceConfig::class),
@@ -150,6 +162,16 @@ return [
             $container->get(WorkspaceConfig::class),
             $container->get(UrlGenerator::class),
             $container->get(AlertHandler::class),
+        ),
+
+    WorkspaceShortsController::class => static fn(ContainerInterface $container): WorkspaceShortsController =>
+        new WorkspaceShortsController(
+            $container->get(WorkspaceModuleViewRenderer::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceShortsService::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
         ),
 
     WorkspaceHomepageController::class =>
