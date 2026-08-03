@@ -194,11 +194,12 @@ numeric default. Defaults live under the `shorts` key in
 `config/workspace.php` and are editable in **Settings → Workspaces**. The
 shipped defaults are levels 1–2, 10 articles, and newest first.
 
-The **Page tree** and **Display options** buttons are always rendered. Direct
-links may use `tree=0` and `options=0` to start the corresponding collapsible
-regions closed; omitting them uses site configuration. The filter form
-preserves both values, which makes the same route suitable for a normal page
-or a compact homepage.
+The page tree is initially visible and the display options are initially
+collapsed. Their theme-aware icon buttons are always rendered with accessible
+labels and tooltips. Direct links may use `tree=0|1` and `options=0|1` to
+override either state; omitting them uses site configuration. The filter form
+preserves the current states, which makes the same route suitable for a normal
+page or a compact homepage.
 
 Security filtering happens before HTML is loaded: the service starts from
 `visibleTree()`, applies inherited node ACL, keeps only document nodes within

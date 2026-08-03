@@ -133,7 +133,7 @@ final readonly class WorkspaceConfig
     {
         $shorts = $this->section('shorts');
 
-        return (bool)($shorts['display_options_visible'] ?? true);
+        return (bool)($shorts['display_options_visible'] ?? false);
     }
 
     /**
@@ -143,10 +143,10 @@ final readonly class WorkspaceConfig
     public function siteDefaultLanguage(): string
     {
         $language = strtolower(trim(
-            $this->config->getAsString('app.localization.locale', 'en') ?? 'en',
+            $this->config->getAsString('app.localization.locale', 'hr') ?? 'hr',
         ));
 
-        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : 'en';
+        return preg_match('/^[a-z]{2}(?:-[a-z]{2})?$/', $language) === 1 ? $language : 'hr';
     }
 
     /**

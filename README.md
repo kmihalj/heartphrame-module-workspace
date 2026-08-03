@@ -148,13 +148,14 @@ application's `config/workspace.php`:
     'depth' => 2,
     'limit' => 10,
     'order' => 'newest',
-    'display_options_visible' => true,
+    'display_options_visible' => false,
 ],
 ```
 
-The page tree and **Display options** panel are expanded by default. A direct
-link can start either one collapsed with `tree=0` or `options=0`; both toggle
-buttons remain available. The filter form preserves these values. Article
+The page tree is expanded and the **Display options** panel is collapsed by
+default. Their always-visible, theme-aware icon buttons expose accessible labels
+and tooltips. A direct link can override either state with `tree=0|1` or
+`options=0|1`; the filter form preserves the visitor's current state. Article
 content first uses an exact published version for the active locale, then the
 site default from `app.localization.locale` in `config/app.php`. It never falls
 back to a draft.

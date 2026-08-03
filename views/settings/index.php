@@ -193,7 +193,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                                 role="switch"
                                 name="shorts_display_options_visible"
                                 value="1"
-                                <?= (bool)($settings['shorts_display_options_visible'] ?? true)
+                                <?= (bool)($settings['shorts_display_options_visible'] ?? false)
                                 ? 'checked'
                                 : '' ?>
                             >

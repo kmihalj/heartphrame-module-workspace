@@ -189,10 +189,12 @@ brojčanu zadanu vrijednost. Zadane postavke žive pod ključem `shorts` u
 `config/workspace.php`, a uređuju se pod **Postavke → Područja**. Isporučene
 zadane vrijednosti su razine 1–2, 10 članaka i najnoviji prvo.
 
-Gumbi **Stablo stranica** i **Opcije prikaza** uvijek su dostupni. Izravna
-poveznica može parametrima `tree=0` i `options=0` početno sklopiti pripadajuće
-dijelove; bez parametara koristi se konfiguracija sitea. Obrazac filtra čuva
-obje vrijednosti pa ista ruta može biti obična stranica ili kompaktna naslovnica.
+Stablo stranica početno je prikazano, a opcije prikaza početno su skrivene.
+Njihovi ikon-gumbi prate temu i uvijek su dostupni s pristupačnim nazivima i
+opisima. Izravna poveznica može parametrima `tree=0|1` i `options=0|1`
+promijeniti bilo koje stanje; bez parametara koristi se konfiguracija sitea.
+Obrazac filtra čuva trenutačna stanja pa ista ruta može biti obična stranica ili
+kompaktna naslovnica.
 
 Sigurnosno filtriranje izvršava se prije učitavanja HTML-a: servis kreće od
 `visibleTree()`, primjenjuje nasljedni ACL čvorova, zadržava dokument-čvorove

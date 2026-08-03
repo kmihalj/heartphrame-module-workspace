@@ -21,7 +21,7 @@ return [
         'depth' => 2,
         'limit' => 10,
         'order' => 'newest',
-        'display_options_visible' => true,
+        'display_options_visible' => false,
     ],
     'menu' => [
         'auto_register_top' => true,

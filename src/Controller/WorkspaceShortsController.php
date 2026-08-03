@@ -84,9 +84,19 @@ final readonly class WorkspaceShortsController
             $this->config->shortsDisplayOptionsVisibleByDefault(),
         );
 
+        $pageTitle = __('Sažetci') . ' · ' . WorkspaceValue::string($workspace['name'] ?? '');
+        $pageDescription = __(
+            'Objavljene stranice koje smijete vidjeti, prikazane kao kratki isječci.',
+        );
+
         return $this->viewRenderer->render('workspace/shorts', [
-            'title' => __('Sažetci') . ' · ' . WorkspaceValue::string($workspace['name'] ?? ''),
+            'title' => $pageTitle,
             'themeTitleContext' => 'integrated',
+            'themeHero' => [
+                'is_home' => false,
+                'title' => $pageTitle,
+                'subtitle' => $pageDescription,
+            ],
             'workspace' => $workspace,
             'tree' => $model['tree'],
             'articles' => $model['articles'],
