@@ -56,7 +56,7 @@ In an archived Workspace, add, edit, and delete are disabled for them as well
 until they reactivate it.
 
 Open **Edit tree**, then the pencil beside a page, to inspect page restrictions.
-Green checkboxes show permissions inherited from the Workspace; red checkboxes
+Green checkboxes show permissions inherited from the Workspace and ancestor pages; red checkboxes
 show permissions retained by a direct restriction on that page. Saving no red
 checkboxes removes the direct restriction and returns to full inheritance.
 

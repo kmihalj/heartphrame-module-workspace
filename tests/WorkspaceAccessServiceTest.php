@@ -252,6 +252,79 @@ final class WorkspaceAccessServiceTest extends TestCase
     }
 
     /**
+     * HR: Uređivač čvora prikazuje zeleno samo stvarno naslijeđena prava
+     *     nakon ograničenja predaka, dok ograničenje trenutačnog čvora ostaje
+     *     odvojeno za crveni prikaz i uređivanje.
+     * EN: The node editor shows only actually inherited rights in green after
+     *     ancestor restrictions, while the current node restriction remains
+     *     separate for red display and editing.
+     */
+    public function testNodeEditorSubjectsSeparateInheritedAndDirectRestrictions(): void
+    {
+        $workspace = $this->repository->saveWorkspace([
+            'name' => 'Nasljedna prava',
+            'slug' => 'nasljedna-prava',
+            'visibility' => 'restricted',
+            'owner_user_id' => 1,
+        ], 1);
+        $workspaceId = (int)$workspace['id'];
+        $this->repository->replaceWorkspaceAcl($workspaceId, [
+            'user' => [
+                2 => ['can_view' => true, 'can_edit' => true],
+            ],
+            'group' => [
+                10 => ['can_view' => true],
+            ],
+        ]);
+        $root = $this->repository->saveNode($workspaceId, [
+            'title' => 'Korijen',
+            'node_type' => 'document',
+            'document_key' => 'inherited-editor-root',
+        ], 1);
+        $child = $this->repository->saveNode($workspaceId, [
+            'title' => 'Potomak',
+            'node_type' => 'document',
+            'document_key' => 'inherited-editor-child',
+            'parent_id' => $root['id'],
+        ], 1);
+        $this->repository->replaceNodeAcl($workspaceId, (int)$root['id'], [
+            'user' => [
+                2 => ['can_view' => true],
+            ],
+        ]);
+        $this->repository->replaceNodeAcl($workspaceId, (int)$child['id'], [
+            'group' => [
+                10 => ['can_view' => true],
+            ],
+        ]);
+
+        $rootSubjects = $this->repository->inheritedAclSubjectsAtNode(
+            $workspaceId,
+            (int)$root['id'],
+        );
+        $rootUser = array_values(array_filter(
+            $rootSubjects,
+            static fn(array $subject): bool =>
+                ($subject['subject_type'] ?? '') === WorkspaceRepository::SUBJECT_USER
+                && (int)($subject['subject_id'] ?? 0) === 2,
+        ))[0];
+        $this->assertTrue((bool)$rootUser['can_edit']);
+
+        $childSubjects = $this->repository->inheritedAclSubjectsAtNode(
+            $workspaceId,
+            (int)$child['id'],
+        );
+        $childUser = array_values(array_filter(
+            $childSubjects,
+            static fn(array $subject): bool =>
+                ($subject['subject_type'] ?? '') === WorkspaceRepository::SUBJECT_USER
+                && (int)($subject['subject_id'] ?? 0) === 2,
+        ))[0];
+        $this->assertTrue((bool)$childUser['can_view']);
+        $this->assertFalse((bool)$childUser['can_edit']);
+    }
+
+    /**
      * HR: Dokazuje da se kratkotrajni ACL cache može isprazniti nakon izmjene
      *     prava te sljedeći izračun čita novo stanje.
      * EN: Proves that the short-lived ACL cache can be cleared after a

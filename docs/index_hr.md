@@ -95,7 +95,7 @@ Prazan ACL čvora znači “naslijedi bez dodatnog ograničenja”. Ograničenje
 roditeljske stranice automatski vrijedi za sve potomke.
 
 U otvorenom Području uključite **Uredi stablo** pa odaberite olovku uz čvor.
-Modal zeleno prikazuje prava naslijeđena iz Područja, a crveno izravna
+Modal zeleno prikazuje prava naslijeđena iz Područja i nadređenih stranica, a crveno izravna
 ograničenja stranice. Crvena oznaka može samo zadržati pravo koje već postoji
 zeleno; nikada ga ne može proširiti. Uklanjanje svih crvenih oznaka i spremanje
 vraća potpuno nasljeđivanje. Korisnik s `can_edit`, ali bez `can_manage`, smije

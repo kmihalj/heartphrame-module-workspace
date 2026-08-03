@@ -423,6 +423,71 @@ final readonly class WorkspaceRepository
     }
 
     /**
+     * HR: Vraća ACL subjekte s pravima koja su stvarno naslijeđena na
+     *     odabranom čvoru, nakon ograničenja svih njegovih predaka. Izravno
+     *     ograničenje samog odabranog čvora namjerno se ne primjenjuje.
+     * EN: Returns ACL subjects with the rights actually inherited at the
+     *     selected node after all ancestor restrictions. The selected node's
+     *     own direct restriction is intentionally not applied.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function inheritedAclSubjectsAtNode(int $workspaceId, int $nodeId): array
+    {
+        $subjects = $this->workspaceAclSubjects($workspaceId);
+        $ancestorIds = $this->ancestorNodeIds($workspaceId, $nodeId);
+        if ($ancestorIds !== [] && end($ancestorIds) === $nodeId) {
+            array_pop($ancestorIds);
+        }
+
+        $rowsByNode = [];
+        foreach ($this->nodeAclRowsForNodes($ancestorIds) as $row) {
+            $rowsByNode[$this->intValue($row['node_id'] ?? 0)][] = $row;
+        }
+
+        $permissions = [
+            'can_view',
+            'can_add',
+            'can_edit',
+            'can_publish',
+            'can_delete',
+            'can_manage',
+        ];
+
+        foreach ($subjects as &$subject) {
+            $subjectType = $this->stringValue($subject['subject_type'] ?? '');
+            $subjectId = $this->intValue($subject['subject_id'] ?? 0);
+            foreach ($ancestorIds as $ancestorId) {
+                $restrictionRows = $rowsByNode[$ancestorId] ?? [];
+                if ($restrictionRows === []) {
+                    continue;
+                }
+
+                $matchingRow = null;
+                foreach ($restrictionRows as $row) {
+                    if (
+                        $this->stringValue($row['subject_type'] ?? '') === $subjectType
+                        && $this->intValue($row['subject_id'] ?? 0) === $subjectId
+                    ) {
+                        $matchingRow = $row;
+                        break;
+                    }
+                }
+
+                foreach ($permissions as $permission) {
+                    $subject[$permission] = (bool)($subject[$permission] ?? false)
+                    && is_array($matchingRow)
+                    && (bool)($matchingRow[$permission] ?? false);
+                }
+            }
+        }
+
+        unset($subject);
+
+        return $subjects;
+    }
+
+    /**
      * HR: Pretražuje aktivne korisnike ili grupe u malom, ograničenom skupu
      *     rezultata za asinkroni ACL i owner picker.
      * EN: Searches active users or groups in a small, bounded result set for

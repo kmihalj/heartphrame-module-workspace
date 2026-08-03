@@ -505,7 +505,10 @@ final readonly class WorkspaceController
 
         $html = $this->viewRenderer->renderPartial('workspace/node-dialog', [
             'workspace' => $workspace,
-            'workspaceAclSubjects' => $this->repository->workspaceAclSubjects($workspaceId),
+            'workspaceAclSubjects' => $this->repository->inheritedAclSubjectsAtNode(
+                $workspaceId,
+                $this->intValue($node['id'] ?? 0),
+            ),
             'node' => $node,
             'nodes' => $this->orderNodesForManagement($nodes),
             'editorAvailable' => $this->editor->isAvailable(),

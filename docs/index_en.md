@@ -99,7 +99,7 @@ An empty node ACL means “inherit without an additional restriction.” A
 restriction on a parent automatically applies to every descendant.
 
 In the open Workspace, select **Edit tree** and then the pencil beside a node.
-The modal shows inherited Workspace grants in green and direct page
+The modal shows grants inherited from the Workspace and ancestor pages in green and direct page
 restrictions in red. Red checks can only retain a permission already granted
 in green; they can never broaden it. Removing every red check and saving
 returns the node to unrestricted inheritance. Users with `can_edit` but not

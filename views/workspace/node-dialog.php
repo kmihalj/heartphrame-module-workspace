@@ -116,7 +116,8 @@ $hasPermission = static function (
             <p class="small text-body-secondary">
                 <?= $this->escape(
                     __(
-                        'Zeleno prikazuje pravo naslijeđeno iz područja. Crveno prikazuje pravo '
+                        'Zeleno prikazuje pravo naslijeđeno iz područja i nadređenih stranica. '
+                        . 'Crveno prikazuje pravo '
                         . 'koje je zadržano izravnim ograničenjem ove stranice.',
                     ),
                 ) ?>
@@ -126,7 +127,7 @@ $hasPermission = static function (
             ) ?>">
                 <span>
                     <span class="workspace-acl-legend-swatch workspace-acl-legend-inherited"></span>
-                    <?= $this->escape(__('Naslijeđeno iz područja')) ?>
+                    <?= $this->escape(__('Naslijeđeno iz područja i predaka')) ?>
                 </span>
                 <span>
                     <span class="workspace-acl-legend-swatch workspace-acl-legend-direct"></span>
@@ -199,7 +200,7 @@ $hasPermission = static function (
                                                         <?= $inherited ? 'checked' : '' ?>
                                                         disabled
                                                         aria-label="<?= $this->escape(
-                                                            __('Naslijeđeno iz područja')
+                                                            __('Naslijeđeno iz područja i predaka')
                                                             . ' - '
                                                             . __($permission)
                                                             . ': '
