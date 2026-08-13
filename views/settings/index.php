@@ -96,6 +96,19 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                                     <?= $this->escape(__('Stablo je početno prikazano')) ?>
                                 </label>
                             </div>
+                            <div class="form-check form-switch mb-2">
+                                <input
+                                    id="workspace-contents-visible"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    name="contents_visible"
+                                    value="1"
+                                    <?= (bool)($settings['contents_visible'] ?? false) ? 'checked' : '' ?>
+                                >
+                                <label class="form-check-label" for="workspace-contents-visible">
+                                    <?= $this->escape(__('Sadržaj stranice je početno prikazan')) ?>
+                                </label>
+                            </div>
                             <div class="form-check form-switch">
                                 <input
                                     id="workspace-authenticated-create"

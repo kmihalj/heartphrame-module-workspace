@@ -27,6 +27,8 @@ return new class implements ReversibleMigrationInterface {
                 $table->string('name', 190)->index();
                 $table->text('description')->nullable();
                 $table->string('visibility', 32)->default('restricted')->index();
+                $table->string('tree_visibility', 16)->default('inherit');
+                $table->string('contents_visibility', 16)->default('inherit');
                 $table->bigInteger('owner_user_id')->unsigned()->index();
                 $table->boolean('is_archived')->default(false)->index();
                 $table->boolean('is_deleted')->default(false)->index();
@@ -74,6 +76,7 @@ return new class implements ReversibleMigrationInterface {
                 $table->integer('sort_order')->default(100)->index();
                 $table->boolean('is_homepage')->default(false)->index();
                 $table->boolean('is_enabled')->default(true)->index();
+                $table->string('contents_visibility', 16)->default('inherit');
                 $table->bigInteger('created_by_user_id')->unsigned()->nullable()->index();
                 $table->bigInteger('updated_by_user_id')->unsigned()->nullable()->index();
                 $table->timestamps();
@@ -171,6 +174,22 @@ return new class implements ReversibleMigrationInterface {
                 },
             );
         }
+
+        if (!$schema->hasTable(ModuleWorkspace::TABLE_WORKSPACE_THEMES)) {
+            $schema->create(
+                ModuleWorkspace::TABLE_WORKSPACE_THEMES,
+                static function (Blueprint $table): void {
+                    $table->id();
+                    $table->bigInteger('workspace_id')->unsigned()->unique();
+                    $table->string('selection_type', 16)->default('default')->index();
+                    $table->string('source_theme_id', 190)->nullable()->index();
+                    $table->string('mode_policy', 16)->default('auto');
+                    $table->longText('theme_json')->nullable();
+                    $table->bigInteger('updated_by_user_id')->unsigned()->nullable()->index();
+                    $table->timestamps();
+                },
+            );
+        }
     }
 
     /**
@@ -186,6 +205,7 @@ return new class implements ReversibleMigrationInterface {
 
         foreach (
             [
+                ModuleWorkspace::TABLE_WORKSPACE_THEMES,
                 ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
                 ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
                 ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS,

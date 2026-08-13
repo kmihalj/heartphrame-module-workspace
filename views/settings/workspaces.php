@@ -77,6 +77,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                         $visibility = WorkspaceValue::string($workspace['visibility'] ?? 'restricted');
                         $publicPath = WorkspaceValue::string($workspace['public_path'] ?? '#');
                         $managePath = WorkspaceValue::string($workspace['manage_path'] ?? '#');
+                        $exportPath = WorkspaceValue::string($workspace['export_path'] ?? '#');
                         ?>
                                 <tr>
                                     <th scope="row"><?= $this->escape($name) ?></th>
@@ -110,6 +111,22 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
                                                 href="<?= $this->escape($publicPath) ?>"
                                             >
                             <?= $this->escape(__('Otvori')) ?>
+                                            </a>
+                                            <a
+                                                class="btn btn-primary btn-sm workspace-export-icon-action"
+                                                href="<?= $this->escape($exportPath) ?>"
+                                                title="<?= $this->escape(__('Izvezi područje u HTML')) ?>"
+                                                aria-label="<?= $this->escape(__('Izvezi područje u HTML')) ?>"
+                                            >
+                                                <svg
+                                                    class="workspace-export-icon-action__icon"
+                                                    viewBox="0 0 24 24"
+                                                    aria-hidden="true"
+                                                    focusable="false"
+                                                >
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                    <path d="M7 10l5 5 5-5M12 15V3"/>
+                                                </svg>
                                             </a>
                                             <a
                                                 class="btn btn-sm btn-primary"

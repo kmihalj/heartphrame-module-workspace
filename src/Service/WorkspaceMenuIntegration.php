@@ -20,6 +20,9 @@ final readonly class WorkspaceMenuIntegration
 
     private const MENU_REPOSITORY = 'AaiEduHr\\HeartPhrameModuleMenu\\Service\\MenuConfigRepository';
 
+    private const MENU_TARGET_REGISTRY =
+    'AaiEduHr\\HeartPhrameModuleMenu\\Extension\\MenuNavigationTargetRegistry';
+
     /**
      * HR: Prima container i konfiguraciju za potpuno opcionalnu module-menu integraciju.
      * EN: Receives the container and configuration for fully optional module-menu integration.
@@ -126,6 +129,39 @@ final readonly class WorkspaceMenuIntegration
                 ],
             ]);
         }
+    }
+
+    /**
+     * HR: Registrira lijeno dohvaćanje područja i stranica u zajednički Menu
+     *     katalog. Closure sprječava čitanje baze tijekom bootstrapa aplikacije.
+     * EN: Registers lazy workspace and page loading in the shared Menu catalog.
+     *     The closure prevents database reads during application bootstrap.
+     */
+    public function registerNavigationTargets(): void
+    {
+        if (
+            !$this->config->isAppModuleEnabled(self::MENU_PACKAGE)
+            || !class_exists(self::MENU_TARGET_REGISTRY)
+        ) {
+            return;
+        }
+
+        try {
+            $registry = $this->container->get(self::MENU_TARGET_REGISTRY);
+            $provider = $this->container->get(WorkspaceMenuNavigationTargetProvider::class);
+        } catch (Throwable) {
+            return;
+        }
+
+        if (
+            !is_object($registry)
+            || !method_exists($registry, 'register')
+            || !($provider instanceof WorkspaceMenuNavigationTargetProvider)
+        ) {
+            return;
+        }
+
+        $registry->register('workspace', static fn(): array => $provider->targets());
     }
 
     /**

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace AaiEduHr\HeartPhrameModuleWorkspace\Service;
 
+use AaiEduHr\HeartPhrameModuleAuth\ModuleAuth;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
+use AaiEduHr\HeartPhrameModuleWorkspace\Event\WorkspaceContentChanged;
 use AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use RuntimeException;
 
 use function array_filter;
@@ -54,8 +57,10 @@ final readonly class WorkspaceRepository
      * HR: Prima ORM bazu i postaje jedino mjesto koje izravno čita Workspace tablice.
      * EN: Receives the ORM database and becomes the only direct reader of Workspace tables.
      */
-    public function __construct(private Database $database)
-    {
+    public function __construct(
+        private Database $database,
+        private ?EventDispatcherInterface $events = null,
+    ) {
     }
 
     /**
@@ -193,6 +198,14 @@ final readonly class WorkspaceRepository
             'name' => $name,
             'description' => $this->stringValue($data['description'] ?? ''),
             'visibility' => $visibility,
+            'tree_visibility' => $this->displayPolicy(
+                $data['tree_visibility']
+                    ?? (is_array($existing) ? $existing['tree_visibility'] ?? 'inherit' : 'inherit'),
+            ),
+            'contents_visibility' => $this->displayPolicy(
+                $data['contents_visibility']
+                    ?? (is_array($existing) ? $existing['contents_visibility'] ?? 'inherit' : 'inherit'),
+            ),
             'owner_user_id' => $ownerUserId,
             'is_archived' => $this->boolValue($data['is_archived'] ?? false),
             'updated_by_user_id' => $actorUserId,
@@ -225,6 +238,8 @@ final readonly class WorkspaceRepository
             throw new RuntimeException(__('Spremljeno područje nije moguće učitati.'));
         }
 
+        $this->contentChanged($workspaceId, $isNew ? 'workspace_created' : 'workspace_updated');
+
         return $workspace;
     }
 
@@ -245,6 +260,8 @@ final readonly class WorkspaceRepository
                 'updated_by_user_id' => $actorUserId,
                 'updated_at' => $now,
             ]);
+
+        $this->contentChanged($workspaceId, 'workspace_deleted');
     }
 
     /**
@@ -280,6 +297,8 @@ final readonly class WorkspaceRepository
         if (!is_array($restored)) {
             throw new RuntimeException(__('Vraćeno područje nije moguće učitati.'));
         }
+
+        $this->contentChanged($workspaceId, 'workspace_restored');
 
         return $restored;
     }
@@ -697,6 +716,41 @@ final readonly class WorkspaceRepository
     }
 
     /**
+     * HR: Jednim prenosivim upitom učitava aktivni dokument-čvor, njegovo
+     *     područje i workflow odabranog jezika za izvedene indekse.
+     * EN: Loads an active document node, its Workspace, and the selected
+     *     language workflow in one portable query for derived indexes.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function publishedNodeContext(int $nodeId, string $language): ?array
+    {
+        $this->assertTablesReady();
+        if ($nodeId <= 0) {
+            return null;
+        }
+
+        $row = $this->database->fetchOne(
+            'SELECT '
+            . 'n.id AS node_id, n.workspace_id, n.node_type, n.slug AS node_slug, '
+            . 'n.title AS node_title, n.document_key, '
+            . 'w.slug AS workspace_slug, w.name AS workspace_name, '
+            . 'f.status, f.current_version_number, f.published_version_number, '
+            . 'f.published_by_user_id, f.published_at, '
+            . 'u.login_identifier AS author_login_identifier '
+            . 'FROM ' . ModuleWorkspace::TABLE_WORKSPACE_NODES . ' n '
+            . 'INNER JOIN ' . ModuleWorkspace::TABLE_WORKSPACES . ' w ON w.id = n.workspace_id '
+            . 'LEFT JOIN ' . ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS . ' f '
+            . 'ON f.node_id = n.id AND f.language_code = ? '
+            . 'LEFT JOIN ' . ModuleAuth::TABLE_AUTH_USERS . ' u ON u.id = f.published_by_user_id '
+            . 'WHERE n.id = ? AND n.is_enabled = ? AND w.is_deleted = ?',
+            [$this->language($language), $nodeId, true, false],
+        );
+
+        return $this->row($row);
+    }
+
+    /**
      * HR: Grupno učitava workflow stanja zadanih stranica za jedan jezik kako
      *     velika stabla ne bi izvodila zaseban upit za svaki čvor.
      * EN: Loads workflow states for the requested pages and one locale in a
@@ -834,6 +888,23 @@ final readonly class WorkspaceRepository
             throw new RuntimeException(__('Workflow stranice nije moguće spremiti.'));
         }
 
+        /*
+         * HR: Nacrt koji još pokazuje zadnju objavljenu verziju ne mijenja indeks.
+         *     Objavu, arhivu i povratak u neobjavljeni nacrt šaljemo slušateljima.
+         * EN: A draft that still points to the last published version does not
+         *     change the index. Publish, archive, and unpublished restore do.
+         */
+        $publishedChanged = $this->nullablePositiveInt($existing['published_version_number'] ?? null)
+        !== $this->nullablePositiveInt($saved['published_version_number'] ?? null);
+        $archiveChanged = $this->stringValue($existing['status'] ?? '')
+        !== $this->stringValue($saved['status'] ?? '')
+        && in_array($this->stringValue($saved['status'] ?? ''), ['archived', 'published'], true);
+        if ($publishedChanged || $archiveChanged) {
+            $node = $this->findNodeById($nodeId);
+            $workspaceId = is_array($node) ? $this->intValue($node['workspace_id'] ?? 0) : 0;
+            $this->contentChanged($workspaceId, 'publication_changed', $nodeId, $language);
+        }
+
         return $saved;
     }
 
@@ -908,6 +979,7 @@ final readonly class WorkspaceRepository
         }
 
         $now = date('Y-m-d H:i:s');
+        $existingNode = $nodeId > 0 ? $this->findNodeById($nodeId) : null;
         $values = [
             'workspace_id' => $workspaceId,
             'parent_id' => $parentId,
@@ -920,6 +992,11 @@ final readonly class WorkspaceRepository
             'sort_order' => $this->intValue($data['sort_order'] ?? 100),
             'is_homepage' => $nodeType === 'document' && $this->boolValue($data['is_homepage'] ?? false),
             'is_enabled' => true,
+            'contents_visibility' => $this->displayPolicy(
+                $data['contents_visibility'] ?? (is_array($existingNode)
+                    ? $existingNode['contents_visibility'] ?? 'inherit'
+                    : 'inherit'),
+            ),
             'updated_by_user_id' => $actorUserId,
             'updated_at' => $now,
         ];
@@ -950,6 +1027,8 @@ final readonly class WorkspaceRepository
         if (!is_array($node)) {
             throw new RuntimeException(__('Spremljeni čvor nije moguće učitati.'));
         }
+
+        $this->contentChanged($workspaceId, $existingNode === null ? 'node_created' : 'node_updated', $nodeId);
 
         return $node;
     }
@@ -1075,6 +1154,9 @@ final readonly class WorkspaceRepository
                     'updated_at' => $now,
                 ]);
         }
+
+
+        $this->contentChanged($workspaceId, 'node_tree_deleted', $nodeId);
     }
 
     /**
@@ -1129,6 +1211,8 @@ final readonly class WorkspaceRepository
                     ->delete();
             },
         );
+
+        $this->contentChanged($workspaceId, 'unpublished_node_deleted', $nodeId);
     }
 
     /**
@@ -1673,6 +1757,39 @@ final readonly class WorkspaceRepository
     }
 
     /**
+     * HR: Normalizira politiku prikaza na nasljeđivanje, prikaz ili skrivanje.
+     * EN: Normalizes a display policy to inherit, show, or hide.
+     */
+    private function displayPolicy(mixed $value): string
+    {
+        $policy = is_scalar($value) ? strtolower(trim((string)$value)) : '';
+
+        return in_array($policy, ['inherit', 'shown', 'hidden'], true)
+        ? $policy
+        : 'inherit';
+    }
+
+    /**
+     * HR: Sprema zadani prikaz sadržaja stranice bez promjene ostalih podataka čvora.
+     * EN: Saves a page's default outline visibility without changing other node data.
+     */
+    public function updateNodeContentsVisibility(
+        int $nodeId,
+        string $policy,
+        int $actorUserId,
+    ): void {
+        $this->assertTablesReady();
+        $this->database->table(ModuleWorkspace::TABLE_WORKSPACE_NODES)
+            ->where('id', '=', $nodeId)
+            ->where('is_enabled', '=', true)
+            ->update([
+                'contents_visibility' => $this->displayPolicy($policy),
+                'updated_by_user_id' => $actorUserId,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+    }
+
+    /**
      * HR: Normalizira tip čvora na dokument ili podržani link.
      * EN: Normalizes node type to a document or supported link.
      */
@@ -2047,6 +2164,39 @@ final readonly class WorkspaceRepository
         && !str_starts_with($path, '//')
         && !str_contains($path, '\\')
         && preg_match('/[\x00-\x1F\x7F]/', $path) !== 1;
+    }
+
+    /**
+     * HR: Sigurno šalje obavijest izvedenim modulima. Neuspjeh opcionalnog
+     *     indeksa ne smije poništiti uspješno spremanje izvornog sadržaja.
+     * EN: Safely notifies derived modules. Failure of an optional index must
+     *     not undo a successful write of the source content.
+     */
+    private function contentChanged(
+        int $workspaceId,
+        string $reason,
+        ?int $nodeId = null,
+        ?string $language = null,
+    ): void {
+        if ($workspaceId <= 0 || !$this->events instanceof EventDispatcherInterface) {
+            return;
+        }
+
+        try {
+            $this->events->dispatch(new WorkspaceContentChanged(
+                $workspaceId,
+                $reason,
+                $nodeId,
+                $language,
+            ));
+        } catch (\Throwable) {
+            /*
+             * HR: Ručni reindeks i periodična provjera popravljaju eventualni
+             *     kvar izvedenog indeksa bez gubitka izvornog sadržaja.
+             * EN: Manual reindexing and periodic refresh repair a derived-index
+             *     failure without losing source content.
+             */
+        }
     }
 
     /**

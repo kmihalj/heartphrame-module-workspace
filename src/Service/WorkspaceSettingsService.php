@@ -42,6 +42,7 @@ final readonly class WorkspaceSettingsService
             'root_path' => $this->config->rootPath(),
             'default_visibility' => $this->config->defaultVisibility(),
             'tree_visible' => $this->config->treeVisibleByDefault(),
+            'contents_visible' => $this->config->contentsVisibleByDefault(),
             'authenticated_users_may_create' => $this->config->authenticatedUsersMayCreate(),
             'shorts_depth' => $this->config->shortsDefaultDepth(),
             'shorts_limit' => $this->config->shortsDefaultLimit(),
@@ -75,6 +76,7 @@ final readonly class WorkspaceSettingsService
             'defaults' => [
                 'visibility' => $visibility,
                 'tree_visible' => $this->boolValue($input['tree_visible'] ?? false),
+                'contents_visible' => $this->boolValue($input['contents_visible'] ?? false),
             ],
             'creation' => [
                 'authenticated_users' => $this->boolValue(

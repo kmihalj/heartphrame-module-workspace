@@ -472,6 +472,26 @@
     }
 
     /**
+     * HR: Premješta sve Workspace modale iz tematskog stacking contexta pod
+     *     `body`, uz Bootstrap backdrop kojem pripadaju. Obuhvaća statičke
+     *     popise, dodavanje stavke i dinamički modal postavki čvora.
+     *
+     * EN: Moves every Workspace modal out of the Theme stacking context and
+     *     under `body`, beside its Bootstrap backdrop. This covers static
+     *     lists, item creation, and the dynamic node-settings dialog.
+     *
+     * @returns {void}
+     */
+    function initializeModalPortals() {
+        document.querySelectorAll('.workspace-shell ~ .modal, .workspace-shell .modal')
+            .forEach((modal) => {
+                if (modal instanceof HTMLElement && modal.parentElement !== document.body) {
+                    document.body.append(modal);
+                }
+            });
+    }
+
+    /**
      * HR: U jedan zajednički Bootstrap modal učitava obrazac, ograničenja i
      * brisanje tek za čvor čiju je edit ikonu korisnik odabrao.
      *
@@ -928,18 +948,160 @@
     }
 
     /**
+     * HR: Pretvara stablo stranica u pristupačan lijevi panel na mobilnom
+     * prikazu, dok postojeći sklopivi desktop stupac ostaje nepromijenjen.
+     *
+     * EN: Turns the page tree into an accessible left drawer on mobile while
+     * leaving the existing collapsible desktop column unchanged.
+     *
+     * @returns {void}
+     */
+    function initializeMobilePanels() {
+        const panel = document.querySelector('[data-workspace-mobile-panel="tree"]');
+        const backdrop = document.querySelector('[data-workspace-mobile-panel-backdrop]');
+        if (!(panel instanceof HTMLElement) || !(backdrop instanceof HTMLElement)) {
+            return;
+        }
+
+        const mobileQuery = window.matchMedia('(max-width: 991.98px)');
+        const openButtons = document.querySelectorAll('[data-workspace-mobile-panel-open="tree"]');
+        const closeButtons = panel.querySelectorAll('[data-workspace-mobile-panel-close="tree"]');
+        const shell = panel.parentElement;
+        const originalNextSibling = panel.nextSibling;
+        let returnFocus = null;
+
+        /**
+         * HR: Premješta mobilni panel pod body kako transformirana tema ne bi
+         *     promijenila koordinatni sustav fiksnog elementa.
+         * EN: Portals the mobile panel under body so a transformed theme cannot
+         *     change the fixed element's coordinate system.
+         *
+         * @returns {void}
+         */
+        const synchronizePortal = () => {
+            if (!(shell instanceof HTMLElement)) {
+                return;
+            }
+
+            if (mobileQuery.matches) {
+                openButtons.forEach((button) => document.body.appendChild(button));
+                document.body.appendChild(backdrop);
+                document.body.appendChild(panel);
+                return;
+            }
+
+            if (originalNextSibling && originalNextSibling.parentNode === shell) {
+                shell.insertBefore(panel, originalNextSibling);
+            } else {
+                shell.prepend(panel);
+            }
+            openButtons.forEach((button) => shell.appendChild(button));
+            shell.appendChild(backdrop);
+        };
+
+        /**
+         * HR: Sinkronizira fokus, inert stanje, pozadinu i opis svih gumba.
+         * EN: Synchronizes focus, inert state, backdrop, and every button label.
+         *
+         * @param {boolean} open
+         * @returns {void}
+         */
+        const setOpen = (open) => {
+            synchronizePortal();
+            const mobileOpen = mobileQuery.matches && open;
+            panel.classList.toggle('workspace-mobile-panel-open', mobileOpen);
+            panel.inert = mobileQuery.matches && !mobileOpen;
+            panel.toggleAttribute('aria-hidden', mobileQuery.matches && !mobileOpen);
+            backdrop.hidden = !mobileOpen;
+            document.body.classList.toggle('workspace-mobile-panel-active', mobileOpen);
+            openButtons.forEach((button) => {
+                button.setAttribute('aria-expanded', mobileOpen ? 'true' : 'false');
+            });
+
+            if (mobileOpen) {
+                panel.scrollTop = 0;
+                const closeButton = panel.querySelector('[data-workspace-mobile-panel-close="tree"]');
+                if (closeButton instanceof HTMLElement) {
+                    closeButton.focus({ preventScroll: true });
+                }
+            }
+        };
+
+        openButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                returnFocus = button instanceof HTMLElement ? button : null;
+                setOpen(true);
+            });
+        });
+
+        closeButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                setOpen(false);
+                if (returnFocus instanceof HTMLElement) {
+                    returnFocus.focus({ preventScroll: true });
+                }
+            });
+        });
+
+        backdrop.addEventListener('click', () => {
+            setOpen(false);
+        });
+
+        panel.querySelectorAll('a[href]').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (mobileQuery.matches) {
+                    setOpen(false);
+                }
+            });
+        });
+
+        /*
+         * HR: Presreće postojeće Bootstrap collapse gumbe samo na mobitelu.
+         * EN: Intercepts existing Bootstrap collapse buttons on mobile only.
+         */
+        document.addEventListener('click', (event) => {
+            const target = event.target instanceof Element
+                ? event.target.closest('[data-bs-target="#workspace-page-tree"]')
+                : null;
+            if (!(target instanceof HTMLElement) || !mobileQuery.matches) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            returnFocus = target;
+            setOpen(!panel.classList.contains('workspace-mobile-panel-open'));
+        }, true);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && panel.classList.contains('workspace-mobile-panel-open')) {
+                setOpen(false);
+            }
+        });
+
+        mobileQuery.addEventListener('change', () => {
+            setOpen(false);
+            synchronizePortal();
+        });
+        synchronizePortal();
+        setOpen(false);
+    }
+
+    /**
      * HR: Inicijalizira sve Workspace kontrole nakon što je DOM spreman.
      * EN: Initializes every Workspace control after the DOM is ready.
      *
      * @returns {void}
      */
     function initializeWorkspaceControls() {
+        initializeModalPortals();
         initializeNodeForms();
         initializeTreeOrganizers();
         initializeTreeEditModes();
         initializeNodeDialog();
         initializeAclControls();
         initializeHomepageTargets();
+        initializeMobilePanels();
     }
 
     if (document.readyState === 'loading') {

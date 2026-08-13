@@ -6,8 +6,11 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Tests;
 
 use AaiEduHr\HeartPhrameModuleAuth\Middleware\RequireAuthenticatedUserMiddleware;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceExportController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceMenuController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceThemeController;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 
@@ -28,7 +31,7 @@ final class WorkspaceManifestTest extends TestCase
             $routesByName[$route[3]] = $route;
         }
 
-        $this->assertCount(23, $routesByName);
+        $this->assertCount(39, $routesByName);
         $this->assertSame(
             ['GET', '/workspaces', WorkspaceController::class . '@index', 'workspace.index', []],
             $routesByName['workspace.index'],
@@ -104,6 +107,45 @@ final class WorkspaceManifestTest extends TestCase
         $this->assertContains(
             RequireAuthenticatedUserMiddleware::class,
             $routesByName['workspace.homepage.preference.save'][4],
+        );
+        $this->assertSame(
+            WorkspaceExportController::class . '@form',
+            $routesByName['workspace.export'][2],
+        );
+        $this->assertSame(
+            WorkspaceExportController::class . '@download',
+            $routesByName['workspace.export.download'][2],
+        );
+        $this->assertContains(
+            RequireAuthenticatedUserMiddleware::class,
+            $routesByName['workspace.export.download'][4],
+        );
+        $this->assertSame(
+            WorkspaceThemeController::class . '@index',
+            $routesByName['workspace.theme'][2],
+        );
+        $this->assertSame(
+            WorkspaceThemeController::class . '@save',
+            $routesByName['workspace.theme.save'][2],
+        );
+        $this->assertSame(
+            WorkspaceThemeController::class . '@export',
+            $routesByName['workspace.theme.export'][2],
+        );
+        $this->assertContains(
+            RequireAuthenticatedUserMiddleware::class,
+            $routesByName['workspace.theme.export'][4],
+        );
+        $this->assertSame(
+            WorkspaceThemeController::class . '@asset',
+            $routesByName['workspace.theme.asset'][2],
+        );
+        $this->assertSame([], $routesByName['workspace.theme.asset'][4]);
+        $this->assertSame(WorkspaceMenuController::class . '@index', $routesByName['workspace.menu'][2]);
+        $this->assertSame(WorkspaceMenuController::class . '@save', $routesByName['workspace.menu.save'][2]);
+        $this->assertContains(
+            RequireAuthenticatedUserMiddleware::class,
+            $routesByName['workspace.menu.save'][4],
         );
     }
 }

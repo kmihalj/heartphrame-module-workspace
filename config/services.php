@@ -6,22 +6,37 @@ use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
 use AaiEduHr\HeartPhrameModuleWorkspace\Account\WorkspaceHomepageAccountSectionProvider;
 use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceApiService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceBackupController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceExportController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceMenuController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceShortsController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceThemeController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Backup\WorkspaceScopedBackupProvider;
+use AaiEduHr\HeartPhrameModuleAuth\Backup\AuthBackupIdentityResolver;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorAccess;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportEditorBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuNavigationTargetProvider;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRouteRegistrar;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceSettingsService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceShortsService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeArchiveService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeAssetLibrary;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeRepository;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceWorkflowService;
 use HeartPhrame\Alert\AlertHandler;
 use HeartPhrame\Authn\AuthnHandlerInterface;
@@ -34,12 +49,41 @@ use HeartPhrame\Routing\UrlGenerator;
 use HeartPhrame\View\View;
 use Psr\Container\ContainerInterface;
 
-return [
+$services = [
     WorkspaceConfig::class => static fn(ContainerInterface $container): WorkspaceConfig =>
         new WorkspaceConfig($container->get(ConfigInterface::class), dirname(__DIR__)),
 
     WorkspaceRepository::class => static fn(ContainerInterface $container): WorkspaceRepository =>
-        new WorkspaceRepository($container->get(Database::class)),
+        new WorkspaceRepository(
+            $container->get(Database::class),
+            $container->get(\Psr\EventDispatcher\EventDispatcherInterface::class),
+        ),
+
+    WorkspaceThemeRepository::class => static fn(ContainerInterface $container): WorkspaceThemeRepository =>
+        new WorkspaceThemeRepository($container->get(Database::class)),
+
+    WorkspaceThemeAssetLibrary::class =>
+        static fn(ContainerInterface $container): WorkspaceThemeAssetLibrary =>
+            new WorkspaceThemeAssetLibrary($container->get(WorkspaceConfig::class)),
+
+    WorkspaceThemeArchiveService::class =>
+        static fn(ContainerInterface $container): WorkspaceThemeArchiveService =>
+            new WorkspaceThemeArchiveService(
+                $container,
+                $container->get(WorkspaceThemeRepository::class),
+                $container->get(WorkspaceThemeAssetLibrary::class),
+                $container->get(WorkspaceConfig::class),
+            ),
+
+    WorkspaceThemeService::class => static fn(ContainerInterface $container): WorkspaceThemeService =>
+        new WorkspaceThemeService(
+            $container,
+            $container->get(ComposerBridge::class),
+            $container->get(WorkspaceThemeRepository::class),
+            $container->get(WorkspaceThemeAssetLibrary::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
+        ),
 
     WorkspaceHomepageRepository::class =>
         static fn(ContainerInterface $container): WorkspaceHomepageRepository =>
@@ -61,6 +105,11 @@ return [
             $container->get(WorkspaceRepository::class),
             $container->get(WorkspaceAccessService::class),
             $container->get(WorkspaceConfig::class),
+            $container->get(WorkspaceShortsService::class),
+            $container->get(WorkspaceExportService::class),
+            $container->get(WorkspaceThemeService::class),
+            $container->get(WorkspaceThemeArchiveService::class),
+            $container->get(WorkspaceHomepageService::class),
         ),
 
     WorkspaceHomepageService::class => static fn(ContainerInterface $container): WorkspaceHomepageService =>
@@ -98,6 +147,31 @@ return [
             $container->get(WorkspaceNotificationBridge::class),
         ),
 
+    WorkspaceExportEditorBridge::class =>
+        static fn(ContainerInterface $container): WorkspaceExportEditorBridge =>
+            new WorkspaceExportEditorBridge(
+                $container,
+                $container->get(ComposerBridge::class),
+            ),
+
+    WorkspaceThemeBridge::class => static fn(ContainerInterface $container): WorkspaceThemeBridge =>
+        new WorkspaceThemeBridge(
+            $container,
+            $container->get(ComposerBridge::class),
+            $container->get(TranslatorInterface::class),
+        ),
+
+    WorkspaceExportService::class => static fn(ContainerInterface $container): WorkspaceExportService =>
+        new WorkspaceExportService(
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceWorkflowService::class),
+            $container->get(WorkspaceExportEditorBridge::class),
+            $container->get(WorkspaceThemeBridge::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(TranslatorInterface::class),
+        ),
+
     WorkspaceNotificationBridge::class =>
         static fn(ContainerInterface $container): WorkspaceNotificationBridge =>
             new WorkspaceNotificationBridge(
@@ -131,6 +205,22 @@ return [
     WorkspaceMenuIntegration::class => static fn(ContainerInterface $container): WorkspaceMenuIntegration =>
         new WorkspaceMenuIntegration($container, $container->get(WorkspaceConfig::class)),
 
+    WorkspaceMenuService::class => static fn(ContainerInterface $container): WorkspaceMenuService =>
+        new WorkspaceMenuService(
+            $container,
+            $container->get(ComposerBridge::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
+        ),
+
+    WorkspaceMenuNavigationTargetProvider::class =>
+        static fn(ContainerInterface $container): WorkspaceMenuNavigationTargetProvider =>
+            new WorkspaceMenuNavigationTargetProvider(
+                $container->get(WorkspaceRepository::class),
+                $container->get(WorkspaceConfig::class),
+                $container->get(UrlGenerator::class),
+            ),
+
     WorkspaceModuleViewRenderer::class => static fn(ContainerInterface $container): WorkspaceModuleViewRenderer =>
         new WorkspaceModuleViewRenderer(
             $container->get(ResponseFactory::class),
@@ -151,6 +241,21 @@ return [
             $container->get(WorkspaceWorkflowService::class),
             $container->get(WorkspaceNotificationBridge::class),
             $container->get(TranslatorInterface::class),
+            $container->get(WorkspaceThemeService::class),
+            $container->get(WorkspaceMenuService::class),
+        ),
+
+    WorkspaceExportController::class => static fn(ContainerInterface $container): WorkspaceExportController =>
+        new WorkspaceExportController(
+            $container->get(ResponseFactory::class),
+            $container->get(WorkspaceModuleViewRenderer::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceExportService::class),
+            $container->get(WorkspaceExportEditorBridge::class),
+            $container->get(UrlGenerator::class),
+            $container->get(AlertHandler::class),
+            $container->get(WorkspaceThemeService::class),
         ),
 
     WorkspaceSettingsController::class => static fn(ContainerInterface $container): WorkspaceSettingsController =>
@@ -174,6 +279,31 @@ return [
             $container->get(WorkspaceConfig::class),
             $container->get(UrlGenerator::class),
             $container->get(TranslatorInterface::class),
+            $container->get(WorkspaceThemeService::class),
+        ),
+
+    WorkspaceThemeController::class => static fn(ContainerInterface $container): WorkspaceThemeController =>
+        new WorkspaceThemeController(
+            $container->get(ResponseFactory::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceThemeService::class),
+            $container->get(WorkspaceThemeArchiveService::class),
+            $container->get(WorkspaceThemeAssetLibrary::class),
+            $container->get(UrlGenerator::class),
+            $container->get(AlertHandler::class),
+        ),
+
+    WorkspaceMenuController::class => static fn(ContainerInterface $container): WorkspaceMenuController =>
+        new WorkspaceMenuController(
+            $container->get(ResponseFactory::class),
+            $container->get(WorkspaceModuleViewRenderer::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceMenuService::class),
+            $container->get(WorkspaceThemeService::class),
+            $container->get(UrlGenerator::class),
+            $container->get(AlertHandler::class),
         ),
 
     WorkspaceHomepageController::class =>
@@ -194,3 +324,133 @@ return [
                 $container->get(UrlGenerator::class),
             ),
 ];
+
+if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider::class)) {
+    $services['heartphrame.backup.provider.workspace'] =
+        static fn(ContainerInterface $container): \AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider =>
+            new \AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider(
+                $container->get(Database::class),
+                new \AaiEduHr\HeartPhrameModuleBackup\Value\BackupProviderMetadata(
+                    'workspace',
+                    \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::PACKAGE_NAME,
+                    2,
+                    ['hr' => 'Područja, stabla i ovlasti', 'en' => 'Workspaces, trees, and permissions'],
+                    ['auth', 'editor-html'],
+                    [\AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::SITE, \AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::COMPONENT],
+                    true,
+                    true,
+                ),
+                [
+                    ['dataset' => 'workspaces', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACES, 'primary_key' => 'id', 'conflict_keys' => ['uuid'], 'preserve_primary_key' => false, 'identity_namespace' => 'workspace.workspace', 'foreign_keys' => [
+                        ['column' => 'owner_user_id', 'namespace' => 'auth.user'],
+                        ['column' => 'created_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                        ['column' => 'updated_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                        ['column' => 'deleted_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                    ]],
+                    ['dataset' => 'workspace-acl', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_ACL, 'primary_key' => 'id', 'conflict_keys' => ['workspace_id', 'subject_type', 'subject_id'], 'preserve_primary_key' => false, 'foreign_keys' => [
+                        ['column' => 'workspace_id', 'namespace' => 'workspace.workspace'],
+                    ], 'polymorphic_foreign_keys' => [[
+                        'column' => 'subject_id', 'type_column' => 'subject_type',
+                        'namespaces' => ['user' => 'auth.user', 'group' => 'auth.group'],
+                        'passthrough' => ['public', 'authenticated'],
+                    ]]],
+                    ['dataset' => 'nodes', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_NODES, 'primary_key' => 'id', 'conflict_keys' => ['uuid'], 'preserve_primary_key' => false, 'identity_namespace' => 'workspace.node', 'foreign_keys' => [
+                        ['column' => 'workspace_id', 'namespace' => 'workspace.workspace'],
+                        ['column' => 'parent_id', 'namespace' => 'workspace.node', 'nullable' => true, 'defer' => true],
+                        ['column' => 'created_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                        ['column' => 'updated_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                    ]],
+                    ['dataset' => 'node-acl', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_NODE_ACL, 'primary_key' => 'id', 'conflict_keys' => ['node_id', 'subject_type', 'subject_id'], 'preserve_primary_key' => false, 'foreign_keys' => [
+                        ['column' => 'node_id', 'namespace' => 'workspace.node'],
+                    ], 'polymorphic_foreign_keys' => [[
+                        'column' => 'subject_id', 'type_column' => 'subject_type',
+                        'namespaces' => ['user' => 'auth.user', 'group' => 'auth.group'],
+                        'passthrough' => ['public', 'authenticated'],
+                    ]]],
+                    ['dataset' => 'node-workflows', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS, 'primary_key' => 'id', 'conflict_keys' => ['node_id', 'language_code'], 'preserve_primary_key' => false, 'foreign_keys' => [
+                        ['column' => 'node_id', 'namespace' => 'workspace.node'],
+                        ['column' => 'submitted_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                        ['column' => 'published_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                        ['column' => 'archived_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                        ['column' => 'updated_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                    ]],
+                    ['dataset' => 'homepage-settings', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS, 'primary_key' => 'id', 'conflict_keys' => ['id'], 'foreign_keys' => [
+                        ['column' => 'public_node_id', 'namespace' => 'workspace.node', 'nullable' => true, 'defer' => true],
+                        ['column' => 'public_workspace_id', 'namespace' => 'workspace.workspace', 'nullable' => true, 'defer' => true],
+                        ['column' => 'authenticated_node_id', 'namespace' => 'workspace.node', 'nullable' => true, 'defer' => true],
+                        ['column' => 'authenticated_workspace_id', 'namespace' => 'workspace.workspace', 'nullable' => true, 'defer' => true],
+                        ['column' => 'updated_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                    ]],
+                    ['dataset' => 'user-homepages', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES, 'primary_key' => 'id', 'conflict_keys' => ['user_id'], 'preserve_primary_key' => false, 'foreign_keys' => [
+                        ['column' => 'user_id', 'namespace' => 'auth.user'],
+                        ['column' => 'node_id', 'namespace' => 'workspace.node', 'defer' => true],
+                        ['column' => 'workspace_id', 'namespace' => 'workspace.workspace', 'nullable' => true, 'defer' => true],
+                    ]],
+                    ['dataset' => 'workspace-themes', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACE_THEMES, 'primary_key' => 'id', 'conflict_keys' => ['workspace_id'], 'preserve_primary_key' => false, 'foreign_keys' => [
+                        // HR: Područja su već uvezena prije privatnih tema, a
+                        // workspace_id je obvezan. Izravno mapiranje sprječava
+                        // privremeni NULL koji bi SQLite/PostgreSQL/MySQL
+                        // ispravno odbili prije odgođene završne faze.
+                        // EN: Workspaces have already been imported before
+                        // private themes and workspace_id is required. Direct
+                        // mapping avoids a temporary NULL correctly rejected
+                        // by SQLite/PostgreSQL/MySQL before deferred finalizing.
+                        ['column' => 'workspace_id', 'namespace' => 'workspace.workspace'],
+                        ['column' => 'updated_by_user_id', 'namespace' => 'auth.user', 'nullable' => true],
+                    ]],
+                ],
+            );
+}
+
+if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider::class)) {
+    $services['heartphrame.backup.provider.workspace-files'] =
+        static fn(ContainerInterface $container): \AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider =>
+            new \AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider(
+                new \AaiEduHr\HeartPhrameModuleBackup\Value\BackupProviderMetadata(
+                    'workspace-files',
+                    \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::PACKAGE_NAME,
+                    1,
+                    ['hr' => 'Privatne teme područja', 'en' => 'Private workspace themes'],
+                    ['workspace'],
+                    [\AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::SITE, \AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::COMPONENT],
+                    true,
+                ),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupFilesystem::class),
+                [['key' => 'workspace-themes', 'path' => $container->get(ConfigInterface::class)->getAppRootDir() . '/data/workspaces/themes']],
+            );
+}
+
+if (interface_exists(\AaiEduHr\HeartPhrameModuleBackup\Contract\BackupProviderInterface::class)) {
+    // HR: Selektivni backup područja koristi stabilne poslovne identitete.
+    // EN: Selective workspace backup uses stable business identities.
+    $services['heartphrame.backup.provider.workspace-scope'] =
+        static fn(ContainerInterface $container): WorkspaceScopedBackupProvider =>
+            new WorkspaceScopedBackupProvider(
+                $container->get(Database::class),
+                $container->get(AuthBackupIdentityResolver::class),
+                $container->get(WorkspaceConfig::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupFilesystem::class),
+            );
+
+    // HR: Workspace je vlasnik ACL pravila svojeg backup sučelja; generički
+    // Backup modul zato ne mora poznavati ni jednu Workspace klasu.
+    // EN: Workspace owns its backup-UI ACL rules, so the generic Backup module
+    // does not need to know any Workspace class.
+    $services[WorkspaceBackupController::class] =
+        static fn(ContainerInterface $container): WorkspaceBackupController =>
+            new WorkspaceBackupController(
+                $container->get(ResponseFactory::class),
+                $container->get(WorkspaceModuleViewRenderer::class),
+                $container->get(WorkspaceRepository::class),
+                $container->get(WorkspaceAccessService::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupJobRepository::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupJobRunner::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupUploadService::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupManager::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupConfig::class),
+                $container->get(UrlGenerator::class),
+                $container->get(\HeartPhrame\Session\SessionInterface::class),
+            );
+}
+
+return $services;

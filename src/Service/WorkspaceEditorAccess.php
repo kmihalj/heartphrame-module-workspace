@@ -7,6 +7,7 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Service;
 use HeartPhrame\Routing\UrlGenerator;
 
 use function array_key_exists;
+use function in_array;
 use function is_array;
 use function trim;
 
@@ -356,6 +357,61 @@ final class WorkspaceEditorAccess
     public function ownsDocument(string $documentKey): bool
     {
         return is_array($this->documentContext($documentKey));
+    }
+
+    /**
+     * HR: Vraća izravnu politiku prikaza sadržaja povezane Workspace stranice.
+     * EN: Returns the direct outline-visibility policy of the linked Workspace page.
+     */
+    public function documentContentsVisibility(string $documentKey): string
+    {
+        $context = $this->documentContext($documentKey);
+        $policy = is_array($context)
+        ? WorkspaceValue::string($context['node']['contents_visibility'] ?? 'inherit')
+        : 'inherit';
+
+        return in_array($policy, ['inherit', 'shown', 'hidden'], true) ? $policy : 'inherit';
+    }
+
+    /**
+     * HR: Sprema izravnu politiku prikaza sadržaja samo kada korisnik smije uređivati stranicu.
+     * EN: Saves the direct outline policy only when the user may edit the page.
+     */
+    public function saveDocumentContentsVisibility(string $documentKey, string $policy): void
+    {
+        $this->documentContext($documentKey);
+        $user = $this->access->currentUser();
+        if (!is_array($user)) {
+            throw new \RuntimeException(__('Nemate pravo uređivanja ove stranice.'));
+        }
+
+        $this->saveDocumentContentsVisibilityForUser($documentKey, $policy, $user);
+    }
+
+    /**
+     * HR: Sprema politiku prikaza za eksplicitnog API korisnika, bez oslanjanja
+     *     na HTTP sesiju koja kod autentikacije API ključem namjerno ne postoji.
+     * EN: Saves the display policy for an explicit API user without relying on
+     *     an HTTP session, which intentionally does not exist for API-key auth.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function saveDocumentContentsVisibilityForUser(
+        string $documentKey,
+        string $policy,
+        array $user,
+    ): void {
+        $context = $this->documentContext($documentKey);
+        if (!is_array($context) || !$this->canEditDocumentForUser($documentKey, $user)) {
+            throw new \RuntimeException(__('Nemate pravo uređivanja ove stranice.'));
+        }
+
+        $this->repository->updateNodeContentsVisibility(
+            WorkspaceValue::int($context['node']['id'] ?? 0),
+            $policy,
+            WorkspaceValue::int($user['id'] ?? 0),
+        );
+        $this->documentContextCache = [];
     }
 
     /**

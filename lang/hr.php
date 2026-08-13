@@ -44,6 +44,7 @@ return [
     'HTML dokument već pripada drugoj stranici područja.' =>
         'HTML dokument već pripada drugoj stranici područja.',
     'HTML editor nije dostupan.' => 'HTML editor nije dostupan.',
+    'HTML izvoz područja nije dostupan.' => 'HTML izvoz područja nije dostupan.',
     'HTML editor ne podržava trajno brisanje neobjavljenog dokumenta.' =>
         'HTML editor ne podržava trajno brisanje neobjavljenog dokumenta.',
     'Hijerarhija i redoslijed stranica su spremljeni.' =>
@@ -394,4 +395,196 @@ return [
         'HTML editor ne podržava objavljivanje nacrta.',
     'HTML editor ne podržava odbacivanje nacrta.' =>
         'HTML editor ne podržava odbacivanje nacrta.',
+    'Izvezi područje u HTML' => 'Izvezi područje u HTML',
+    'Izvezi HTML' => 'Izvezi HTML',
+    'Natrag na upravljanje područjem' => 'Natrag na upravljanje područjem',
+    'Što sadrži HTML izvoz?' => 'Što sadrži HTML izvoz?',
+    'ZIP sadrži samostalne HTML stranice, trenutačnu temu, filtrirano stablo, privitke i statičke snimke kalendara i zadataka.' =>
+        'ZIP sadrži samostalne HTML stranice, trenutačnu temu, filtrirano stablo, privitke i statičke snimke kalendara i zadataka.',
+    'Izvoze se samo objavljene stranice koje smijete vidjeti. Offline paket ne sadrži aktivne prijave, API pozive ni mogućnost uređivanja.' =>
+        'Izvoze se samo objavljene stranice koje smijete vidjeti. Offline paket ne sadrži aktivne prijave, API pozive ni mogućnost uređivanja.',
+    'Naslov offline aplikacije' => 'Naslov offline aplikacije',
+    'Jezici' => 'Jezici',
+    'Početni prikaz' => 'Početni prikaz',
+    'Stablo, sadržaj dokumenta i privitci slijede trenutačne postavke aplikacije te se u izvozu mogu neovisno pokazati ili sakriti.' =>
+        'Stablo, sadržaj dokumenta i privitci slijede trenutačne postavke aplikacije te se u izvozu mogu neovisno pokazati ili sakriti.',
+    'Opseg izvoza' => 'Opseg izvoza',
+    'Cijelo područje' => 'Cijelo područje',
+    'Sve objavljene i ACL-vidljive stranice područja.' =>
+        'Sve objavljene i ACL-vidljive stranice područja.',
+    'Odabrane stranice' => 'Odabrane stranice',
+    'Stablo u ZIP-u sadržavat će samo odabrane izvezene stranice.' =>
+        'Stablo u ZIP-u sadržavat će samo odabrane izvezene stranice.',
+    'Stranice za izvoz' => 'Stranice za izvoz',
+    'Nema objavljenih stranica koje smijete izvesti.' =>
+        'Nema objavljenih stranica koje smijete izvesti.',
+    'Odaberite najmanje jednu stranicu za izvoz.' =>
+        'Odaberite najmanje jednu stranicu za izvoz.',
+    'Samo administratori i upravitelji područja mogu izvesti područje.' =>
+        'Samo administratori i upravitelji područja mogu izvesti područje.',
+    'Nema objavljenih stranica za izvoz.' => 'Nema objavljenih stranica za izvoz.',
+    'PHP ZIP ekstenzija nije instalirana.' => 'PHP ZIP ekstenzija nije instalirana.',
+    'ZIP export nije moguće pripremiti.' => 'ZIP export nije moguće pripremiti.',
+    'Manifest izvoza nije moguće izraditi.' => 'Manifest izvoza nije moguće izraditi.',
+    'Izvezeno područje: :workspace' => 'Izvezeno područje: :workspace',
+    'Knowledge that lives together.' => 'Znanje koje živi zajedno.',
+    'Home' => 'Početna',
+    'Početna' => 'Početna',
+    'Odaberite stranicu iz stabla.' => 'Odaberite stranicu iz stabla.',
+    'Stablo je prazno.' => 'Stablo je prazno.',
+    'Opcije prikaza' => 'Opcije prikaza',
+    'Automatski' => 'Automatski',
+    'Svijetlo' => 'Svijetlo',
+    'Tamno' => 'Tamno',
+    'Tema' => 'Tema',
+    'Preskoči na glavni sadržaj' => 'Preskoči na glavni sadržaj',
+    'Tema područja' => 'Tema područja',
+    'Uredi temu područja' => 'Uredi temu područja',
+    'Područje koristi zadanu sistemsku temu.' => 'Područje koristi zadanu sistemsku temu.',
+    'Privatna tema područja' => 'Privatna tema područja',
+    'Odabrana sistemska tema' => 'Odabrana sistemska tema',
+    'Theme modul nije instaliran ili uključen.' => 'Theme modul nije instaliran ili uključen.',
+    'Odaberite datoteku teme.' => 'Odaberite datoteku teme.',
+    'Odaberite ZIP paket teme.' => 'Odaberite ZIP paket teme.',
+    'Nepoznata akcija teme područja.' => 'Nepoznata akcija teme područja.',
+    'Tema područja je spremljena.' => 'Tema područja je spremljena.',
+    'Migracija tema područja nije primijenjena.' => 'Migracija tema područja nije primijenjena.',
+    'Područje nije valjano.' => 'Područje nije valjano.',
+    'Odabir teme područja nije valjan.' => 'Odabir teme područja nije valjan.',
+    'Privatna tema područja nema konfiguraciju.' => 'Privatna tema područja nema konfiguraciju.',
+    'Privatnu temu područja nije moguće spremiti.' =>
+        'Privatnu temu područja nije moguće spremiti.',
+    'Predložak migracije tema područja nije pronađen.' =>
+        'Predložak migracije tema područja nije pronađen.',
+    'Kreirana je migracija tema područja: ' => 'Kreirana je migracija tema područja: ',
+    'System theme files are read only in workspace settings.' =>
+        'Datoteke sistemske teme moguće je samo čitati u postavkama područja.',
+    'Theme editor did not return an HTTP response.' =>
+        'Uređivač teme nije vratio valjan HTTP odgovor.',
+    'Selected system theme does not exist.' => 'Odabrana sistemska tema ne postoji.',
+    'Workspace ID is invalid.' => 'ID područja nije valjan.',
+    'Theme module returned an invalid private theme.' =>
+        'Theme modul vratio je nevaljanu privatnu temu.',
+    'Theme module service is unavailable: %s' => 'Servis Theme modula nije dostupan: %s',
+    'Theme module service does not support: %s' => 'Servis Theme modula ne podržava: %s',
+    'Workspace theme asset upload failed.' => 'Prijenos datoteke teme područja nije uspio.',
+    'Workspace theme directory cannot be created.' =>
+        'Direktorij teme područja nije moguće kreirati.',
+    'Workspace theme asset checksum cannot be calculated.' =>
+        'Kontrolni zbroj datoteke teme područja nije moguće izračunati.',
+    'Workspace theme asset cannot be stored.' => 'Datoteku teme područja nije moguće spremiti.',
+    'Source theme asset does not exist.' => 'Izvorna datoteka teme ne postoji.',
+    'System theme asset cannot be copied to the workspace.' =>
+        'Datoteku sistemske teme nije moguće kopirati u područje.',
+    'Workspace theme asset does not exist.' => 'Datoteka teme područja ne postoji.',
+    'A workspace theme asset in use cannot be deleted. Select and save a replacement first.' =>
+        'Datoteku teme područja koja se koristi nije moguće obrisati. Najprije odaberite i spremite zamjenu.',
+    'Workspace theme asset cannot be deleted.' => 'Datoteku teme područja nije moguće obrisati.',
+    'Workspace theme asset manifest cannot be written.' =>
+        'Manifest datoteka teme područja nije moguće zapisati.',
+    'Workspace theme temporary file cannot be created.' =>
+        'Privremenu datoteku teme područja nije moguće kreirati.',
+    'Workspace theme asset is larger than 25 MB.' => 'Datoteka teme područja veća je od 25 MB.',
+    'Workspace theme upload cannot be stored.' => 'Prenesenu temu područja nije moguće spremiti.',
+    'Workspace theme asset is empty.' => 'Datoteka teme područja je prazna.',
+    'Unsupported workspace theme asset format.' => 'Format datoteke teme područja nije podržan.',
+    'Workspace theme asset is not a valid image.' => 'Datoteka teme područja nije valjana slika.',
+    'Uploaded SVG is invalid.' => 'Preneseni SVG nije valjan.',
+    'Uploaded SVG contains active content.' => 'Preneseni SVG sadrži aktivni sadržaj.',
+    'Uploaded SVG contains unsafe content.' => 'Preneseni SVG sadrži nesiguran sadržaj.',
+    'Only a private workspace theme can be exported.' =>
+        'Moguće je izvesti samo privatnu temu područja.',
+    'Unable to create the workspace theme export.' =>
+        'Izvoz teme područja nije moguće kreirati.',
+    'Unable to add a workspace theme file to the export.' =>
+        'Datoteku teme područja nije moguće dodati u izvoz.',
+    'Unable to read the workspace theme export.' => 'Izvoz teme područja nije moguće pročitati.',
+    'Theme export upload failed.' => 'Prijenos izvoza teme nije uspio.',
+    'Theme export archive cannot be opened.' => 'Arhivu izvoza teme nije moguće otvoriti.',
+    'Unsupported theme export format.' => 'Format izvoza teme nije podržan.',
+    'Theme export identity does not match.' => 'Identitet izvoza teme nije valjan.',
+    'Theme module returned an invalid imported theme.' =>
+        'Theme modul vratio je nevaljanu uvezenu temu.',
+    'Existing workspace theme files cannot be prepared for import.' =>
+        'Postojeće datoteke teme područja nije moguće pripremiti za uvoz.',
+    'Imported workspace theme directory cannot be created.' =>
+        'Direktorij uvezene teme područja nije moguće kreirati.',
+    'Imported workspace theme files cannot be activated.' =>
+        'Datoteke uvezene teme područja nije moguće aktivirati.',
+    'Theme export contains too many files.' => 'Izvoz teme sadrži previše datoteka.',
+    'Theme export file manifest is invalid.' => 'Manifest datoteka izvoza teme nije valjan.',
+    'Theme export contains an unsafe file path.' => 'Izvoz teme sadrži nesigurnu putanju datoteke.',
+    'Theme export file integrity check failed.' => 'Provjera integriteta datoteke izvoza teme nije uspjela.',
+    'Imported theme directory cannot be created.' => 'Direktorij uvezene teme nije moguće kreirati.',
+    'Imported theme file cannot be stored.' => 'Datoteku uvezene teme nije moguće spremiti.',
+    'Theme export contains too many entries.' => 'Izvoz teme sadrži previše zapisa.',
+    'Theme export contains an unsafe entry.' => 'Izvoz teme sadrži nesiguran zapis.',
+    'Theme export is missing %s.' => 'U izvozu teme nedostaje %s.',
+    'Theme export contains invalid JSON.' => 'Izvoz teme sadrži nevaljan JSON.',
+    'Theme export JSON root must be an object.' => 'Korijen JSON-a izvoza teme mora biti objekt.',
+    'Theme import temporary file cannot be created.' =>
+        'Privremenu datoteku za uvoz teme nije moguće kreirati.',
+    'Theme export archive is too large.' => 'Arhiva izvoza teme je prevelika.',
+    'Theme export upload cannot be stored.' => 'Preneseni izvoz teme nije moguće spremiti.',
+    'Theme module repository is unavailable.' => 'Repozitorij Theme modula nije dostupan.',
+    'Theme module does not support private workspace themes.' =>
+        'Theme modul ne podržava privatne teme područja.',
+    'Temporary theme archive cannot be created.' => 'Privremenu arhivu teme nije moguće kreirati.',
+    'ZIP extension is required for theme transfer.' => 'Za prijenos teme potrebna je ZIP ekstenzija.',
+    'Sadržaj stranice je početno prikazan' => 'Sadržaj stranice je početno prikazan',
+    'Zadani prikaz' => 'Zadani prikaz',
+    'Stablo stranica' => 'Stablo stranica',
+    'Sadržaj stranice' => 'Sadržaj stranice',
+    'Naslijedi sistemsku postavku' => 'Naslijedi sistemsku postavku',
+    'Prikaži' => 'Prikaži',
+    'Sakrij' => 'Sakrij',
+    'Sažetci područja nisu dostupni.' => 'Sažetci područja nisu dostupni.',
+    'Polje "theme" mora biti JSON objekt.' => 'Polje "theme" mora biti JSON objekt.',
+    'Uvoz teme područja nije dostupan.' => 'Uvoz teme područja nije dostupan.',
+    'Izvoz teme područja nije dostupan.' => 'Izvoz teme područja nije dostupan.',
+    'Teme područja nisu dostupne.' => 'Teme područja nisu dostupne.',
+    'Postavke naslovnice nisu dostupne.' => 'Postavke naslovnice nisu dostupne.',
+    'Postavka pojedine stranice nadjačava zadani prikaz sadržaja područja.' =>
+        'Postavka pojedine stranice nadjačava zadani prikaz sadržaja područja.',
+    'Kada je aktivan poseban lijevi meni, stablo je početno skriveno i može se ponovno otvoriti njegovom ikonom.' =>
+        'Kada je aktivan poseban lijevi meni, stablo je početno skriveno i može se ponovno otvoriti njegovom ikonom.',
+    'Zadani prikaz sadržaja stranice' => 'Zadani prikaz sadržaja stranice',
+    'Naslijedi postavku područja' => 'Naslijedi postavku područja',
+    'Predložak migracije postavki prikaza nije pronađen.' =>
+        'Predložak migracije postavki prikaza nije pronađen.',
+    'Kreirana je migracija postavki prikaza područja: ' =>
+        'Kreirana je migracija postavki prikaza područja: ',
+    'Not Found' => 'Nije pronađeno',
+    'Posebni meniji područja' => 'Posebni meniji područja',
+    'Posebni gornji meni' => 'Posebni gornji meni',
+    'Posebni lijevi meni' => 'Posebni lijevi meni',
+    'Uredi menije područja' => 'Uredi menije područja',
+    'Uredite posebni gornji i lijevi meni samo za ovo područje.' =>
+        'Uredite posebni gornji i lijevi meni samo za ovo područje.',
+    'Gornji i lijevi meni uređuju se odvojeno. Promjena ili uklanjanje jednoga ne mijenja drugi meni.' =>
+        'Gornji i lijevi meni uređuju se odvojeno. Promjena ili uklanjanje jednoga ne mijenja drugi meni.',
+    'Posebni meni područja je spremljen.' => 'Posebni meni područja je spremljen.',
+    'Menu modul nije instaliran ili uključen.' => 'Menu modul nije instaliran ili uključen.',
+    'Upravljaj područjem' => 'Upravljaj područjem',
+    'Backup datoteka' => 'Backup datoteka',
+    'Backup područja' => 'Backup područja',
+    'Ciljno područje' => 'Ciljno područje',
+    'Izvezi backup područja' => 'Izvezi backup područja',
+    'Kreiraj novo područje' => 'Kreiraj novo područje',
+    'Napredak prijenosa' => 'Napredak prijenosa',
+    'Natrag na područje' => 'Natrag na područje',
+    'Način vraćanja' => 'Način vraćanja',
+    'Odaberite backup datoteku.' => 'Odaberite backup datoteku.',
+    'Pokreni vraćanje' => 'Pokreni vraćanje',
+    'Preflight provjera' => 'Preflight provjera',
+    'Preuzmi šifrirani backup' => 'Preuzmi šifrirani backup',
+    'Spoji s istim područjem' => 'Spoji s istim područjem',
+    'Upravljaj backupom područja' => 'Upravljaj backupom područja',
+    'Učitaj i provjeri' => 'Učitaj i provjeri',
+    'Vrati backup područja' => 'Vrati backup područja',
+    'Vratiti backup područja sada? Postojeći sadržaj može biti promijenjen.' =>
+        'Vratiti backup područja sada? Postojeći sadržaj može biti promijenjen.',
+    'Zahtjev nije uspio.' => 'Zahtjev nije uspio.',
+    'Zamijeni postojeće područje' => 'Zamijeni postojeće područje',
+    'Zaporka arhiva' => 'Zaporka arhiva',
 ];

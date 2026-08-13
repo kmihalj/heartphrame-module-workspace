@@ -26,5 +26,6 @@ final class ModuleWorkspaceTest extends TestCase
             'workspace_user_homepages',
             ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
         );
+        $this->assertSame('workspace_themes', ModuleWorkspace::TABLE_WORKSPACE_THEMES);
     }
 }

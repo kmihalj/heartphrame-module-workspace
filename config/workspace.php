@@ -11,6 +11,7 @@ return [
     'defaults' => [
         'visibility' => 'restricted',
         'tree_visible' => true,
+        'contents_visible' => false,
     ],
     'creation' => [
         'authenticated_users' => false,

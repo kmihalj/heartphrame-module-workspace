@@ -6,6 +6,7 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Tests;
 
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Migration\ReversibleMigrationInterface;
+use AaiEduHr\HeartPhrameModuleWorkspace\Event\WorkspaceContentChanged;
 use AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
@@ -15,14 +16,19 @@ use HeartPhrame\Helper\Helper;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use RuntimeException;
 
 #[CoversClass(WorkspaceWorkflowService::class)]
+#[UsesClass(WorkspaceContentChanged::class)]
 #[UsesClass(WorkspaceRepository::class)]
 #[UsesClass(WorkspaceValue::class)]
 final class WorkspaceWorkflowServiceTest extends TestCase
 {
     private WorkspaceWorkflowService $workflow;
+
+    /** @var list<WorkspaceContentChanged> */
+    private array $events = [];
 
     /**
      * HR: Priprema prijenosnu SQLite shemu i jednu dokument-stranicu bez
@@ -68,8 +74,24 @@ final class WorkspaceWorkflowServiceTest extends TestCase
             'updated_at' => $now,
         ]);
 
+        $dispatcher = new class (
+            fn(WorkspaceContentChanged $event): WorkspaceContentChanged => $this->events[] = $event,
+        ) implements EventDispatcherInterface {
+            public function __construct(private readonly \Closure $record)
+            {
+            }
+
+            public function dispatch(object $event): object
+            {
+                if ($event instanceof WorkspaceContentChanged) {
+                    ($this->record)($event);
+                }
+
+                return $event;
+            }
+        };
         $this->workflow = new WorkspaceWorkflowService(
-            new WorkspaceRepository($database),
+            new WorkspaceRepository($database, $dispatcher),
         );
     }
 
@@ -99,6 +121,8 @@ final class WorkspaceWorkflowServiceTest extends TestCase
         $this->assertSame(WorkspaceWorkflowService::STATUS_DRAFT, $newDraft['status']);
         $this->assertSame(1, $this->workflow->publicationVersion('upute', 'hr'));
 
+        $publishedEventsBeforeRepublish = count($this->events);
+
         $review = $this->workflow->transition(1, 'hr', 'submit', 2, 7, true, false, false);
         $this->assertSame(WorkspaceWorkflowService::STATUS_IN_REVIEW, $review['status']);
         $this->assertSame(1, $this->workflow->publicationVersion('upute', 'hr'));
@@ -106,6 +130,8 @@ final class WorkspaceWorkflowServiceTest extends TestCase
         $republished = $this->workflow->transition(1, 'hr', 'publish', 2, 1, false, true, false);
         $this->assertSame(WorkspaceWorkflowService::STATUS_PUBLISHED, $republished['status']);
         $this->assertSame(2, $this->workflow->publicationVersion('upute', 'hr'));
+        $this->assertGreaterThan($publishedEventsBeforeRepublish, count($this->events));
+        $this->assertSame('hr', $this->events[array_key_last($this->events)]->language);
     }
 
     /**

@@ -44,6 +44,7 @@ return [
     'HTML dokument već pripada drugoj stranici područja.' =>
         'The HTML document already belongs to another Workspace page.',
     'HTML editor nije dostupan.' => 'The HTML editor is unavailable.',
+    'HTML izvoz područja nije dostupan.' => 'Workspace HTML export is unavailable.',
     'HTML editor ne podržava trajno brisanje neobjavljenog dokumenta.' =>
         'The HTML editor does not support permanent deletion of an unpublished document.',
     'Hijerarhija i redoslijed stranica su spremljeni.' =>
@@ -395,4 +396,196 @@ return [
         'The HTML editor does not support draft publication.',
     'HTML editor ne podržava odbacivanje nacrta.' =>
         'The HTML editor does not support discarding drafts.',
+    'Izvezi područje u HTML' => 'Export Workspace to HTML',
+    'Izvezi HTML' => 'Export HTML',
+    'Natrag na upravljanje područjem' => 'Back to Workspace management',
+    'Što sadrži HTML izvoz?' => 'What does the HTML export contain?',
+    'ZIP sadrži samostalne HTML stranice, trenutačnu temu, filtrirano stablo, privitke i statičke snimke kalendara i zadataka.' =>
+        'The ZIP contains standalone HTML pages, the current theme, a filtered tree, attachments, and static calendar and task snapshots.',
+    'Izvoze se samo objavljene stranice koje smijete vidjeti. Offline paket ne sadrži aktivne prijave, API pozive ni mogućnost uređivanja.' =>
+        'Only published pages you may view are exported. The offline package contains no active sign-ins, API calls, or editing features.',
+    'Naslov offline aplikacije' => 'Offline application title',
+    'Jezici' => 'Languages',
+    'Početni prikaz' => 'Initial view',
+    'Stablo, sadržaj dokumenta i privitci slijede trenutačne postavke aplikacije te se u izvozu mogu neovisno pokazati ili sakriti.' =>
+        'The tree, document outline, and attachments follow the current application settings and may be shown or hidden independently in the export.',
+    'Opseg izvoza' => 'Export scope',
+    'Cijelo područje' => 'Complete Workspace',
+    'Sve objavljene i ACL-vidljive stranice područja.' =>
+        'All published, ACL-visible Workspace pages.',
+    'Odabrane stranice' => 'Selected pages',
+    'Stablo u ZIP-u sadržavat će samo odabrane izvezene stranice.' =>
+        'The tree in the ZIP will contain only selected exported pages.',
+    'Stranice za izvoz' => 'Pages to export',
+    'Nema objavljenih stranica koje smijete izvesti.' =>
+        'There are no published pages you may export.',
+    'Odaberite najmanje jednu stranicu za izvoz.' =>
+        'Select at least one page to export.',
+    'Samo administratori i upravitelji područja mogu izvesti područje.' =>
+        'Only administrators and Workspace managers may export a Workspace.',
+    'Nema objavljenih stranica za izvoz.' => 'There are no published pages to export.',
+    'PHP ZIP ekstenzija nije instalirana.' => 'The PHP ZIP extension is not installed.',
+    'ZIP export nije moguće pripremiti.' => 'The ZIP export could not be prepared.',
+    'Manifest izvoza nije moguće izraditi.' => 'The export manifest could not be created.',
+    'Izvezeno područje: :workspace' => 'Exported Workspace: :workspace',
+    'Knowledge that lives together.' => 'Knowledge that lives together.',
+    'Home' => 'Home',
+    'Početna' => 'Home',
+    'Odaberite stranicu iz stabla.' => 'Choose a page from the tree.',
+    'Stablo je prazno.' => 'The tree is empty.',
+    'Opcije prikaza' => 'View options',
+    'Automatski' => 'Automatic',
+    'Svijetlo' => 'Light',
+    'Tamno' => 'Dark',
+    'Tema' => 'Theme',
+    'Preskoči na glavni sadržaj' => 'Skip to main content',
+    'Tema područja' => 'Workspace theme',
+    'Uredi temu područja' => 'Edit Workspace theme',
+    'Područje koristi zadanu sistemsku temu.' => 'The Workspace uses the default system theme.',
+    'Privatna tema područja' => 'Private Workspace theme',
+    'Odabrana sistemska tema' => 'Selected system theme',
+    'Theme modul nije instaliran ili uključen.' => 'The Theme module is not installed or enabled.',
+    'Odaberite datoteku teme.' => 'Choose a theme file.',
+    'Odaberite ZIP paket teme.' => 'Choose a theme ZIP package.',
+    'Nepoznata akcija teme područja.' => 'Unknown Workspace theme action.',
+    'Tema područja je spremljena.' => 'The Workspace theme has been saved.',
+    'Migracija tema područja nije primijenjena.' => 'The Workspace theme migration has not been applied.',
+    'Područje nije valjano.' => 'The Workspace is invalid.',
+    'Odabir teme područja nije valjan.' => 'The Workspace theme selection is invalid.',
+    'Privatna tema područja nema konfiguraciju.' => 'The private Workspace theme has no configuration.',
+    'Privatnu temu područja nije moguće spremiti.' =>
+        'The private Workspace theme could not be saved.',
+    'Predložak migracije tema područja nije pronađen.' =>
+        'The Workspace theme migration template was not found.',
+    'Kreirana je migracija tema područja: ' => 'Created Workspace theme migration: ',
+    'System theme files are read only in workspace settings.' =>
+        'System theme files are read only in workspace settings.',
+    'Theme editor did not return an HTTP response.' =>
+        'The Theme editor did not return an HTTP response.',
+    'Selected system theme does not exist.' => 'The selected system theme does not exist.',
+    'Workspace ID is invalid.' => 'The Workspace ID is invalid.',
+    'Theme module returned an invalid private theme.' =>
+        'The Theme module returned an invalid private theme.',
+    'Theme module service is unavailable: %s' => 'The Theme module service is unavailable: %s',
+    'Theme module service does not support: %s' => 'The Theme module service does not support: %s',
+    'Workspace theme asset upload failed.' => 'The Workspace theme asset upload failed.',
+    'Workspace theme directory cannot be created.' =>
+        'The Workspace theme directory could not be created.',
+    'Workspace theme asset checksum cannot be calculated.' =>
+        'The Workspace theme asset checksum could not be calculated.',
+    'Workspace theme asset cannot be stored.' => 'The Workspace theme asset could not be stored.',
+    'Source theme asset does not exist.' => 'The source theme asset does not exist.',
+    'System theme asset cannot be copied to the workspace.' =>
+        'The system theme asset could not be copied to the Workspace.',
+    'Workspace theme asset does not exist.' => 'The Workspace theme asset does not exist.',
+    'A workspace theme asset in use cannot be deleted. Select and save a replacement first.' =>
+        'A Workspace theme asset in use cannot be deleted. Select and save a replacement first.',
+    'Workspace theme asset cannot be deleted.' => 'The Workspace theme asset could not be deleted.',
+    'Workspace theme asset manifest cannot be written.' =>
+        'The Workspace theme asset manifest could not be written.',
+    'Workspace theme temporary file cannot be created.' =>
+        'The Workspace theme temporary file could not be created.',
+    'Workspace theme asset is larger than 25 MB.' => 'The Workspace theme asset is larger than 25 MB.',
+    'Workspace theme upload cannot be stored.' => 'The Workspace theme upload could not be stored.',
+    'Workspace theme asset is empty.' => 'The Workspace theme asset is empty.',
+    'Unsupported workspace theme asset format.' => 'Unsupported Workspace theme asset format.',
+    'Workspace theme asset is not a valid image.' => 'The Workspace theme asset is not a valid image.',
+    'Uploaded SVG is invalid.' => 'The uploaded SVG is invalid.',
+    'Uploaded SVG contains active content.' => 'The uploaded SVG contains active content.',
+    'Uploaded SVG contains unsafe content.' => 'The uploaded SVG contains unsafe content.',
+    'Only a private workspace theme can be exported.' =>
+        'Only a private Workspace theme can be exported.',
+    'Unable to create the workspace theme export.' =>
+        'The Workspace theme export could not be created.',
+    'Unable to add a workspace theme file to the export.' =>
+        'A Workspace theme file could not be added to the export.',
+    'Unable to read the workspace theme export.' => 'The Workspace theme export could not be read.',
+    'Theme export upload failed.' => 'The theme export upload failed.',
+    'Theme export archive cannot be opened.' => 'The theme export archive could not be opened.',
+    'Unsupported theme export format.' => 'Unsupported theme export format.',
+    'Theme export identity does not match.' => 'The theme export identity does not match.',
+    'Theme module returned an invalid imported theme.' =>
+        'The Theme module returned an invalid imported theme.',
+    'Existing workspace theme files cannot be prepared for import.' =>
+        'Existing Workspace theme files could not be prepared for import.',
+    'Imported workspace theme directory cannot be created.' =>
+        'The imported Workspace theme directory could not be created.',
+    'Imported workspace theme files cannot be activated.' =>
+        'The imported Workspace theme files could not be activated.',
+    'Theme export contains too many files.' => 'The theme export contains too many files.',
+    'Theme export file manifest is invalid.' => 'The theme export file manifest is invalid.',
+    'Theme export contains an unsafe file path.' => 'The theme export contains an unsafe file path.',
+    'Theme export file integrity check failed.' => 'The theme export file integrity check failed.',
+    'Imported theme directory cannot be created.' => 'The imported theme directory could not be created.',
+    'Imported theme file cannot be stored.' => 'The imported theme file could not be stored.',
+    'Theme export contains too many entries.' => 'The theme export contains too many entries.',
+    'Theme export contains an unsafe entry.' => 'The theme export contains an unsafe entry.',
+    'Theme export is missing %s.' => 'The theme export is missing %s.',
+    'Theme export contains invalid JSON.' => 'The theme export contains invalid JSON.',
+    'Theme export JSON root must be an object.' => 'The theme export JSON root must be an object.',
+    'Theme import temporary file cannot be created.' =>
+        'The theme import temporary file could not be created.',
+    'Theme export archive is too large.' => 'The theme export archive is too large.',
+    'Theme export upload cannot be stored.' => 'The theme export upload could not be stored.',
+    'Theme module repository is unavailable.' => 'The Theme module repository is unavailable.',
+    'Theme module does not support private workspace themes.' =>
+        'The Theme module does not support private Workspace themes.',
+    'Temporary theme archive cannot be created.' => 'The temporary theme archive could not be created.',
+    'ZIP extension is required for theme transfer.' => 'The ZIP extension is required for theme transfer.',
+    'Sadržaj stranice je početno prikazan' => 'The page outline is initially visible',
+    'Zadani prikaz' => 'Default display',
+    'Stablo stranica' => 'Page tree',
+    'Sadržaj stranice' => 'Page outline',
+    'Naslijedi sistemsku postavku' => 'Inherit system setting',
+    'Prikaži' => 'Show',
+    'Sakrij' => 'Hide',
+    'Sažetci područja nisu dostupni.' => 'Workspace summaries are unavailable.',
+    'Polje "theme" mora biti JSON objekt.' => 'The "theme" field must be a JSON object.',
+    'Uvoz teme područja nije dostupan.' => 'Workspace theme import is unavailable.',
+    'Izvoz teme područja nije dostupan.' => 'Workspace theme export is unavailable.',
+    'Teme područja nisu dostupne.' => 'Workspace themes are unavailable.',
+    'Postavke naslovnice nisu dostupne.' => 'Homepage settings are unavailable.',
+    'Postavka pojedine stranice nadjačava zadani prikaz sadržaja područja.' =>
+        'An individual page setting overrides the Workspace outline default.',
+    'Kada je aktivan poseban lijevi meni, stablo je početno skriveno i može se ponovno otvoriti njegovom ikonom.' =>
+        'When a special left menu is active, the page tree starts hidden and can be reopened with its icon.',
+    'Zadani prikaz sadržaja stranice' => 'Default page outline display',
+    'Naslijedi postavku područja' => 'Inherit Workspace setting',
+    'Predložak migracije postavki prikaza nije pronađen.' =>
+        'The display-preferences migration template was not found.',
+    'Kreirana je migracija postavki prikaza područja: ' =>
+        'Workspace display-preferences migration created: ',
+    'Not Found' => 'Not Found',
+    'Posebni meniji područja' => 'Workspace special menus',
+    'Posebni gornji meni' => 'Special top menu',
+    'Posebni lijevi meni' => 'Special left menu',
+    'Uredi menije područja' => 'Edit Workspace menus',
+    'Uredite posebni gornji i lijevi meni samo za ovo područje.' =>
+        'Edit the special top and left menus only for this Workspace.',
+    'Gornji i lijevi meni uređuju se odvojeno. Promjena ili uklanjanje jednoga ne mijenja drugi meni.' =>
+        'Top and left menus are edited separately. Changing or removing one does not affect the other.',
+    'Posebni meni područja je spremljen.' => 'The Workspace special menu has been saved.',
+    'Menu modul nije instaliran ili uključen.' => 'The Menu module is not installed or enabled.',
+    'Upravljaj područjem' => 'Manage Workspace',
+    'Backup datoteka' => 'Backup file',
+    'Backup područja' => 'Workspace backup',
+    'Ciljno područje' => 'Target Workspace',
+    'Izvezi backup područja' => 'Export Workspace backup',
+    'Kreiraj novo područje' => 'Create a new Workspace',
+    'Napredak prijenosa' => 'Upload progress',
+    'Natrag na područje' => 'Back to Workspace',
+    'Način vraćanja' => 'Restore mode',
+    'Odaberite backup datoteku.' => 'Select a backup file.',
+    'Pokreni vraćanje' => 'Run restore',
+    'Preflight provjera' => 'Preflight check',
+    'Preuzmi šifrirani backup' => 'Download encrypted backup',
+    'Spoji s istim područjem' => 'Merge with the same Workspace',
+    'Upravljaj backupom područja' => 'Manage Workspace backup',
+    'Učitaj i provjeri' => 'Upload and validate',
+    'Vrati backup područja' => 'Restore Workspace backup',
+    'Vratiti backup područja sada? Postojeći sadržaj može biti promijenjen.' =>
+        'Restore the Workspace backup now? Existing content may be changed.',
+    'Zahtjev nije uspio.' => 'The request failed.',
+    'Zamijeni postojeće područje' => 'Replace the existing Workspace',
+    'Zaporka arhiva' => 'Archive passphrase',
 ];

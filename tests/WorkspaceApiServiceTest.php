@@ -91,9 +91,13 @@ final class WorkspaceApiServiceTest extends TestCase
             'slug' => 'api-podrucje',
             'description' => 'Workspace API test',
             'owner_user_id' => 1,
+            'tree_visibility' => 'hidden',
+            'contents_visibility' => 'shown',
         ], $admin);
 
         $this->assertSame('api-podrucje', $workspace['slug']);
+        $this->assertSame('hidden', $workspace['tree_visibility']);
+        $this->assertSame('shown', $workspace['contents_visibility']);
         $this->assertTrue((bool)($workspace['permissions']['can_manage'] ?? false));
         $this->assertSame('API područje', $this->service->getWorkspace('api-podrucje', $admin)['name']);
 
@@ -139,10 +143,11 @@ final class WorkspaceApiServiceTest extends TestCase
         $updatedNode = $this->service->updateNode(
             'api-podrucje',
             (int)$first['id'],
-            ['title' => 'Javna dokumentacija'],
+            ['title' => 'Javna dokumentacija', 'contents_visibility' => 'hidden'],
             $admin,
         );
         $this->assertSame('Javna dokumentacija', $updatedNode['title']);
+        $this->assertSame('hidden', $updatedNode['contents_visibility']);
 
         $this->service->reorderTree('api-podrucje', [
             ['id' => $document['id'], 'parent_id' => null, 'sort_order' => 10],

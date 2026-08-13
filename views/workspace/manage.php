@@ -21,6 +21,12 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
  * @var string $subjectSearchPath
  * @var string $indexPath
  * @var string $workspaceViewPath
+ * @var string $exportPath
+ * @var string $workspaceThemePath
+ * @var array<string, mixed>|null $workspaceThemeState
+ * @var string $workspaceThemeLabel
+ * @var string $workspaceMenuPath
+ * @var string $workspaceBackupPath
  * @var string $assetsCssPath
  * @var string $assetsJsPath
  */
@@ -159,6 +165,66 @@ foreach ($workspaceAclSubjects as $subject) {
                             rows="2"
                         ><?= $this->escape(WorkspaceValue::string($workspace['description'] ?? '')) ?></textarea>
                     </div>
+                    <div class="col-12">
+                        <fieldset>
+                            <legend class="h6 mb-2"><?= $this->escape(__('Zadani prikaz')) ?></legend>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label" for="workspace-tree-visibility">
+                                        <?= $this->escape(__('Stablo stranica')) ?>
+                                    </label>
+                                    <select id="workspace-tree-visibility" class="form-select" name="tree_visibility">
+                                        <?php foreach (
+                                            [
+                                                'inherit' => __('Naslijedi sistemsku postavku'),
+                                                'shown' => __('Prikaži'),
+                                                'hidden' => __('Sakrij'),
+                                            ] as $policy => $label
+) : ?>
+                                            <option value="<?= $policy ?>" <?= WorkspaceValue::string(
+                                                $workspace['tree_visibility'] ?? 'inherit',
+                                            ) === $policy ? 'selected' : '' ?>>
+                                                <?= $this->escape($label) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label" for="workspace-contents-visibility">
+                                        <?= $this->escape(__('Sadržaj stranice')) ?>
+                                    </label>
+                                    <select id="workspace-contents-visibility" class="form-select" name="contents_visibility">
+                                        <?php foreach (
+                                            [
+                                                'inherit' => __('Naslijedi sistemsku postavku'),
+                                                'shown' => __('Prikaži'),
+                                                'hidden' => __('Sakrij'),
+                                            ] as $policy => $label
+) : ?>
+                                            <option value="<?= $policy ?>" <?= WorkspaceValue::string(
+                                                $workspace['contents_visibility'] ?? 'inherit',
+                                            ) === $policy ? 'selected' : '' ?>>
+                                                <?= $this->escape($label) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-text mt-2">
+                                <?= $this->escape(
+                                    __('Postavka pojedine stranice nadjačava zadani prikaz sadržaja područja.'),
+                                ) ?>
+                            </div>
+                            <div class="form-text mt-1">
+                                <?= $this->escape(
+                                    __(
+                                        'Kada je aktivan poseban lijevi meni, stablo je početno skriveno '
+                                        . 'i može se ponovno otvoriti njegovom ikonom.',
+                                    ),
+                                ) ?>
+                            </div>
+                        </fieldset>
+                    </div>
                     <?php if ($workspaceId > 0) : ?>
                         <div class="col-12">
                             <div class="form-check form-switch">
@@ -176,7 +242,27 @@ foreach ($workspaceAclSubjects as $subject) {
                             </div>
                         </div>
                     <?php endif; ?>
-                    <div class="col-12 d-flex justify-content-end">
+                    <div class="col-12 d-flex align-items-center justify-content-between gap-3">
+                        <?php if ($exportPath !== '') : ?>
+                            <a
+                                class="btn btn-primary btn-sm workspace-export-icon-action"
+                                href="<?= $this->escape($exportPath) ?>"
+                                title="<?= $this->escape(__('Izvezi područje u HTML')) ?>"
+                                aria-label="<?= $this->escape(__('Izvezi područje u HTML')) ?>"
+                            >
+                                <svg
+                                    class="workspace-export-icon-action__icon"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                    focusable="false"
+                                >
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <path d="M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                            </a>
+                        <?php else : ?>
+                            <span aria-hidden="true"></span>
+                        <?php endif; ?>
                         <button class="btn btn-primary" type="submit">
                             <?= $this->escape(__('Spremi')) ?>
                         </button>
@@ -188,6 +274,75 @@ foreach ($workspaceAclSubjects as $subject) {
 <?php endif; ?>
 
 <?php if ($workspaceId > 0) : ?>
+    <?php if ($canManage && $workspaceThemePath !== '') : ?>
+        <?php
+        $workspaceThemeSelection = WorkspaceValue::string($workspaceThemeState['selection_type'] ?? 'default');
+        ?>
+        <section class="card mb-4" aria-labelledby="workspace-theme-title">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h2 id="workspace-theme-title" class="h5 mb-1">
+                        <?= $this->escape(__('Tema područja')) ?>
+                    </h2>
+                    <p class="text-body-secondary mb-0">
+                        <?php if ($workspaceThemeSelection === 'default') : ?>
+                            <?= $this->escape(__('Područje koristi zadanu sistemsku temu.')) ?>
+                        <?php elseif ($workspaceThemeSelection === 'custom') : ?>
+                            <?= $this->escape(__('Privatna tema područja')) ?>:
+                            <?= $this->escape($workspaceThemeLabel) ?>
+                        <?php else : ?>
+                            <?= $this->escape(__('Odabrana sistemska tema')) ?>:
+                            <?= $this->escape($workspaceThemeLabel) ?>
+                        <?php endif; ?>
+                    </p>
+                </div>
+                <a class="btn btn-primary" href="<?= $this->escape($workspaceThemePath) ?>">
+                    <?= $this->escape(__('Uredi temu područja')) ?>
+                </a>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($canManage && $workspaceMenuPath !== '') : ?>
+        <section class="card mb-4" aria-labelledby="workspace-menu-title">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h2 id="workspace-menu-title" class="h5 mb-1">
+                        <?= $this->escape(__('Posebni meniji područja')) ?>
+                    </h2>
+                    <p class="text-body-secondary mb-0">
+                        <?= $this->escape(__(
+                            'Uredite posebni gornji i lijevi meni samo za ovo područje.',
+                        )) ?>
+                    </p>
+                </div>
+                <a class="btn btn-primary" href="<?= $this->escape($workspaceMenuPath) ?>">
+                    <?= $this->escape(__('Uredi menije područja')) ?>
+                </a>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($canManage && $workspaceBackupPath !== '') : ?>
+        <section class="card mb-4" aria-labelledby="workspace-backup-title">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h2 id="workspace-backup-title" class="h5 mb-1">
+                        <?= $this->escape(__('Backup područja')) ?>
+                    </h2>
+                    <p class="text-body-secondary mb-0">
+                        <?= $this->escape(__(
+                            'Izvezite ili vratite sadržaj, povijest, prava, temu i posebne menije ovog područja.',
+                        )) ?>
+                    </p>
+                </div>
+                <a class="btn btn-primary" href="<?= $this->escape($workspaceBackupPath) ?>">
+                    <?= $this->escape(__('Upravljaj backupom područja')) ?>
+                </a>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <?php if ($canManage) : ?>
         <section class="card mb-4" aria-labelledby="workspace-acl-title">
             <div class="card-body">

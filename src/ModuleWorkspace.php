@@ -25,6 +25,8 @@ final class ModuleWorkspace
 
     public const TABLE_WORKSPACE_USER_HOMEPAGES = 'workspace_user_homepages';
 
+    public const TABLE_WORKSPACE_THEMES = 'workspace_themes';
+
     /**
      * HR: Sprječava instanciranje klase koja služi samo kao registar stabilnog naziva paketa.
      * EN: Prevents instantiation of a class used only as a registry for the stable package name.

@@ -99,4 +99,26 @@ final class WorkspaceValue
 
         return $result;
     }
+
+    /**
+     * HR: Zadržava samo string ključeve i skalarne tekstualne vrijednosti mape.
+     * EN: Retains only string keys and scalar text values from a map.
+     *
+     * @return array<string, string>
+     */
+    public static function stringMap(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $key => $item) {
+            if (is_string($key) && is_scalar($item)) {
+                $result[$key] = (string)$item;
+            }
+        }
+
+        return $result;
+    }
 }

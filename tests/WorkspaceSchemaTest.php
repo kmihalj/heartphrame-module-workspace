@@ -48,6 +48,7 @@ final class WorkspaceSchemaTest extends TestCase
                 ModuleWorkspace::TABLE_WORKSPACE_NODE_WORKFLOWS,
                 ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
                 ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
+                ModuleWorkspace::TABLE_WORKSPACE_THEMES,
             ] as $table
         ) {
             $this->assertTrue($schema->hasTable($table), $table . ' was not created.');
@@ -55,8 +56,22 @@ final class WorkspaceSchemaTest extends TestCase
 
         $this->assertTrue(
             $schema->hasColumns(
+                ModuleWorkspace::TABLE_WORKSPACE_THEMES,
+                ['workspace_id', 'selection_type', 'source_theme_id', 'mode_policy', 'theme_json'],
+            ),
+        );
+        $this->assertTrue(
+            $schema->hasColumns(
                 ModuleWorkspace::TABLE_WORKSPACES,
-                ['slug', 'visibility', 'owner_user_id', 'is_archived', 'is_deleted'],
+                [
+                    'slug',
+                    'visibility',
+                    'tree_visibility',
+                    'contents_visibility',
+                    'owner_user_id',
+                    'is_archived',
+                    'is_deleted',
+                ],
             ),
         );
         $this->assertTrue(
@@ -93,7 +108,14 @@ final class WorkspaceSchemaTest extends TestCase
         $this->assertTrue(
             $schema->hasColumns(
                 ModuleWorkspace::TABLE_WORKSPACE_NODES,
-                ['workspace_id', 'parent_id', 'node_type', 'document_key', 'sort_order'],
+                [
+                    'workspace_id',
+                    'parent_id',
+                    'node_type',
+                    'document_key',
+                    'sort_order',
+                    'contents_visibility',
+                ],
             ),
         );
         $this->assertTrue(
@@ -159,6 +181,30 @@ final class WorkspaceSchemaTest extends TestCase
         $this->assertFalse(
             $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS),
         );
+    }
+
+    /**
+     * HR: Nadogradnja tema područja radi samostalno i može se sigurno vratiti.
+     * EN: The workspace-theme upgrade works independently and can be safely rolled back.
+     */
+    public function testWorkspaceThemeUpgradeMigrationIsPortableAndReversible(): void
+    {
+        $helper = new Helper();
+        $config = new Config($helper, [
+            'database' => [
+                'connections' => [
+                    'default' => ['driver' => 'sqlite', 'database' => ':memory:'],
+                ],
+            ],
+        ]);
+        $database = new Database($config, $helper);
+        $migration = require dirname(__DIR__) . '/resources/migrations/add_workspace_themes.php';
+        $this->assertInstanceOf(ReversibleMigrationInterface::class, $migration);
+
+        $migration->up($database);
+        $this->assertTrue($database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_THEMES));
+        $migration->down($database);
+        $this->assertFalse($database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_THEMES));
     }
 
     /**

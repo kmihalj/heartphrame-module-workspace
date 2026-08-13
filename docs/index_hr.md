@@ -17,7 +17,7 @@ modula.
 
 ## 2. Model podataka
 
-Jedina inicijalna migracija kroz ORM kreira pet tablica:
+Jedina inicijalna migracija kroz ORM kreira osam tablica:
 
 | Tablica | Odgovornost |
 | --- | --- |
@@ -26,6 +26,9 @@ Jedina inicijalna migracija kroz ORM kreira pet tablica:
 | `workspace_nodes` | Uređena hijerarhija dokumenata i linkova |
 | `workspace_node_acl` | Dodatna ograničenja naslijeđena kroz stablo |
 | `workspace_node_workflows` | Stanje objave i pokazivači na nepromjenjive Editor verzije po stranici i jeziku |
+| `workspace_homepage_settings` | Javna i prijavljena politika naslovnice aplikacije |
+| `workspace_user_homepages` | Opcionalni osobni izbori naslovnice |
+| `workspace_themes` | Sistemski izbor ili izolirani privatni JSON teme po Području |
 
 Nema SQL-a vezanog uz određenu bazu. Boolean zadane vrijednosti su stvarni
 booleani, a shema je kompatibilna sa SQLite, PostgreSQL i MySQL/MariaDB bazama.
@@ -122,8 +125,12 @@ sljedeća provjera u istom zahtjevu također vidi nova prava.
 
 Lijevo stablo može se prikazati ili sakriti. Izgledom prati karticu sadržaja
 HTML editora: koristi isti naslov, `list-group`, temu i unutarnji scroll. Na
-desktopu ostaje dostupno tijekom čitanja, a na mobitelu postaje ograničen i
-sklopiv blok.
+desktopu ostaje dostupno tijekom čitanja. Na mobilnom se iz glavnog toka uklanja
+u plutajuću karticu odmaknutu od svih rubova zaslona koja klizi slijeva. Kartica
+zadržava boje, obrub, akcent i sjenu stabla iz aktivne teme. Diskretna,
+zalijepljena rubna ikona otvara karticu, a gumb zatvaranja, pozadina ili tipka
+Escape vraćaju čitatelja na dokument. Fokus i `aria-expanded` stanje prate
+otvorenu karticu.
 
 Kartica stabla i HTML kartica počinju u istom retku. Prekidač stabla nalazi se
 kao prva SVG akcija zajedničkog Editorova pregleda, dok su SVG akcije za novu
@@ -196,6 +203,11 @@ promijeniti bilo koje stanje; bez parametara koristi se konfiguracija sitea.
 Obrazac filtra čuva trenutačna stanja pa ista ruta može biti obična stranica ili
 kompaktna naslovnica.
 
+Ako Menu isporučuje poseban lijevi meni za aktivnu rutu, aplikacija početno
+sklapa Workspace stablo bez obzira na zadanu postavku područja. Time se izbjegavaju
+dva istodobno otvorena lijeva navigacijska elementa, a obje ikon-sklopke ostaju
+dostupne; `tree=1` i dalje je izričit odabir za izravne poveznice.
+
 Sigurnosno filtriranje izvršava se prije učitavanja HTML-a: servis kreće od
 `visibleTree()`, primjenjuje nasljedni ACL čvorova, zadržava dokument-čvorove
 odabrane dubine pa traži nearhivirani workflow s pozitivnim pokazivačem na
@@ -263,6 +275,66 @@ Napredni modal prikazuje samo polja relevantna odabranoj vrsti stavke.
 Bez HTML editora Područja i linkovi i dalje rade. Bez Workspace modula HTML
 editor zadržava samostalno ponašanje.
 
+### 6.1 Prenosivi HTML izvoz Područja
+
+`GET /workspaces/export?workspace={slug}` otvara obrazac, a
+`POST /workspaces/export` vraća ZIP. Obje rute traže prijavu; controller zatim
+zahtijeva administratorski status ili efektivno Workspace pravo `can_manage`.
+Ta druga autorizacijska provjera obavezna je i kada korisnik zna izravni URL.
+
+Odaberite **Cijelo područje** za sve objavljene stranice koje izvoznik smije
+vidjeti ili **Odabrane stranice** i pošaljite `node_ids[]`. Server ne vjeruje tim
+ID-evima: ponovno gradi nasljedno ACL stablo za trenutačnog korisnika, uklanja
+nacrte i stranice dostupne samo kao arhivirane te presijeca poslanu listu s tim
+rezultatom. Stranica sa strožim naslijeđenim ili izravnim ograničenjem zato ne
+ulazi ni u generirano stablo ni u ZIP.
+
+Struktura paketa je:
+
+```text
+index.html                     # jedina tematizirana offline ljuska
+manifest.json                  # izvor, jezici i popis izvezenih stranica
+assets/css/                    # Theme, Bootstrap, Editor, Calendar i Task CSS
+assets/js/workspace-export.js  # lokalne kontrole teme, jezika i panela
+assets/theme/                  # samo aktivne light/dark datoteke teme
+documents/{ključ-dokumenta}/{izvorni-jezik}/v{verzija}/
+                               # privitci nepromjenjive verzije bez sudara jezika
+{objavljeni-jezik}/{stranica}.html
+```
+
+Nakon raspakiravanja korijenski `index.html` otvara se izravno iz filesistema.
+To je jedina tematizirana offline aplikacijska ljuska. Jedina stavka menija je
+**Početna** i vraća izvezenu početnu stranicu Područja. Linkovi stabla mijenjaju
+ugrađenu snimku nepromjenjive stranice bez HTTP-a i `fetch` poziva. Ljuska
+ponovno koristi stvarne renderere zaglavlja i heroa Theme modula, prenosivi CSS,
+odabrani svijetli/tamni logo i hero vizual, širinu containera te klase
+preklapanja sadržaja. Hero zato prikazuje naslov trenutačne stranice jednako kao
+aplikacija i dodaje lokaliziranu napomenu `Izvezeno područje: {Područje}`. Ne
+dodaje drugi naslov stranice.
+
+Odabrane light/dark slike loga i hero vizuala ugrađene su u `index.html` kao
+data URI. Time se njihov prikaz ne oslanja na relativnu putanju preglednika pri
+otvaranju kroz `file://`. Izvorne odabrane datoteke ostaju pod `assets/theme/`
+radi pregleda i provjere cjelovitosti ZIP-a.
+
+Svaka datoteka `{objavljeni-jezik}/{stranica}.html` čisti je samostalni dokument
+izrađen Editorovim formatterom. Izravno otvaranje prikazuje isti renderirani HTML
+kao izvoz jedne stranice, bez Workspace zaglavlja, heroa, stabla i akcija
+uređivanja. Samostalna datoteka ne učitava Theme CSS i zato nema pozadinu
+aplikacije. Jezični direktoriji i datoteke postoje samo za stvarne objavljene
+prijevode. Korijenski selector svejedno nudi sve konfigurirane jezike; kada
+prijevod ne postoji, prikazuje zadanu hrvatsku snimku, a zatim prvu stvarnu
+snimku. Taj runtime fallback nikada ne stvara dupliciranu jezičnu datoteku.
+
+Calendar i Task placeholderi pretvaraju se u statični read-only HTML kroz iste
+ACL-aware integracijske metode kao Editorov izvoz jedne stranice. Izostavljaju
+se akcije uređivanja i preuzimanja kalendara: kalendar je renderirani read-only
+snapshot. Izvezena stranica nema aktivne API zahtjeve. Privitci dolaze iz točne
+objavljene verzije, nikada iz nacrta koji se uređuje. Kontrole teme, jezika,
+stabla, sadržaja dokumenta i privitaka rade lokalno bez Bootstrap JavaScripta.
+Kada Theme modul nije instaliran ili je isključen, ista struktura paketa ostaje
+funkcionalna uz minimalno čitljivo fallback zaglavlje, hero i raspored.
+
 ## 7. Proces objave
 
 Stanje objave pripada dokument-čvoru i jeziku. Workspace sprema samo status,
@@ -320,6 +392,15 @@ poslao kada to nije ista osoba. Obavijesti su pomoćni kanal i njihov neuspjeh
 ne može poništiti uspješan workflow prijelaz. Ako je uključen opcionalni E-mail
 modul, ista obavijest može se staviti i u njegov trajni SMTP outbox.
 
+Nakon promjene pokazivača objave, onemogućavanja stranice ili podstabla te
+promjene metapodataka Područja ili stabla repozitorij šalje neutralni događaj
+`WorkspaceContentChanged`. Opcionalni izvedeni moduli mogu ga slušati i
+sinkronizirati samo pogođeno Područje i jezik. Spremanje nacrta koje zadržava
+trenutačni pokazivač objave namjerno ne šalje promjenu objave, pa čitatelji i
+indeksi nastavljaju koristiti zadnju objavljenu verziju. Neuspjeh slušatelja
+odvojen je od spremanja izvornog sadržaja; periodični ili ručni reindeks može
+popraviti izvedeno spremište bez gubitka mjerodavnih Workspace podataka.
+
 Kada Workspace nije instaliran, svi integracijski pozivi su no-op. Samostalno
 spremanje, pregled, povijest i export Editora nastavljaju koristiti aktualnu
 verziju dokumenta kao i prije.
@@ -337,6 +418,7 @@ return [
     'defaults' => [
         'visibility' => 'restricted',
         'tree_visible' => true,
+        'contents_visible' => false,
     ],
     'creation' => [
         'authenticated_users' => false,
@@ -348,6 +430,13 @@ return [
 ];
 ```
 
+`tree_visible` i `contents_visible` su sistemske rezervne vrijednosti. Svako
+područje može za stablo i sadržaj odabrati nasljeđivanje, prikaz ili skrivanje,
+a pojedina stranica može dodatno nadjačati samo prikaz svojeg sadržaja. Redoslijed
+razrješavanja je: **stranica → područje → sistemska postavka**. URL parametri
+prikaza ostaju jednokratna korisnička iznimka i ne mijenjaju spremljene zadane
+vrijednosti.
+
 Korijenska putanja mora biti slobodan prvi segment rute. Postavke odbijaju
 konflikt s postojećom rutom aplikacije.
 
@@ -357,12 +446,58 @@ Ako je Menu uključen, Workspace idempotentno registrira:
 - Opće postavke;
 - Sva područja;
 - Obrisana područja.
+- dinamička odredišta editora za svako aktivno područje i dokumentnu stranicu.
 
 Ponovljeni requesti ne dupliciraju niti premještaju te stavke.
 Administratorske stranice Područja prikazuju zajednički lijevi izbornik
 Postavki kada je Menu dostupan. Bez Menu modula iste stranice ostaju uporabive
 kroz lokalni rezervni izbornik s Općim postavkama, Svim područjima i Obrisanim
 područjima.
+
+Integracija odredišta je lijena, pa otvaranje bilo kojeg od četiri Menu editora
+čita trenutačno stablo područja. Područja su u grupi **Područja**, a stranice u
+grupi **Stranice područja** kao `Područje / Stranica`. Menu ih u izborniku
+**Primijeni poseban meni na** spaja sa svim ostalim navigacijskim stranicama.
+Odabir područja popunjava `/workspace/slug` i `/workspace/slug/*`; putanje nikad
+ne sadrže trenutačni instalacijski base path. API, akcijske, dijaloške, asset i
+ostale tehničke rute filtrira Menu i nikad ne postaju navigacijski izbori.
+
+### Pravila teme po Području
+
+Theme je opcionalna integracija. Kada je uključen, upravitelj može ostaviti
+**Zadanu sistemsku temu**, izričito odabrati jednu sistemsku temu ili
+urediti/uvesti izoliranu privatnu temu. Prva izmjena stvara potpunu privatnu
+kopiju i nepromijenjenim nazivima dodaje naziv Područja. Workspace zahtjev
+nikada ne zapisuje sistemski Theme JSON.
+
+Redak `workspace_themes` sadrži vrstu izbora, ID izvora, mode policy i privatni
+JSON teme. Privatni binarni/SVG asseti nalaze se u
+`data/workspaces/themes/<workspace-id>/assets`, a reference imaju oblik
+`@runtime-theme-assets/<datoteka>`. Posluživanje asseta ponovno provjerava pravo
+pregleda, dok Theme repozitorij prima razriješeni override samo tijekom
+trenutačnog zahtjeva. Time globalna aktivna tema ostaje nepromijenjena na svim
+stranicama izvan Područja i u drugim Područjima.
+
+Upravitelji mogu uvesti potpuni Theme v3 paket. Izvoz je namjerno dostupan samo
+administratoru aplikacije i samo za privatnu temu Područja. Paket je kompatibilan
+i s uvozom u drugo Područje i s uvozom u globalnu Theme biblioteku. Potpuni
+backup mora obuhvatiti tablicu `workspace_themes` i direktorij
+`data/workspaces/themes`.
+
+### Posebni meniji po Području
+
+Menu je još jedna opcionalna integracija. Korisnik s efektivnim pravom
+`can_manage` može iz **Upravljaj područjem** otvoriti **Posebne menije
+područja** i neovisno uređivati gornji i lijevi route-specific meni tog
+Područja. Kontroler ponavlja Workspace ACL provjeru i za GET i za POST zahtjev.
+
+Preglednik nikada ne određuje opseg. Server prije spremanja prepisuje ID
+contexta, naziv, route patterne i prenosive path patterne vrijednostima
+`/workspace/{slug}` i `/workspace/{slug}/*` odabranog Područja. Krivotvoreni
+zahtjev zato ne može promijeniti meni izvan Područja. Definicija samo lijevog
+menija nije vidljiva u editoru gornjeg menija i obratno; uklanjanje jedne strane
+čuva drugu. Runtime ipak smije spojiti podudarne odvojene zapise kako bi se oba
+menija prikazala na istoj stranici.
 
 ## 9. Instalacija i rad
 
@@ -379,6 +514,7 @@ Korisne putanje sa zadanom konfiguracijom:
 
 - `/workspaces`: popis vidljivih Područja
 - `/workspaces/manage`: kreiranje ili upravljanje Područjem
+- `/workspaces/theme?workspace={slug}`: izbor ili privatno uređivanje teme Područja
 - `GET /workspaces/acl/subjects`: ograničena serverska pretraga korisnika,
   grupa i ugrađenih publika; zahtijeva pravo upravljanja Područjem
 - `GET /workspaces/node/dialog`: ACL-om zaštićen sadržaj modala odabrane stavke
@@ -391,6 +527,13 @@ Korisne putanje sa zadanom konfiguracijom:
 - `/settings/workspaces/homepage`: javna, prijavljena i osobna politika naslovnice
 - `/settings/workspaces/all`: administratorski popis
 - `/settings/workspaces/deleted`: vraćanje obrisanih Područja
+
+Postojeća instalacija dodaje izolirane teme Područja naredbama:
+
+```bash
+vendor/bin/hph workspace:install-themes-migration
+vendor/bin/hph orm-migrate:up
+```
 
 ### Politika naslovnice aplikacije
 
@@ -440,6 +583,15 @@ opcionalni API modul, on registrira HTTP adapter:
 | `POST /api/v1/workspaces` | `workspace:manage` | Koristi aplikacijsko pravilo kreiranja |
 | `GET/PATCH/DELETE /api/v1/workspaces/{slug}` | read/manage | Ponovno provjerava efektivno pravo |
 | `GET /api/v1/workspaces/{slug}/tree?lang=hr` | `workspace:read` | Filtrira naslijeđeni ACL i objavljeno stanje |
+| `GET /api/v1/workspaces/{slug}/shorts?lang=hr` | `workspace:read` | Vraća samo vidljive, točno objavljene sažetke |
+| `POST /api/v1/workspaces/{slug}/exports/html` | `workspace:manage` | Preuzima ACL-filtrirani offline HTML ZIP |
+| `GET/PUT /api/v1/workspaces/homepage/settings` | `workspace:manage` | Samo administrator čita ili sprema javnu/prijavljenu politiku |
+| `GET/PUT /api/v1/workspaces/homepage/preference` | `workspace:read` | Čita ili sprema osobni odabir isključivo vlasnika ključa |
+| `GET/PATCH /api/v1/workspaces/{slug}/theme` | `workspace:manage` | Čita ili privatno mijenja temu bez promjene sistemske teme |
+| `PUT .../{slug}/theme/selection` | `workspace:manage` | Bira nasljeđivanje ili sistemsku temu samo za područje |
+| `POST .../{slug}/theme/import` | `workspace:manage` | Uvozi ZIP u privatnu temu područja |
+| `GET .../{slug}/theme/export` | `workspace:manage` | Samo administrator izvozi privatnu temu |
+| `POST/DELETE .../{slug}/theme/assets` | `workspace:manage` | Dodaje ili briše datoteke privatne teme |
 | `PUT /api/v1/workspaces/{slug}/tree/order` | `workspace:manage` | Atomski provjerava potpuni raspored |
 | `GET/PUT /api/v1/workspaces/{slug}/acl` | `workspace:manage` | Čita ili zamjenjuje potpuni ACL područja |
 | `GET /api/v1/workspaces/{slug}/acl/subjects` | `workspace:manage` | Ograničena pretraga `category=user\|group&q=...` |
@@ -453,9 +605,20 @@ prava vlasnika, administratora, Workspace ACL-a, grupa, arhive i naslijeđenih
 ograničenja koja koristi web sučelje. Nedostatak prava pregleda skriva se kao
 `404`, a vidljiv resurs bez prava upravljanja vraća `403`.
 
+DTO područja sadrži `tree_visibility` i `contents_visibility`, a DTO čvora
+sadrži `contents_visibility`. Prihvaćene vrijednosti su `inherit`, `shown` i
+`hidden`. HTML izvoz prihvaća opcionalnu JSON listu `node_ids`. Prazna lista
+izvozi cijelo vidljivo područje, a odabrani ID-evi izvoze samo te stranice i
+stablo potrebno za dolazak do njih.
+
 Pretraga ACL subjekata vraća samo sigurni picker DTO: `id`, `label`, `type`,
 `category`, `is_builtin` i `is_read_only`. Interna Auth polja, uključujući
 hash lozinke i podatke prijave, ne prelaze granicu repozitorija.
+
+Tema područja je izolirana: `PATCH .../theme` uvijek stvara ili mijenja privatnu
+kopiju u bazi i podatkovnom direktoriju područja. Sistemski JSON nikada se ne
+zapisuje kroz Workspace API. Uvoz koristi multipart polje `theme`, a upload
+slike polje `asset` uz `role=hero|icon|logo|other`.
 
 Primjer čitanja ključem koji ima `workspace:read`:
 
@@ -488,3 +651,8 @@ Naredba pokreće PHPCS, Rector dry-run, PHPStan za izvorni i testni kod te
 PHPUnit. Svaka metoda dokumentirana je na hrvatskom i engleskom. Prikazi
 escapeaju ispis, forme koriste framework CSRF polje, a kontroleri prije
 pisanja provjeravaju pripadnost Području.
+
+## 12. Backup i povrat
+
+Selektivna arhiva područja, ovlasti upravitelja, načini obrade konflikata i veze
+između modula opisani su u [backupu i povratu područja](backup_hr.md).

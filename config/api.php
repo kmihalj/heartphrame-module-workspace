@@ -26,8 +26,10 @@ return [
                 'workspace:manage' => [
                     'label' => ['hr' => 'Upravljanje', 'en' => 'Manage'],
                     'description' => [
-                        'hr' => 'Kreiranje, uređivanje, brisanje i vraćanje područja te upravljanje ACL-om i stablom, uz obaveznu provjeru korisničkih prava.',
-                        'en' => 'Create, update, delete, and restore workspaces and manage ACLs and trees, subject to mandatory user permission checks.',
+                        'hr' => 'Kreiranje, uređivanje, brisanje i vraćanje područja te upravljanje '
+                            . 'ACL-om, stablom, temom i naslovnicama, uz obaveznu provjeru korisničkih prava.',
+                        'en' => 'Create, update, delete, and restore workspaces and manage ACLs, trees, '
+                            . 'themes, and homepages, subject to mandatory user permission checks.',
                     ],
                 ],
             ],

@@ -6,8 +6,16 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Api;
 
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExport;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportSelectionException;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceShortsService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeArchiveService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
+use Psr\Http\Message\UploadedFileInterface;
 
 /**
  * HR: Izlaže stabilne Workspace operacije bez ovisnosti o HTTP ili API modulu.
@@ -40,6 +48,11 @@ final readonly class WorkspaceApiService
         private WorkspaceRepository $repository,
         private WorkspaceAccessService $access,
         private WorkspaceConfig $config,
+        private ?WorkspaceShortsService $shorts = null,
+        private ?WorkspaceExportService $exporter = null,
+        private ?WorkspaceThemeService $themes = null,
+        private ?WorkspaceThemeArchiveService $themeArchives = null,
+        private ?WorkspaceHomepageService $homepages = null,
     ) {
     }
 
@@ -87,6 +100,324 @@ final readonly class WorkspaceApiService
         $workspace = $this->requireWorkspace($slug, $user, 'can_view');
 
         return $this->treeDtos($this->access->visibleTree($workspace, $user, $language));
+    }
+
+    /**
+     * HR: Vraća ACL-filtrirane sažetke objavljenih stranica bez oslanjanja na web sesiju.
+     *
+     * EN: Returns ACL-filtered published-page summaries without relying on the web session.
+     *
+     * @param array<string,mixed> $query
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function getShorts(
+        string $slug,
+        string $language,
+        array $query,
+        array $user,
+    ): array {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_view');
+        if (!$this->shorts instanceof WorkspaceShortsService) {
+            throw new \RuntimeException(__('Sažetci područja nisu dostupni.'));
+        }
+
+        return $this->shorts->viewModel(
+            $workspace,
+            $language,
+            $query,
+            $this->config->siteDefaultLanguage(),
+            $user,
+        );
+    }
+
+    /**
+     * HR: Stvara ACL-filtrirani offline HTML paket područja za administratora
+     *     ili korisnika s efektivnim pravom upravljanja.
+     * EN: Creates an ACL-filtered offline HTML Workspace package for an
+     *     administrator or a user with effective manage permission.
+     *
+     * @param list<int> $selectedNodeIds
+     * @param array<string,mixed> $user
+     */
+    public function exportWorkspace(
+        string $slug,
+        array $selectedNodeIds,
+        array $user,
+    ): WorkspaceExport {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        if (!$this->exporter instanceof WorkspaceExportService) {
+            throw new \RuntimeException(__('HTML izvoz područja nije dostupan.'));
+        }
+
+        if ($this->themes instanceof WorkspaceThemeService) {
+            $this->themes->activate($workspace);
+        }
+
+        try {
+            return $this->exporter->export($workspace, $selectedNodeIds, $user);
+        } catch (WorkspaceExportSelectionException $workspaceExportSelectionException) {
+            /*
+             * HR: Prazan ili samo-linkovni izbor je korisnička validacijska
+             *     pogreška, a ne kvar servera.
+             * EN: An empty or link-only selection is a client validation
+             *     failure, not a server fault.
+             */
+            throw $this->invalid($workspaceExportSelectionException->getMessage());
+        }
+    }
+
+    /**
+     * HR: Vraća API-siguran model postavki teme područja korisniku koji njime upravlja.
+     * EN: Returns an API-safe Workspace theme settings model to a user who manages it.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function getWorkspaceTheme(string $slug, array $user): array
+    {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        $themes = $this->requireThemes();
+        $editor = $themes->editorData(
+            $workspace,
+            $this->access->isAdministrator($user),
+        );
+
+        return [
+            'workspace_id' => WorkspaceValue::int($workspace['id'] ?? 0),
+            'themes' => WorkspaceValue::rows($editor['themes'] ?? []),
+            'settings' => WorkspaceValue::stringKeyArray($editor['settings'] ?? []),
+            'selected_theme' => WorkspaceValue::stringKeyArray($editor['selectedTheme'] ?? []),
+            'component_settings' => WorkspaceValue::stringKeyArray(
+                $editor['componentSettings'] ?? [],
+            ),
+            'assets' => WorkspaceValue::rows($editor['themeAssets'] ?? []),
+            'gradient_presets' => WorkspaceValue::rows($editor['gradientPresets'] ?? []),
+            'color_fields' => WorkspaceValue::rows($editor['colorFields'] ?? []),
+            'color_field_groups' => WorkspaceValue::rows($editor['colorFieldGroups'] ?? []),
+            'font_options' => WorkspaceValue::rows($editor['fontOptions'] ?? []),
+            'can_export' => (bool)($editor['themeEditorAllowExport'] ?? false),
+            'assets_read_only' => (bool)($editor['themeEditorAssetsReadOnly'] ?? true),
+        ];
+    }
+
+    /**
+     * HR: Sprema nasljeđivanje ili izbor sistemske teme samo za zadano područje.
+     * EN: Stores inheritance or a system-theme selection only for the supplied Workspace.
+     *
+     * @param array<string,mixed> $payload
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function selectWorkspaceTheme(string $slug, array $payload, array $user): array
+    {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        $this->requireThemes()->saveSelection(
+            $workspace,
+            WorkspaceValue::string($payload['theme_id'] ?? '__default__'),
+            WorkspaceValue::string($payload['mode_policy'] ?? 'auto'),
+            $this->userId($user),
+        );
+
+        return $this->getWorkspaceTheme($slug, $user);
+    }
+
+    /**
+     * HR: Sprema privatnu kopiju konfiguracije teme bez promjene sistemske teme.
+     * EN: Stores a private copy of the theme configuration without changing the system theme.
+     *
+     * @param array<string,mixed> $payload
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function saveWorkspaceTheme(string $slug, array $payload, array $user): array
+    {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        $theme = $payload['theme'] ?? null;
+        if (!is_array($theme) || array_is_list($theme)) {
+            throw $this->invalid(__('Polje "theme" mora biti JSON objekt.'));
+        }
+
+        $this->requireThemes()->saveTheme(
+            $workspace,
+            WorkspaceValue::stringKeyArray($theme),
+            WorkspaceValue::string($payload['mode_policy'] ?? 'auto'),
+            $this->userId($user),
+        );
+
+        return $this->getWorkspaceTheme($slug, $user);
+    }
+
+    /**
+     * HR: Uvozi privatni ZIP paket teme u područje kojim korisnik upravlja.
+     * EN: Imports a private theme ZIP package into a Workspace managed by the user.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function importWorkspaceTheme(
+        string $slug,
+        UploadedFileInterface $file,
+        string $modePolicy,
+        array $user,
+    ): array {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        if (!$this->themeArchives instanceof WorkspaceThemeArchiveService) {
+            throw new \RuntimeException(__('Uvoz teme područja nije dostupan.'));
+        }
+
+        $this->themeArchives->import(
+            $workspace,
+            $file,
+            $modePolicy,
+            $this->userId($user),
+        );
+
+        return $this->getWorkspaceTheme($slug, $user);
+    }
+
+    /**
+     * HR: Administratoru izvozi privatnu temu područja kao prijenosni ZIP.
+     * EN: Exports a Workspace private theme as a portable ZIP for an administrator.
+     *
+     * @param array<string,mixed> $user
+     */
+    public function exportWorkspaceTheme(string $slug, array $user): WorkspaceExport
+    {
+        $this->requireAdministrator($user);
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        if (!$this->themeArchives instanceof WorkspaceThemeArchiveService) {
+            throw new \RuntimeException(__('Izvoz teme područja nije dostupan.'));
+        }
+
+        return new WorkspaceExport(
+            'workspace-theme-' . WorkspaceValue::string($workspace['slug'] ?? 'theme') . '.zip',
+            $this->themeArchives->export($workspace),
+        );
+    }
+
+    /**
+     * HR: Dodaje sigurnu slikovnu datoteku u privatnu biblioteku teme područja.
+     * EN: Adds a safe image file to the Workspace private theme library.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function uploadWorkspaceThemeAsset(
+        string $slug,
+        UploadedFileInterface $file,
+        string $role,
+        array $user,
+    ): array {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        $this->requireThemes()->uploadAsset(
+            $workspace,
+            $file,
+            $role,
+            $this->userId($user),
+        );
+
+        return $this->getWorkspaceTheme($slug, $user);
+    }
+
+    /**
+     * HR: Briše nekorištenu datoteku samo iz privatne teme područja.
+     * EN: Deletes an unused file only from the Workspace private theme.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function deleteWorkspaceThemeAsset(string $slug, string $file, array $user): array
+    {
+        $workspace = $this->requireWorkspace($slug, $user, 'can_manage');
+        $this->requireThemes()->deleteAsset(
+            $workspace,
+            $file,
+            $this->userId($user),
+        );
+
+        return $this->getWorkspaceTheme($slug, $user);
+    }
+
+    /**
+     * HR: Administratoru vraća globalnu politiku naslovnice i dostupne ciljeve.
+     * EN: Returns the global homepage policy and available targets to an administrator.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function getHomepageSettings(array $user): array
+    {
+        $this->requireAdministrator($user);
+
+        return $this->requireHomepages()->settingsForFormForLocale(
+            $this->config->siteDefaultLanguage(),
+        );
+    }
+
+    /**
+     * HR: Administratoru sprema globalnu javnu i prijavljenu naslovnicu.
+     * EN: Stores global public and authenticated homepages for an administrator.
+     *
+     * @param array<string,mixed> $payload
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>
+     */
+    public function saveHomepageSettings(array $payload, array $user): array
+    {
+        $this->requireAdministrator($user);
+        $homepages = $this->requireHomepages();
+        $homepages->saveSettingsForLocale(
+            $payload,
+            $this->userId($user),
+            $this->config->siteDefaultLanguage(),
+        );
+
+        return $homepages->settingsForFormForLocale($this->config->siteDefaultLanguage());
+    }
+
+    /**
+     * HR: Vraća osobni odabir naslovnice vlasnika API ključa.
+     * EN: Returns the API-key owner's personal homepage selection.
+     *
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>|null
+     */
+    public function getHomepagePreference(array $user): ?array
+    {
+        $userId = $this->userId($user);
+
+        return $this->requireHomepages()->accountDataForUser(
+            $userId,
+            $user,
+            $this->config->siteDefaultLanguage(),
+        );
+    }
+
+    /**
+     * HR: Sprema osobni odabir naslovnice samo za vlasnika API ključa.
+     * EN: Stores a personal homepage selection only for the API-key owner.
+     *
+     * @param array<string,mixed>|int $selection
+     * @param array<string,mixed> $user
+     * @return array<string,mixed>|null
+     */
+    public function saveHomepagePreference(array|int $selection, array $user): ?array
+    {
+        $userId = $this->userId($user);
+        $homepages = $this->requireHomepages();
+        $homepages->saveUserSelectionForUser(
+            $userId,
+            $selection,
+            $user,
+            $this->config->siteDefaultLanguage(),
+        );
+
+        return $homepages->accountDataForUser(
+            $userId,
+            $user,
+            $this->config->siteDefaultLanguage(),
+        );
     }
 
     /**
@@ -498,6 +829,32 @@ final readonly class WorkspaceApiService
     }
 
     /**
+     * HR: Vraća dostupnu integraciju tema ili jasnu domensku grešku.
+     * EN: Returns the available theme integration or a clear domain failure.
+     */
+    private function requireThemes(): WorkspaceThemeService
+    {
+        if (!$this->themes instanceof WorkspaceThemeService || !$this->themes->isAvailable()) {
+            throw new \RuntimeException(__('Teme područja nisu dostupne.'));
+        }
+
+        return $this->themes;
+    }
+
+    /**
+     * HR: Vraća dostupni servis naslovnica ili jasnu domensku grešku.
+     * EN: Returns the available homepage service or a clear domain failure.
+     */
+    private function requireHomepages(): WorkspaceHomepageService
+    {
+        if (!$this->homepages instanceof WorkspaceHomepageService) {
+            throw new \RuntimeException(__('Postavke naslovnice nisu dostupne.'));
+        }
+
+        return $this->homepages;
+    }
+
+    /**
      * HR: Vraća sigurni javni DTO područja bez internih delete i audit detalja.
      *
      * EN: Returns a safe public Workspace DTO without internal delete and audit details.
@@ -514,6 +871,12 @@ final readonly class WorkspaceApiService
             'name' => WorkspaceValue::string($workspace['name'] ?? ''),
             'description' => WorkspaceValue::string($workspace['description'] ?? ''),
             'visibility' => WorkspaceValue::string($workspace['visibility'] ?? 'restricted'),
+            'tree_visibility' => WorkspaceValue::string(
+                $workspace['tree_visibility'] ?? 'inherit',
+            ),
+            'contents_visibility' => WorkspaceValue::string(
+                $workspace['contents_visibility'] ?? 'inherit',
+            ),
             'owner_user_id' => WorkspaceValue::int($workspace['owner_user_id'] ?? 0),
             'is_archived' => (bool)($workspace['is_archived'] ?? false),
             'is_deleted' => (bool)($workspace['is_deleted'] ?? false),
@@ -593,6 +956,9 @@ final readonly class WorkspaceApiService
             'target_url' => WorkspaceValue::string($node['target_url'] ?? ''),
             'sort_order' => WorkspaceValue::int($node['sort_order'] ?? 0),
             'is_homepage' => (bool)($node['is_homepage'] ?? false),
+            'contents_visibility' => WorkspaceValue::string(
+                $node['contents_visibility'] ?? 'inherit',
+            ),
             'permissions' => WorkspaceValue::stringKeyArray($node['permissions'] ?? []),
         ];
     }
@@ -688,7 +1054,18 @@ final readonly class WorkspaceApiService
      */
     private function mergeWorkspacePayload(array $workspace, array $payload): array
     {
-        foreach (['name', 'slug', 'description', 'visibility', 'owner_user_id', 'is_archived'] as $key) {
+        foreach (
+            [
+                'name',
+                'slug',
+                'description',
+                'visibility',
+                'owner_user_id',
+                'is_archived',
+                'tree_visibility',
+                'contents_visibility',
+            ] as $key
+        ) {
             if (!array_key_exists($key, $payload)) {
                 $payload[$key] = $workspace[$key] ?? null;
             }
@@ -717,6 +1094,7 @@ final readonly class WorkspaceApiService
                 'is_homepage',
                 'route_name',
                 'target_url',
+                'contents_visibility',
             ] as $key
         ) {
             if (!array_key_exists($key, $payload)) {

@@ -90,6 +90,32 @@ $hasPermission = static function (
                     'treeOrganizerAvailable' => true,
                 ],
             ) ?>
+            <?php if (WorkspaceValue::string($node['node_type'] ?? '') === 'document') : ?>
+                <div class="mt-3">
+                    <label class="form-label" for="workspace-node-contents-visibility">
+                        <?= $this->escape(__('Zadani prikaz sadržaja stranice')) ?>
+                    </label>
+                    <select
+                        id="workspace-node-contents-visibility"
+                        class="form-select"
+                        name="contents_visibility"
+                    >
+                        <?php foreach (
+                            [
+                                'inherit' => __('Naslijedi postavku područja'),
+                                'shown' => __('Prikaži'),
+                                'hidden' => __('Sakrij'),
+                            ] as $policy => $label
+) : ?>
+                            <option value="<?= $policy ?>" <?= WorkspaceValue::string(
+                                $node['contents_visibility'] ?? 'inherit',
+                            ) === $policy ? 'selected' : '' ?>>
+                                <?= $this->escape($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endif; ?>
             <div class="d-flex justify-content-end mt-3">
                 <button class="btn btn-primary" type="submit">
                     <?= $this->escape(__('Spremi stavku')) ?>

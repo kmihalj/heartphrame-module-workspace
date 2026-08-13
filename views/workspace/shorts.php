@@ -21,6 +21,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
  * @var bool $treeVisibleByDefault
  * @var bool $displayOptionsVisibleByDefault
  * @var string $assetsCssPath
+ * @var string $assetsJsPath
  */
 $orderOptions = [
     'hierarchy' => __('Prema hijerarhiji'),
@@ -29,15 +30,26 @@ $orderOptions = [
 ];
 ?>
 <link rel="stylesheet" href="<?= $this->escape($assetsCssPath) ?>">
+<script src="<?= $this->escape($assetsJsPath) ?>" defer></script>
 
 <div class="workspace-shell workspace-shorts-shell">
     <aside
         id="workspace-page-tree"
         class="workspace-sidebar collapse<?= $treeVisibleByDefault ? ' show' : '' ?>"
+        data-workspace-mobile-panel="tree"
         aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
     >
         <nav class="card shadow-sm workspace-tree-card hph-sidebar-card">
             <div class="card-body">
+                <div class="workspace-mobile-panel-header">
+                    <h2 class="h6 mb-0"><?= $this->escape(__('Stablo stranica')) ?></h2>
+                    <button
+                        class="workspace-mobile-panel-close"
+                        type="button"
+                        data-workspace-mobile-panel-close="tree"
+                        aria-label="<?= $this->escape(__('Zatvori')) ?>"
+                    >&times;</button>
+                </div>
                 <div class="workspace-tree-heading mb-3">
                     <div class="workspace-tree-card-actions">
                         <a
@@ -78,6 +90,23 @@ $orderOptions = [
             </div>
         </nav>
     </aside>
+
+    <button
+        class="workspace-mobile-edge-toggle workspace-mobile-edge-toggle--start"
+        type="button"
+        data-workspace-mobile-panel-open="tree"
+        aria-controls="workspace-page-tree"
+        aria-expanded="false"
+        title="<?= $this->escape(__('Stablo stranica')) ?>"
+        aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
+    >
+        <svg class="workspace-tree-card-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M10 3H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+            <path d="M19 14h-5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2z"/>
+            <path d="M7 10v2a2 2 0 0 0 2 2h5"/>
+        </svg>
+    </button>
+    <div class="workspace-mobile-panel-backdrop" data-workspace-mobile-panel-backdrop hidden></div>
 
     <main class="workspace-main workspace-shorts-main">
         <div class="workspace-shorts-toolbar mb-3" aria-label="<?= $this->escape(__('Opcije prikaza')) ?>">

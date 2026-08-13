@@ -7,9 +7,13 @@ use AaiEduHr\HeartPhrameModuleAuth\Middleware\RequireAuthenticatedUserMiddleware
 use AaiEduHr\HeartPhrameModuleAuth\ModuleAuth;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
 use AaiEduHr\HeartPhrameModuleWorkspace\Account\WorkspaceHomepageAccountSectionProvider;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceBackupController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceExportController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceMenuController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceThemeController;
 use AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRouteRegistrar;
@@ -92,7 +96,7 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
      */
     public function getBaseRoutes(): array
     {
-        return [
+        $routes = [
             ['GET', '/workspaces', WorkspaceController::class . '@index', 'workspace.index', []],
             [
                 'GET',
@@ -185,6 +189,62 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                 'workspace.workflow.transition',
                 [RequireAuthenticatedUserMiddleware::class],
             ],
+            [
+                'GET',
+                '/workspaces/export',
+                WorkspaceExportController::class . '@form',
+                'workspace.export',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'POST',
+                '/workspaces/export',
+                WorkspaceExportController::class . '@download',
+                'workspace.export.download',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'GET',
+                '/workspaces/theme',
+                WorkspaceThemeController::class . '@index',
+                'workspace.theme',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'GET',
+                '/workspaces/menu',
+                WorkspaceMenuController::class . '@index',
+                'workspace.menu',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'POST',
+                '/workspaces/menu',
+                WorkspaceMenuController::class . '@save',
+                'workspace.menu.save',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'POST',
+                '/workspaces/theme',
+                WorkspaceThemeController::class . '@save',
+                'workspace.theme.save',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'GET',
+                '/workspaces/theme/export',
+                WorkspaceThemeController::class . '@export',
+                'workspace.theme.export',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'GET',
+                '/workspaces/theme/assets/{workspace}/{file}',
+                WorkspaceThemeController::class . '@asset',
+                'workspace.theme.asset',
+                [],
+            ],
             ['GET', '/workspaces/assets.css', WorkspaceController::class . '@styles', 'workspace.assets.css', []],
             ['GET', '/workspaces/assets.js', WorkspaceController::class . '@scripts', 'workspace.assets.js', []],
             [
@@ -237,6 +297,49 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                 [RequireAuthenticatedUserMiddleware::class],
             ],
         ];
+
+        // HR: Rute se uopće ne registriraju bez opcionalnog Backup modula.
+        // EN: Routes are not registered at all without the optional Backup module.
+        if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupManager::class)) {
+            $middleware = [RequireAuthenticatedUserMiddleware::class];
+            $routes = [
+                ...$routes,
+                [
+                    'GET', '/workspaces/backup', WorkspaceBackupController::class . '@index',
+                    'workspace.backup', $middleware,
+                ],
+                [
+                    'GET', '/workspaces/backup/csrf', WorkspaceBackupController::class . '@csrf',
+                    'workspace.backup.csrf', $middleware,
+                ],
+                [
+                    'POST', '/workspaces/backup/create', WorkspaceBackupController::class . '@create',
+                    'workspace.backup.create', $middleware,
+                ],
+                [
+                    'POST', '/workspaces/backup/upload/start', WorkspaceBackupController::class . '@uploadStart',
+                    'workspace.backup.upload.start', $middleware,
+                ],
+                [
+                    'POST', '/workspaces/backup/upload/chunk', WorkspaceBackupController::class . '@uploadChunk',
+                    'workspace.backup.upload.chunk', $middleware,
+                ],
+                [
+                    'POST', '/workspaces/backup/upload/finish', WorkspaceBackupController::class . '@uploadFinish',
+                    'workspace.backup.upload.finish', $middleware,
+                ],
+                [
+                    'POST', '/workspaces/backup/preflight', WorkspaceBackupController::class . '@preflight',
+                    'workspace.backup.preflight', $middleware,
+                ],
+                [
+                    'POST', '/workspaces/backup/restore', WorkspaceBackupController::class . '@restore',
+                    'workspace.backup.restore', $middleware,
+                ],
+            ];
+        }
+
+        return $routes;
     }
 
     /**
@@ -264,6 +367,14 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                     'installHomepageMigration',
                 ],
             ),
+            new CommandDefinition(
+                'workspace:install-themes-migration',
+                'Copy the Workspace private-theme upgrade migration into the host application.',
+                [
+                    \AaiEduHr\HeartPhrameModuleWorkspace\Command\HpWorkspaceCommand::class,
+                    'installThemesMigration',
+                ],
+            ),
         ];
     }
 
@@ -286,6 +397,7 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                 $integration = $container->get(WorkspaceMenuIntegration::class);
                 if ($integration instanceof WorkspaceMenuIntegration) {
                     $integration->registerMenuItems();
+                    $integration->registerNavigationTargets();
                 }
             },
             static function (ContainerInterface $container): void {

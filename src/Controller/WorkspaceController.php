@@ -7,9 +7,11 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceWorkflowService;
 use HeartPhrame\Alert\Alert;
@@ -52,6 +54,8 @@ final readonly class WorkspaceController
         private WorkspaceWorkflowService $workflow,
         private WorkspaceNotificationBridge $notifications,
         private TranslatorInterface $translator,
+        private WorkspaceThemeService $themes,
+        private WorkspaceMenuService $menus,
     ) {
     }
 
@@ -180,6 +184,12 @@ final readonly class WorkspaceController
 
         $workspaceId = is_array($workspace) ? $this->intValue($workspace['id'] ?? 0) : 0;
         $isAdministrator = $this->access->isAdministrator();
+        $workspaceThemeState = null;
+        if (is_array($workspace) && $this->themes->isAvailable()) {
+            $this->themes->activate($workspace);
+            $workspaceThemeState = $this->themes->state($workspace);
+        }
+
         $ownerUserId = is_array($workspace)
         ? $this->intValue($workspace['owner_user_id'] ?? 0)
         : $this->currentUserId();
@@ -203,6 +213,32 @@ final readonly class WorkspaceController
             'indexPath' => $this->pathFor('workspace.index', '/workspaces'),
             'workspaceViewPath' => is_array($workspace)
                 ? $this->workspacePath($this->stringValue($workspace['slug'] ?? ''))
+                : '',
+            'exportPath' => is_array($workspace)
+                && ($isAdministrator || $workspacePermissions['can_manage'])
+                ? $this->pathFor('workspace.export', '/workspaces/export')
+                    . '?workspace=' . rawurlencode($this->stringValue($workspace['slug'] ?? ''))
+                : '',
+            'workspaceThemePath' => is_array($workspace) && is_array($workspaceThemeState)
+                ? $this->pathFor('workspace.theme', '/workspaces/theme')
+                    . '?workspace=' . rawurlencode($this->stringValue($workspace['slug'] ?? ''))
+                : '',
+            'workspaceThemeState' => $workspaceThemeState,
+            'workspaceThemeLabel' => is_array($workspaceThemeState)
+                ? $this->localizedThemeLabel($workspaceThemeState)
+                : '',
+            'workspaceMenuPath' => is_array($workspace)
+                && $workspacePermissions['can_manage']
+                && $this->menus->isAvailable()
+                ? $this->pathFor('workspace.menu', '/workspaces/menu')
+                    . '?workspace=' . rawurlencode($this->stringValue($workspace['slug'] ?? ''))
+                : '',
+            'workspaceBackupPath' => is_array($workspace)
+                && $workspacePermissions['can_manage']
+                && class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupManager::class)
+                && $this->urlGenerator->namedRouteExists('workspace.backup')
+                ? $this->pathFor('workspace.backup', '/workspaces/backup')
+                    . '?workspace=' . rawurlencode($this->stringValue($workspace['slug'] ?? ''))
                 : '',
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
             'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
@@ -976,7 +1012,10 @@ final readonly class WorkspaceController
             return $this->accessDenied();
         }
 
+        $this->themes->activate($workspace);
+
         $language = $this->language($request);
+        $treeVisible = $this->config->treeVisibleForWorkspace($workspace);
         $editorView = null;
         $workflowView = null;
         $nodePermissions = $workspacePermissions;
@@ -991,11 +1030,18 @@ final readonly class WorkspaceController
 
             $documentKey = $this->stringValue($node['document_key'] ?? '');
             if ($documentKey !== '') {
+                $viewQuery = $request->getQueryParams();
+                if (!array_key_exists('toc', $viewQuery)) {
+                    $viewQuery['toc'] = $this->config->contentsVisibleForPage($workspace, $node)
+                    ? 'on'
+                    : 'off';
+                }
+
                 $latestVersion = $this->editor->latestVersionNumber($documentKey, $language);
                 $editorView = $this->editor->documentView(
                     $documentKey,
                     $language,
-                    $request->getQueryParams(),
+                    $viewQuery,
                     (bool)($nodePermissions['can_edit'] ?? false),
                     (bool)($nodePermissions['can_edit'] ?? false)
                         || (bool)($nodePermissions['can_publish'] ?? false),
@@ -1024,6 +1070,7 @@ final readonly class WorkspaceController
                 $workflowTransitionPath,
                 $language,
                 (bool)($editorView['isDraftPreview'] ?? false),
+                $treeVisible,
             );
         }
 
@@ -1122,7 +1169,7 @@ final readonly class WorkspaceController
             'reviewQueue' => $reviewQueue,
             'unpublishedPages' => $unpublishedPages,
             'language' => $language,
-            'treeVisibleByDefault' => $this->config->treeVisibleByDefault(),
+            'treeVisibleByDefault' => $treeVisible,
             'shortsPath' => $this->shortsPath(
                 $this->stringValue($workspace['slug'] ?? ''),
                 $language,
@@ -1161,6 +1208,7 @@ final readonly class WorkspaceController
                 $workflowTransitionPath,
                 $language,
                 false,
+                $treeVisible,
             ),
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
             'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
@@ -1518,13 +1566,14 @@ final readonly class WorkspaceController
         string $transitionPath,
         string $language,
         bool $isDraftPreview,
+        bool $treeVisible,
     ): array {
         $actions = [[
             'type' => 'collapse',
             'label' => __('Stablo'),
             'target' => '#workspace-page-tree',
             'controls' => 'workspace-page-tree',
-            'expanded' => $this->config->treeVisibleByDefault(),
+            'expanded' => $treeVisible,
             'icon' => 'tree',
         ]];
         if (!is_array($node) || !is_array($workflow)) {
@@ -1739,6 +1788,24 @@ final readonly class WorkspaceController
         $path = $this->pathFor('workspace.manage', '/workspaces/manage');
 
         return $workspaceSlug !== '' ? $path . '?workspace=' . rawurlencode($workspaceSlug) : $path;
+    }
+
+    /**
+     * HR: Odabire lokalizirani naziv razriješene teme uz hrvatski i engleski fallback.
+     * EN: Selects the resolved theme label with Croatian and English fallbacks.
+     *
+     * @param array<string, mixed> $state
+     */
+    private function localizedThemeLabel(array $state): string
+    {
+        $theme = is_array($state['resolved_theme'] ?? null) ? $state['resolved_theme'] : [];
+        $labels = is_array($theme['label'] ?? null) ? $theme['label'] : [];
+        $locale = strtolower($this->translator->getLocale());
+        $base = strtolower(strtok($locale, '-_') ?: $locale);
+
+        return $this->stringValue(
+            $labels[$locale] ?? $labels[$base] ?? $labels['hr'] ?? $labels['en'] ?? '',
+        );
     }
 
     /**

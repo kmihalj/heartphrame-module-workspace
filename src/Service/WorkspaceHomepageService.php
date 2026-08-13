@@ -63,16 +63,27 @@ final readonly class WorkspaceHomepageService
      */
     public function settingsForForm(): array
     {
+        return $this->settingsForFormForLocale('');
+    }
+
+    /**
+     * HR: Priprema administratorske vrijednosti bez oslanjanja na web sesiju za jezik.
+     * EN: Prepares administrator values without relying on the web session for locale.
+     *
+     * @return array<string, mixed>
+     */
+    public function settingsForFormForLocale(string $locale): array
+    {
         $settings = $this->homepages->settings();
 
         return [
             'settings' => $settings,
             'view_options_ready' => $this->homepages->viewOptionsReady(),
-            'public_option_groups' => $this->selectablePageGroups(null),
+            'public_option_groups' => $this->selectablePageGroups([], $locale),
             'authenticated_option_groups' => $this->selectablePageGroups([
                 'id' => self::GENERIC_AUTHENTICATED_USER_ID,
                 'is_admin' => false,
-            ]),
+            ], $locale),
         ];
     }
 
@@ -84,6 +95,17 @@ final readonly class WorkspaceHomepageService
      */
     public function saveSettings(array $input, int $actorUserId): void
     {
+        $this->saveSettingsForLocale($input, $actorUserId, '');
+    }
+
+    /**
+     * HR: Sprema administratorsku politiku uz izričit jezik pozivatelja API-ja ili weba.
+     * EN: Stores administrator policy using the API or web caller's explicit locale.
+     *
+     * @param array<string, mixed> $input
+     */
+    public function saveSettingsForLocale(array $input, int $actorUserId, string $locale): void
+    {
         if (!$this->tablesReady()) {
             throw new RuntimeException(__('Migracija naslovnice područja nije primijenjena.'));
         }
@@ -92,7 +114,7 @@ final readonly class WorkspaceHomepageService
         $authenticatedTarget = $this->targetFromInput($input, 'authenticated');
         if (
             $publicTarget['type'] !== 'default'
-            && !$this->groupsContainTarget($this->selectablePageGroups(null), $publicTarget)
+            && !$this->groupsContainTarget($this->selectablePageGroups([], $locale), $publicTarget)
         ) {
             throw new RuntimeException(__('Javna naslovnica mora biti objavljena i dostupna gostima.'));
         }
@@ -101,7 +123,7 @@ final readonly class WorkspaceHomepageService
         if (
             $authenticatedTarget['type'] !== 'default'
             && !$this->groupsContainTarget(
-                $this->selectablePageGroups($genericUser),
+                $this->selectablePageGroups($genericUser, $locale),
                 $authenticatedTarget,
             )
         ) {
@@ -126,12 +148,25 @@ final readonly class WorkspaceHomepageService
      */
     public function accountData(int $userId): ?array
     {
+        return $this->accountDataForUser($userId, $this->access->currentUser() ?? []);
+    }
+
+    /**
+     * HR: Priprema osobni odabir za izričito zadanog autentificiranog korisnika,
+     *     primjerice vlasnika API ključa, bez oslanjanja na web sesiju.
+     * EN: Prepares personal selection for an explicitly supplied authenticated
+     *     user, such as an API-key owner, without relying on the web session.
+     *
+     * @param array<string, mixed> $user
+     * @return array<string, mixed>|null
+     */
+    public function accountDataForUser(int $userId, array $user, string $locale = ''): ?array
+    {
         if (!$this->tablesReady() || $userId <= 0) {
             return null;
         }
 
-        $currentUser = $this->access->currentUser();
-        if ($this->userId($currentUser) !== $userId) {
+        if ($this->userId($user) !== $userId) {
             return null;
         }
 
@@ -140,7 +175,7 @@ final readonly class WorkspaceHomepageService
             return null;
         }
 
-        $groups = $this->selectablePageGroups($currentUser);
+        $groups = $this->selectablePageGroups($user, $locale);
         $selectedTarget = $this->homepages->userTarget($userId);
         $selectionUnavailable = $selectedTarget['type'] !== 'default'
         && !$this->groupsContainTarget($groups, $selectedTarget);
@@ -165,12 +200,33 @@ final readonly class WorkspaceHomepageService
      */
     public function saveUserSelection(int $userId, array|int $selection): void
     {
+        $this->saveUserSelectionForUser(
+            $userId,
+            $selection,
+            $this->access->currentUser() ?? [],
+        );
+    }
+
+    /**
+     * HR: Sprema osobni odabir izričito zadanog korisnika nakon ACL provjere,
+     *     bez preuzimanja identiteta iz web sesije.
+     * EN: Stores the explicitly supplied user's personal selection after an ACL
+     *     check, without taking the identity from the web session.
+     *
+     * @param array<string, mixed>|int $selection
+     * @param array<string, mixed> $user
+     */
+    public function saveUserSelectionForUser(
+        int $userId,
+        array|int $selection,
+        array $user,
+        string $locale = '',
+    ): void {
         if (!$this->tablesReady()) {
             throw new RuntimeException(__('Migracija naslovnice područja nije primijenjena.'));
         }
 
-        $currentUser = $this->access->currentUser();
-        if ($userId <= 0 || $this->userId($currentUser) !== $userId) {
+        if ($userId <= 0 || $this->userId($user) !== $userId) {
             throw new RuntimeException(__('Za osobnu naslovnicu potrebna je prijava.'));
         }
 
@@ -185,7 +241,7 @@ final readonly class WorkspaceHomepageService
         : $this->targetFromInput(WorkspaceValue::stringKeyArray($selection), '');
         if (
             $target['type'] !== 'default'
-            && !$this->groupsContainTarget($this->selectablePageGroups($currentUser), $target)
+            && !$this->groupsContainTarget($this->selectablePageGroups($user, $locale), $target)
         ) {
             throw new RuntimeException(__('Odabrana stranica nije objavljena ili joj nemate pristup.'));
         }
@@ -250,7 +306,7 @@ final readonly class WorkspaceHomepageService
      * @param array<string, mixed>|null $user
      * @return list<array{name:string,options:list<array<string,mixed>>}>
      */
-    private function selectablePageGroups(?array $user): array
+    private function selectablePageGroups(?array $user, string $locale = ''): array
     {
         if (!$this->tablesReady()) {
             return [];
@@ -293,7 +349,7 @@ final readonly class WorkspaceHomepageService
                     continue;
                 }
 
-                if ($this->readableLanguage($workflows[$nodeId] ?? []) === '') {
+                if ($this->readableLanguage($workflows[$nodeId] ?? [], $locale) === '') {
                     continue;
                 }
 
@@ -415,7 +471,7 @@ final readonly class WorkspaceHomepageService
      *
      * @param list<array<string, mixed>> $workflows
      */
-    private function readableLanguage(array $workflows): string
+    private function readableLanguage(array $workflows, string $locale = ''): string
     {
         $readable = [];
         foreach ($workflows as $workflow) {
@@ -429,7 +485,7 @@ final readonly class WorkspaceHomepageService
             }
         }
 
-        foreach ($this->languagePreference() as $language) {
+        foreach ($this->languagePreference($locale) as $language) {
             if (isset($readable[$language])) {
                 return $language;
             }
@@ -444,10 +500,12 @@ final readonly class WorkspaceHomepageService
      *
      * @return list<string>
      */
-    private function languagePreference(): array
+    private function languagePreference(string $locale = ''): array
     {
         $languages = [
-            $this->normalizeLanguage($this->translator->getLocale()),
+            $locale !== ''
+                ? $this->normalizeLanguage($locale)
+                : $this->normalizeLanguage($this->translator->getLocale()),
             $this->workspaceConfig->siteDefaultLanguage(),
             $this->normalizeLanguage(
                 $this->config->getAsString('app.localization.fallback_locale', 'en') ?? 'en',

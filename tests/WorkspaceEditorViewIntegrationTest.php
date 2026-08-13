@@ -80,6 +80,31 @@ final class WorkspaceEditorViewIntegrationTest extends TestCase
     }
 
     /**
+     * HR: Mobilno stablo mora koristiti plutajuću tematsku karticu s naslovom
+     *     unutar kartice, jednako kao desni panel sadržaja.
+     * EN: The mobile tree must use a floating themed card with its heading
+     *     inside the card, matching the right-hand contents drawer.
+     */
+    public function testMobileTreeUsesFloatingThemedCard(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+        $shorts = file_get_contents(dirname(__DIR__) . '/views/workspace/shorts.php');
+        $css = file_get_contents(dirname(__DIR__) . '/resources/assets/workspace.css');
+
+        $this->assertIsString($view);
+        $this->assertIsString($shorts);
+        $this->assertIsString($css);
+        $this->assertStringContainsString('data-workspace-mobile-panel="tree"', $view);
+        $this->assertStringContainsString('data-workspace-mobile-panel="tree"', $shorts);
+        $this->assertLessThan(
+            strpos($view, 'workspace-mobile-panel-header'),
+            strpos($view, '<div class="card-body">'),
+        );
+        $this->assertStringContainsString('height: calc(100dvh - 1.5rem);', $css);
+        $this->assertStringContainsString('overflow: visible;', $css);
+    }
+
+    /**
      * HR: Blok za soft-brisanje mora koristiti tematsku Bootstrap karticu kao i ostale postavke.
      * EN: The soft-delete block must use a theme-aware Bootstrap card like the other settings.
      */
@@ -103,12 +128,20 @@ final class WorkspaceEditorViewIntegrationTest extends TestCase
     {
         $workspaceView = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
         $manageView = file_get_contents(dirname(__DIR__) . '/views/workspace/manage.php');
+        $workspaceScript = file_get_contents(dirname(__DIR__) . '/resources/assets/workspace.js');
 
         $this->assertIsString($workspaceView);
         $this->assertIsString($manageView);
+        $this->assertIsString($workspaceScript);
         $this->assertStringContainsString('data-workspace-tree-edit-toggle', $workspaceView);
         $this->assertStringContainsString("'workspace/tree-organizer'", $workspaceView);
         $this->assertStringContainsString('data-workspace-node-editor-modal', $workspaceView);
+        $this->assertStringContainsString('initializeModalPortals', $workspaceScript);
+        $this->assertStringContainsString(
+            "document.querySelectorAll('.workspace-shell ~ .modal, .workspace-shell .modal')",
+            $workspaceScript,
+        );
+        $this->assertStringContainsString('document.body.append(modal)', $workspaceScript);
         $this->assertStringNotContainsString('data-workspace-tree-order-form', $manageView);
         $this->assertStringNotContainsString("'workspace/node-fields'", $manageView);
     }

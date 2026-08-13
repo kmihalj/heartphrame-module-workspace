@@ -188,6 +188,15 @@ final class WorkspaceShortsServiceTest extends TestCase
 
         $this->accessCacheReset();
         $this->authn->login(['id' => 3, 'is_admin' => false]);
+        $explicitActor = $this->shorts->viewModel(
+            $workspace,
+            'hr',
+            ['depth' => 1, 'limit' => 'all'],
+            'hr',
+            ['id' => 2, 'is_admin' => false],
+        );
+        $this->assertContains('Ograničeno', $this->titles($explicitActor));
+
         $hierarchy = $this->shorts->viewModel($workspace, 'hr', [
             'depth' => 2,
             'limit' => 10,

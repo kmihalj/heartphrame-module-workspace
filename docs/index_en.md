@@ -17,7 +17,7 @@ private database tables.
 
 ## 2. Data model
 
-The single initial migration creates five tables through the ORM:
+The single initial migration creates eight tables through the ORM:
 
 | Table | Responsibility |
 | --- | --- |
@@ -26,6 +26,9 @@ The single initial migration creates five tables through the ORM:
 | `workspace_nodes` | Ordered hierarchy of documents and links |
 | `workspace_node_acl` | Additional restrictions inherited through the tree |
 | `workspace_node_workflows` | Per-page and per-language publication state and immutable Editor version pointers |
+| `workspace_homepage_settings` | Public and signed-in application-homepage policy |
+| `workspace_user_homepages` | Optional personal homepage selections |
+| `workspace_themes` | Per-Workspace system selection or isolated private theme JSON |
 
 There are no database-specific SQL statements. Boolean defaults use real
 booleans, and schema creation is compatible with SQLite, PostgreSQL, and
@@ -126,8 +129,12 @@ later check in the same request also sees the new permissions.
 
 The left-side tree can be shown or hidden. It visually follows the HTML
 editor's outline card by using the same heading, `list-group`, theme, and
-internal scrolling. On desktop it remains available while reading; on mobile
-it becomes a bounded, collapsible block.
+internal scrolling. On desktop it remains available while reading. On mobile
+it leaves the document flow and becomes a floating card inset from every
+viewport edge that slides in from the left. The card preserves the active
+theme's tree colours, border, accent, and shadow. A discreet fixed edge icon
+opens the card, while its close button, backdrop, or Escape returns focus to the
+document. Focus and `aria-expanded` state follow the open card.
 
 The tree card and HTML card start in the same row. The tree toggle is the first
 SVG action in Editor's shared view, while SVG actions for creating a page and
@@ -201,6 +208,11 @@ override either state; omitting them uses site configuration. The filter form
 preserves the current states, which makes the same route suitable for a normal
 page or a compact homepage.
 
+If Menu supplies a route-specific special left menu, the application initially
+collapses the Workspace page tree regardless of the Workspace default. This
+prevents two open left navigations while keeping both icon controls available;
+`tree=1` remains an explicit opt-in for direct links.
+
 Security filtering happens before HTML is loaded: the service starts from
 `visibleTree()`, applies inherited node ACL, keeps only document nodes within
 the selected depth, then requires a non-archived workflow with a positive
@@ -269,6 +281,69 @@ to the selected item type.
 Without the editor module, Workspaces and link nodes remain usable. Without
 Workspace, the HTML editor retains its standalone behavior.
 
+### 6.1 Portable Workspace HTML export
+
+`GET /workspaces/export?workspace={slug}` opens the selection form and
+`POST /workspaces/export` returns the ZIP. Both routes require authentication;
+the controller then requires either administrator status or effective
+Workspace `can_manage`. This second authorization check is mandatory even when
+the user knows the direct URL.
+
+Choose **Complete Workspace** to export every published page the exporter may
+view, or **Selected pages** to submit `node_ids[]`. The server never trusts those
+IDs: it rebuilds the inherited ACL tree for the current user, removes drafts and
+archived-only pages, and intersects the submitted list with that result. A page
+with a stricter inherited or direct restriction is therefore absent from both
+the generated tree and the ZIP.
+
+The package layout is:
+
+```text
+index.html                     # single themed offline shell
+manifest.json                  # source, locale and exported-page inventory
+assets/css/                    # Theme, Bootstrap, Editor, Calendar and Task CSS
+assets/js/workspace-export.js  # local theme/language/panel controls
+assets/theme/                  # only active light/dark Theme assets
+documents/{document-key}/{source-locale}/v{version}/
+                               # immutable-version attachment bytes without locale collisions
+{published-locale}/{page}.html
+```
+
+Open the extracted root `index.html` directly from the filesystem. It is the
+only themed offline application shell. The sole menu item is **Home** and
+switches back to the exported Workspace homepage. Tree links switch the
+embedded immutable page snapshot without HTTP or `fetch`. The shell reuses the
+Theme module's real header and hero renderers, portable CSS, selected light/dark
+logo and hero artwork, container width, and content-overlap classes. The hero
+therefore contains the current page title exactly as it does in the application
+and adds the localized `Exported Workspace: {Workspace}` note. It does not add a
+second page title.
+
+The selected light/dark logo and hero images are embedded into `index.html` as
+data URIs, so their display does not depend on browser-relative paths over
+`file://`. The original selected files remain under `assets/theme/` for ZIP
+inspection and integrity verification.
+
+Every `{published-locale}/{page}.html` file is a clean standalone document made
+by Editor's own formatter. Opening that file directly shows the same rendered
+HTML as a single-page export, without the Workspace header, hero, tree, or
+editing actions. A standalone file does not load Theme CSS and therefore does
+not inherit the application's page background. Locale directories and page files exist only for real
+published translations. The root selector still lists every configured
+language; for a missing translation it displays the site-default Croatian
+snapshot, then the first real snapshot. That runtime fallback never creates a
+duplicate locale file.
+
+Calendar and Task placeholders are converted to static read-only HTML through
+the same ACL-aware integration methods used by Editor's single-page export.
+Calendar edit and download actions are omitted: the calendar is a rendered
+read-only snapshot. There are no active API requests in the exported page.
+Attachments are copied from the exact published version, never from an editable
+draft. Theme, language, tree, outline, and attachment controls run locally and
+do not require Bootstrap JavaScript. When the Theme module is absent or
+disabled, the same package structure remains functional with a minimal readable
+fallback header, hero, and layout.
+
 ## 7. Publishing workflow
 
 Publication state belongs to a document node and a language. Workspace stores
@@ -330,6 +405,15 @@ an auxiliary channel and cannot roll back a successful workflow transition.
 If the optional E-mail module is enabled, the same notification may also be
 queued in its persistent SMTP outbox.
 
+After a publication pointer changes, a page or subtree is disabled, or
+Workspace/tree metadata changes, the repository dispatches the neutral
+`WorkspaceContentChanged` event. Optional derived modules may listen to that
+event and synchronize only the affected Workspace and language. Draft saves
+that preserve the current published pointer intentionally do not dispatch a
+publication change, so readers and indexes keep the last published version.
+Listener failure is isolated from the source write; periodic or manual reindex
+can repair a derived store without losing authoritative Workspace data.
+
 When Workspace is not installed, all integration calls are no-ops. Standalone
 Editor save, view, history, and export continue using the current document
 version exactly as before.
@@ -347,6 +431,7 @@ return [
     'defaults' => [
         'visibility' => 'restricted',
         'tree_visible' => true,
+        'contents_visible' => false,
     ],
     'creation' => [
         'authenticated_users' => false,
@@ -358,6 +443,12 @@ return [
 ];
 ```
 
+`tree_visible` and `contents_visible` are the system fallbacks. Each Workspace
+may inherit, show, or hide its tree and page outline, while an individual page
+may additionally override only its own outline. Resolution order is:
+**page → Workspace → system setting**. Display query parameters remain a
+one-request user override and do not change saved defaults.
+
 The root path must be a free first route segment. Settings reject collisions
 with an existing application route.
 
@@ -367,11 +458,57 @@ If Menu is enabled, Workspace idempotently registers:
 - General settings;
 - All Workspaces;
 - Deleted Workspaces.
+- dynamic editor destinations for every active Workspace and document page.
 
 Repeated requests do not duplicate or relocate those entries.
 Workspace administration pages render the shared Settings sidebar when Menu is
 available. Without Menu, the same pages remain usable through a local fallback
 sidebar containing General settings, All Workspaces, and Deleted Workspaces.
+
+The destination integration is lazy, so opening any of Menu's four editors
+reads the current Workspace tree at that moment. Areas appear under
+**Workspaces**, pages under **Workspace pages** as `Area / Page`. Menu combines
+them with all other navigable application pages in **Apply special menu to**.
+Selecting an area fills `/workspace/slug` and `/workspace/slug/*`; paths never
+contain the current deployment base path. API, action, dialog, asset, and other
+technical routes are filtered by Menu and never become navigation choices.
+
+### Per-Workspace theme policy
+
+Theme is an optional integration. With it enabled, a manager may leave a
+Workspace on **Default system theme**, explicitly select one system theme, or
+edit/import an isolated private theme. The first edit creates a complete private
+copy and appends the Workspace name to unchanged source labels. System Theme
+JSON is never written from a Workspace request.
+
+The `workspace_themes` row contains selection type, source ID, mode policy, and
+private theme JSON. Private binary/SVG assets live under
+`data/workspaces/themes/<workspace-id>/assets`; references use
+`@runtime-theme-assets/<file>`. Asset delivery rechecks view ACL, while the Theme
+repository receives the resolved override only for the current request. This
+keeps the global active theme unchanged on all non-Workspace pages and in other
+Workspaces.
+
+Managers can import a complete Theme v3 archive. Export is deliberately limited
+to application administrators and only exists for a private Workspace theme.
+That archive is compatible with both another Workspace import and the global
+Theme library import. A complete backup must include the `workspace_themes`
+table and `data/workspaces/themes` directory.
+
+### Per-Workspace special menus
+
+Menu is another optional integration. A user with effective `can_manage`
+permission can open **Special Workspace menus** from **Manage Workspace** and
+edit that Workspace's top and left route-specific menus independently. The
+controller repeats the Workspace ACL check for both GET and POST requests.
+
+The browser never owns the scope. Before saving, the server overwrites the
+context identifier, label, route patterns, and portable path patterns with the
+selected Workspace's `/workspace/{slug}` and `/workspace/{slug}/*` values.
+This prevents a forged request from changing menus outside the Workspace. A
+left-only definition is absent from the top-menu editor and vice versa;
+removing one side preserves the other. At runtime, matching separated records
+may still supply both menus on the same page.
 
 ## 9. Installation and operation
 
@@ -388,6 +525,7 @@ Useful URLs with the default configuration:
 
 - `/workspaces`: visible Workspace list
 - `/workspaces/manage`: create or manage a Workspace
+- `/workspaces/theme?workspace={slug}`: select or privately edit a Workspace theme
 - `GET /workspaces/acl/subjects`: bounded server-side search for users, groups,
   and built-in audiences; requires Workspace management permission
 - `GET /workspaces/node/dialog`: ACL-protected modal content for a selected item
@@ -400,6 +538,13 @@ Useful URLs with the default configuration:
 - `/settings/workspaces/homepage`: public, signed-in, and personal homepage policy
 - `/settings/workspaces/all`: administrator list
 - `/settings/workspaces/deleted`: restore screen
+
+Existing installations add isolated Workspace themes with:
+
+```bash
+vendor/bin/hph workspace:install-themes-migration
+vendor/bin/hph orm-migrate:up
+```
 
 ### Application homepage policy
 
@@ -449,6 +594,15 @@ When the optional API module is enabled, that module registers the HTTP adapter:
 | `POST /api/v1/workspaces` | `workspace:manage` | Uses the application creation policy |
 | `GET/PATCH/DELETE /api/v1/workspaces/{slug}` | read/manage | Rechecks effective view or manage permission |
 | `GET /api/v1/workspaces/{slug}/tree?lang=hr` | `workspace:read` | Filters inherited ACL and publication state |
+| `GET /api/v1/workspaces/{slug}/shorts?lang=hr` | `workspace:read` | Returns only visible, exactly published summaries |
+| `POST /api/v1/workspaces/{slug}/exports/html` | `workspace:manage` | Downloads the ACL-filtered offline HTML ZIP |
+| `GET/PUT /api/v1/workspaces/homepage/settings` | `workspace:manage` | Administrator-only public/authenticated policy |
+| `GET/PUT /api/v1/workspaces/homepage/preference` | `workspace:read` | Reads or stores only the key owner's personal choice |
+| `GET/PATCH /api/v1/workspaces/{slug}/theme` | `workspace:manage` | Reads or privately changes a theme without changing system themes |
+| `PUT .../{slug}/theme/selection` | `workspace:manage` | Selects inheritance or a system theme only for the Workspace |
+| `POST .../{slug}/theme/import` | `workspace:manage` | Imports a ZIP as the Workspace private theme |
+| `GET .../{slug}/theme/export` | `workspace:manage` | Administrator-only private-theme export |
+| `POST/DELETE .../{slug}/theme/assets` | `workspace:manage` | Adds or deletes private-theme files |
 | `PUT /api/v1/workspaces/{slug}/tree/order` | `workspace:manage` | Atomically validates the complete arrangement |
 | `GET/PUT /api/v1/workspaces/{slug}/acl` | `workspace:manage` | Reads or replaces the complete Workspace ACL |
 | `GET /api/v1/workspaces/{slug}/acl/subjects` | `workspace:manage` | Bounded `category=user\|group&q=...` search |
@@ -463,9 +617,20 @@ membership, archive, and inherited node restrictions used by the web UI.
 Missing view permission is concealed as `404`; a visible resource without
 management permission returns `403`.
 
+Workspace DTOs include `tree_visibility` and `contents_visibility`; node DTOs
+include `contents_visibility`. Accepted values are `inherit`, `shown`, and
+`hidden`. HTML export accepts an optional JSON `node_ids` list. An empty list
+exports the complete visible Workspace; selected IDs export only those pages
+and the tree necessary to reach them.
+
 The ACL-subject search returns only the safe picker DTO: `id`, `label`, `type`,
 `category`, `is_builtin`, and `is_read_only`. Internal Auth fields, including
 password hashes and login metadata, never cross the repository boundary.
+
+Workspace themes remain isolated: `PATCH .../theme` always creates or updates
+the private database/filesystem copy. Workspace API never writes a system JSON
+theme. Import uses the `theme` multipart field; image upload uses `asset` with
+`role=hero|icon|logo|other`.
 
 Example read with a `workspace:read` key:
 
@@ -498,3 +663,8 @@ The command runs PHPCS, Rector dry-run, PHPStan for source and tests, and
 PHPUnit. Every method is documented in Croatian and English. Views use
 escaped output, forms use the framework CSRF field, and controllers validate
 Workspace ownership before write operations.
+
+## 12. Backup and restore
+
+Selective workspace archives, manager authorization, conflict modes, and
+cross-module references are documented in [Workspace backup and restore](backup_en.md).

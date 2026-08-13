@@ -142,6 +142,9 @@ final readonly class WorkspaceSettingsController
             $workspace['manage_path'] = $this->pathFor('workspace.manage', '/workspaces/manage')
             . '?workspace='
             . rawurlencode($slug);
+            $workspace['export_path'] = $this->pathFor('workspace.export', '/workspaces/export')
+            . '?workspace='
+            . rawurlencode($slug);
             $workspace['public_path'] = $this->urlGenerator->namedRouteExists('workspace.show')
             ? $this->urlGenerator->getPathFor('workspace.show', ['workspaceSlug' => $slug])
             : rtrim($this->urlGenerator->getBasePath(), '/')

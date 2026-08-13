@@ -9,6 +9,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceShortsService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
 use HeartPhrame\Localization\TranslatorInterface;
 use HeartPhrame\Routing\UrlGenerator;
@@ -40,6 +41,7 @@ final readonly class WorkspaceShortsController
         private WorkspaceConfig $config,
         private UrlGenerator $urlGenerator,
         private TranslatorInterface $translator,
+        private WorkspaceThemeService $themes,
     ) {
     }
 
@@ -67,6 +69,8 @@ final readonly class WorkspaceShortsController
             return $this->accessDenied();
         }
 
+        $this->themes->activate($workspace);
+
         $language = $this->language($request);
         $query = $request->getQueryParams();
         $model = $this->shorts->viewModel(
@@ -77,7 +81,7 @@ final readonly class WorkspaceShortsController
         );
         $treeVisible = $this->queryVisibility(
             $query['tree'] ?? null,
-            $this->config->treeVisibleByDefault(),
+            $this->config->treeVisibleForWorkspace($workspace),
         );
         $displayOptionsVisible = $this->queryVisibility(
             $query['options'] ?? null,
@@ -110,6 +114,7 @@ final readonly class WorkspaceShortsController
             'treeVisibleByDefault' => $treeVisible,
             'displayOptionsVisibleByDefault' => $displayOptionsVisible,
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+            'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
         ]);
     }
 

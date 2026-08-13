@@ -86,6 +86,7 @@ $workflowIcon = static function (string $action): string {
     <aside
         id="workspace-page-tree"
         class="workspace-sidebar collapse<?= $treeVisibleByDefault ? ' show' : '' ?>"
+        data-workspace-mobile-panel="tree"
         aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
     >
         <nav
@@ -93,6 +94,15 @@ $workflowIcon = static function (string $action): string {
             aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
         >
             <div class="card-body">
+                <div class="workspace-mobile-panel-header">
+                    <h2 class="h6 mb-0"><?= $this->escape(__('Stablo stranica')) ?></h2>
+                    <button
+                        class="workspace-mobile-panel-close"
+                        type="button"
+                        data-workspace-mobile-panel-close="tree"
+                        aria-label="<?= $this->escape(__('Zatvori')) ?>"
+                    >&times;</button>
+                </div>
                 <div class="workspace-tree-heading mb-3">
                     <?php if ($hasTreeActions) : ?>
                         <div
@@ -248,6 +258,19 @@ $workflowIcon = static function (string $action): string {
             </div>
         </nav>
     </aside>
+
+    <button
+        class="workspace-mobile-edge-toggle workspace-mobile-edge-toggle--start"
+        type="button"
+        data-workspace-mobile-panel-open="tree"
+        aria-controls="workspace-page-tree"
+        aria-expanded="false"
+        title="<?= $this->escape(__('Stablo stranica')) ?>"
+        aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
+    >
+        <?= $workflowIcon('tree') ?>
+    </button>
+    <div class="workspace-mobile-panel-backdrop" data-workspace-mobile-panel-backdrop hidden></div>
 
     <main class="workspace-main">
         <?php if ($canCreatePage) : ?>

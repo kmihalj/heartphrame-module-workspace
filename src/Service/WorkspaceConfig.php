@@ -8,6 +8,7 @@ use HeartPhrame\Config\ConfigInterface;
 
 use function array_replace_recursive;
 use function in_array;
+use function is_array;
 use function is_file;
 use function is_scalar;
 use function preg_match;
@@ -72,6 +73,68 @@ final readonly class WorkspaceConfig
         $defaults = $this->section('defaults');
 
         return (bool)($defaults['tree_visible'] ?? true);
+    }
+
+    /**
+     * HR: Određuje je li sadržaj stranice početno prikazan kada područje i
+     *     stranica ne zadaju vlastitu vrijednost.
+     * EN: Determines whether the page outline is initially visible when neither
+     *     the Workspace nor the page supplies an override.
+     */
+    public function contentsVisibleByDefault(): bool
+    {
+        $defaults = $this->section('defaults');
+
+        return (bool)($defaults['contents_visible'] ?? false);
+    }
+
+    /**
+     * HR: Razrješava početni prikaz stabla iz postavke područja i sistemskog fallbacka.
+     * EN: Resolves initial page-tree visibility from the Workspace setting and system fallback.
+     *
+     * @param array<string, mixed> $workspace
+     */
+    public function treeVisibleForWorkspace(array $workspace): bool
+    {
+        return $this->resolveDisplayPolicy(
+            $workspace['tree_visibility'] ?? 'inherit',
+            $this->treeVisibleByDefault(),
+        );
+    }
+
+    /**
+     * HR: Razrješava sadržaj redom stranica, područje pa sistemska postavka.
+     * EN: Resolves outline visibility in page, Workspace, then system order.
+     *
+     * @param array<string, mixed> $workspace
+     * @param array<string, mixed>|null $node
+     */
+    public function contentsVisibleForPage(array $workspace, ?array $node): bool
+    {
+        $workspaceVisible = $this->resolveDisplayPolicy(
+            $workspace['contents_visibility'] ?? 'inherit',
+            $this->contentsVisibleByDefault(),
+        );
+
+        return $this->resolveDisplayPolicy(
+            is_array($node) ? ($node['contents_visibility'] ?? 'inherit') : 'inherit',
+            $workspaceVisible,
+        );
+    }
+
+    /**
+     * HR: Pretvara nasljednu, prikazanu ili skrivenu vrijednost u efektivni boolean.
+     * EN: Converts an inherited, shown, or hidden policy into an effective boolean.
+     */
+    private function resolveDisplayPolicy(mixed $value, bool $fallback): bool
+    {
+        $policy = is_scalar($value) ? strtolower(trim((string)$value)) : 'inherit';
+
+        return match ($policy) {
+            'shown' => true,
+            'hidden' => false,
+            default => $fallback,
+        };
     }
 
     /**
@@ -202,6 +265,50 @@ final readonly class WorkspaceConfig
     public function moduleRoot(): string
     {
         return $this->moduleRoot;
+    }
+
+    /**
+     * HR: Vraća trajni direktorij privatnih tema područja unutar aplikacijskog `data` stabla.
+     * EN: Returns the persistent private-workspace-theme directory inside the application's `data` tree.
+     */
+    public function workspaceThemesPath(): string
+    {
+        $path = rtrim($this->config->getAppRootDir(), DIRECTORY_SEPARATOR)
+        . DIRECTORY_SEPARATOR . 'data'
+        . DIRECTORY_SEPARATOR . 'workspaces'
+        . DIRECTORY_SEPARATOR . 'themes';
+        if (!is_dir($path) && !mkdir($path, 0775, true) && !is_dir($path)) {
+            throw new \RuntimeException('Workspace theme directory cannot be created.');
+        }
+
+        return $path;
+    }
+
+    /**
+     * HR: Vraća siguran direktorij teme jednog područja.
+     * EN: Returns the safe theme directory for one workspace.
+     */
+    public function workspaceThemePath(int $workspaceId): string
+    {
+        if ($workspaceId <= 0) {
+            throw new \InvalidArgumentException('Workspace ID is invalid.');
+        }
+
+        return $this->workspaceThemesPath() . DIRECTORY_SEPARATOR . $workspaceId;
+    }
+
+    /**
+     * HR: Vraća i po potrebi kreira direktorij slikovnih asseta privatne teme.
+     * EN: Returns and creates, when necessary, the private theme image-asset directory.
+     */
+    public function workspaceThemeAssetsPath(int $workspaceId): string
+    {
+        $path = $this->workspaceThemePath($workspaceId) . DIRECTORY_SEPARATOR . 'assets';
+        if (!is_dir($path) && !mkdir($path, 0775, true) && !is_dir($path)) {
+            throw new \RuntimeException('Workspace theme asset directory cannot be created.');
+        }
+
+        return $path;
     }
 
     /**

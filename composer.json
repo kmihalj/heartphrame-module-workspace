@@ -17,6 +17,10 @@
         {
             "type": "vcs",
             "url": "https://gitlab.opencode.hr/srce/aai-eduhr/heartphrame/heartphrame-module-orm.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kmihalj/heartphrame-module-backup.git"
         }
     ],
     "require": {
@@ -26,13 +30,16 @@
         "aaieduhr/heartphrame-module-orm": "dev-main"
     },
     "suggest": {
+        "aaieduhr/heartphrame-module-backup": "Adds complete site backup and scoped Workspace backup/import with ACL, trees, themes, and related content.",
         "aaieduhr/heartphrame-module-editor-html": "Enables Workspace-owned HTML pages and editing.",
         "aaieduhr/heartphrame-module-api": "Exposes ACL-aware Workspace resources through the versioned HTTP API.",
         "aaieduhr/heartphrame-module-menu": "Adds Workspace entries to the application and settings menus.",
         "aaieduhr/heartphrame-module-notification": "Notifies publishers about review requests and authors about publication.",
-        "aaieduhr/heartphrame-module-email": "Sends optional e-mail copies through the Notification module."
+        "aaieduhr/heartphrame-module-email": "Sends optional e-mail copies through the Notification module.",
+        "aaieduhr/heartphrame-module-theme": "Adds isolated per-Workspace themes and includes them in portable HTML exports."
     },
     "require-dev": {
+        "aaieduhr/heartphrame-module-backup": "dev-main",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^10 || ^11",
         "rector/rector": "^2.0",

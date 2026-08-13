@@ -55,6 +55,7 @@ final readonly class WorkspaceShortsService
      *
      * @param array<string, mixed> $workspace
      * @param array<mixed, mixed> $query
+     * @param array<string, mixed>|null $user
      * @return array<string, mixed>
      */
     public function viewModel(
@@ -62,6 +63,7 @@ final readonly class WorkspaceShortsService
         string $language,
         array $query,
         ?string $defaultLanguage = null,
+        ?array $user = null,
     ): array {
         $defaultLanguage = $this->normalizedLanguage(
             $defaultLanguage ?? $this->config->siteDefaultLanguage(),
@@ -83,7 +85,7 @@ final readonly class WorkspaceShortsService
 
         $visibleTree = $this->access->visibleTreeForLanguages(
             $workspace,
-            null,
+            $user,
             array_values(array_unique([$language, $defaultLanguage])),
         );
         $flatNodes = $this->flattenTree($visibleTree);
