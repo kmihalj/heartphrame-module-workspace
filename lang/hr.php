@@ -587,4 +587,65 @@ return [
     'Zahtjev nije uspio.' => 'Zahtjev nije uspio.',
     'Zamijeni postojeće područje' => 'Zamijeni postojeće područje',
     'Zaporka arhiva' => 'Zaporka arhiva',
+    'Održavanje' => 'Održavanje',
+    'Prije čišćenja potvrdite da razumijete da je radnja nepovratna.' =>
+        'Prije čišćenja potvrdite da razumijete da je radnja nepovratna.',
+    'Održavanje je dovršeno.' => 'Održavanje je dovršeno.',
+    'Uklonjene povijesne verzije:' => 'Uklonjene povijesne verzije:',
+    'trajno uklonjene stranice:' => 'trajno uklonjene stranice:',
+    'trajno uklonjeni privitci:' => 'trajno uklonjeni privitci:',
+    'Neke datoteke nije bilo moguće ukloniti; provjerite prava datotečnog sustava.' =>
+        'Neke datoteke nije bilo moguće ukloniti; provjerite prava datotečnog sustava.',
+    'Odaberite valjani opseg održavanja.' => 'Odaberite valjani opseg održavanja.',
+    'Odaberite valjano pravilo povijesti.' => 'Odaberite valjano pravilo povijesti.',
+    'Broj sačuvanih verzija mora biti 3, 5 ili 10.' =>
+        'Broj sačuvanih verzija mora biti 3, 5 ili 10.',
+    'Starost povijesti mora biti 10, 30 ili 90 dana.' =>
+        'Starost povijesti mora biti 10, 30 ili 90 dana.',
+    'Starost obrisanih stavki mora biti 10, 30 ili 90 dana.' =>
+        'Starost obrisanih stavki mora biti 10, 30 ili 90 dana.',
+    'Odaberite barem jednu radnju održavanja.' => 'Odaberite barem jednu radnju održavanja.',
+    'Odabrano područje nije pronađeno.' => 'Odabrano područje nije pronađeno.',
+    'HTML Editor nije dostupan pa održavanje sadržaja nije moguće.' =>
+        'HTML Editor nije dostupan pa održavanje sadržaja nije moguće.',
+    'Pregledajte koliko prostora zauzimaju povijest i obrisane stavke prije čišćenja.' =>
+        'Pregledajte koliko prostora zauzimaju povijest i obrisane stavke prije čišćenja.',
+    'Povijesne verzije' => 'Povijesne verzije',
+    'Obrisane stranice' => 'Obrisane stranice',
+    'Procjena baze' => 'Procjena baze',
+    'Datotečni sustav' => 'Datotečni sustav',
+    'Veličina baze je procjena korisnog sadržaja redaka, ne fizička veličina datoteke baze koja ovisi o sustavu baze i njegovu održavanju.' =>
+        'Veličina baze je procjena korisnog sadržaja redaka, ne fizička veličina datoteke baze koja ovisi o sustavu baze i njegovu održavanju.',
+    'Područje' => 'Područje',
+    'Povijest' => 'Povijest',
+    'Obrisano' => 'Obrisano',
+    'Baza' => 'Baza',
+    'Datoteke' => 'Datoteke',
+    'Čišćenje' => 'Čišćenje',
+    'Čišćenje je nepovratno. Prije pokretanja izradite potpuni backup sitea.' =>
+        'Čišćenje je nepovratno. Prije pokretanja izradite potpuni backup sitea.',
+    'Opseg' => 'Opseg',
+    'Cijeli site' => 'Cijeli site',
+    'Odabrano područje' => 'Odabrano područje',
+    'Povijest stranica' => 'Povijest stranica',
+    'Ne diraj povijest' => 'Ne diraj povijest',
+    'Ukloni svu povijest osim aktualnih i objavljenih verzija' =>
+        'Ukloni svu povijest osim aktualnih i objavljenih verzija',
+    'Zadrži posljednjih nekoliko verzija' => 'Zadrži posljednjih nekoliko verzija',
+    'Ukloni povijest stariju od odabranog broja dana' =>
+        'Ukloni povijest stariju od odabranog broja dana',
+    'Vrijednost' => 'Vrijednost',
+    'Trajno uklanjanje obrisanih stavki' => 'Trajno uklanjanje obrisanih stavki',
+    'Ne uklanjaj obrisane stavke' => 'Ne uklanjaj obrisane stavke',
+    'Starije od 10 dana' => 'Starije od 10 dana',
+    'Starije od 30 dana' => 'Starije od 30 dana',
+    'Starije od 90 dana' => 'Starije od 90 dana',
+    'Referencirani privitci ostaju sačuvani dok ih koristi neka zadržana verzija.' =>
+        'Referencirani privitci ostaju sačuvani dok ih koristi neka zadržana verzija.',
+    'Razumijem da je čišćenje nepovratno i da sadržaj mogu vratiti samo iz backupa.' =>
+        'Razumijem da je čišćenje nepovratno i da sadržaj mogu vratiti samo iz backupa.',
+    'Pokreni održavanje' => 'Pokreni održavanje',
+    'Broj sačuvanih verzija' => 'Broj sačuvanih verzija',
+    'Starost u danima' => 'Starost u danima',
+    'Ukupno' => 'Ukupno',
 ];

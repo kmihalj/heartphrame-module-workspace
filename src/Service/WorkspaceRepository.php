@@ -9,6 +9,7 @@ use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
 use AaiEduHr\HeartPhrameModuleWorkspace\Event\WorkspaceContentChanged;
 use AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 use function array_filter;
@@ -60,6 +61,7 @@ final readonly class WorkspaceRepository
     public function __construct(
         private Database $database,
         private ?EventDispatcherInterface $events = null,
+        private ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -2189,13 +2191,20 @@ final readonly class WorkspaceRepository
                 $nodeId,
                 $language,
             ));
-        } catch (\Throwable) {
+        } catch (\Throwable $throwable) {
             /*
              * HR: Ručni reindeks i periodična provjera popravljaju eventualni
              *     kvar izvedenog indeksa bez gubitka izvornog sadržaja.
              * EN: Manual reindexing and periodic refresh repair a derived-index
              *     failure without losing source content.
              */
+            $this->logger?->error('Workspace content-change listeners failed for workspace {workspace_id}.', [
+                'module' => 'workspace',
+                'workspace_id' => $workspaceId,
+                'node_id' => $nodeId,
+                'reason' => $reason,
+                'exception' => $throwable,
+            ]);
         }
     }
 

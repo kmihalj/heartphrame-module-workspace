@@ -127,6 +127,17 @@ final readonly class WorkspaceMenuIntegration
                     'enabled' => true,
                     'level' => 1,
                 ],
+                [
+                    'id' => 'workspace.settings.maintenance',
+                    'parent_id' => 'workspace.settings.group',
+                    'label' => ['hr' => 'Održavanje', 'en' => 'Maintenance'],
+                    'route' => 'workspace.settings.maintenance',
+                    'url' => '',
+                    'query' => '',
+                    'order' => 50,
+                    'enabled' => true,
+                    'level' => 1,
+                ],
             ]);
         }
     }

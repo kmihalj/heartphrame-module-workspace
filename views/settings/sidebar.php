@@ -11,6 +11,7 @@ declare(strict_types=1);
  * @var string $homepagePath
  * @var string $allPath
  * @var string $deletedPath
+ * @var string $maintenancePath
  * @var string $settingsMenuActiveSection
  * @var object|null $menuRenderer
  */
@@ -65,6 +66,14 @@ if (isset($menuRenderer) && is_object($menuRenderer)) {
     <?= $settingsMenuActiveSection === 'workspace.settings.deleted' ? 'aria-current="page"' : '' ?>
                 >
     <?= $this->escape(__('Obrisana područja')) ?>
+                </a>
+                <a
+                    class="list-group-item list-group-item-action ps-4
+    <?= $settingsMenuActiveSection === 'workspace.settings.maintenance' ? 'active' : '' ?>"
+                    href="<?= $this->escape($maintenancePath) ?>"
+    <?= $settingsMenuActiveSection === 'workspace.settings.maintenance' ? 'aria-current="page"' : '' ?>
+                >
+    <?= $this->escape(__('Održavanje')) ?>
                 </a>
             </div>
         </div>

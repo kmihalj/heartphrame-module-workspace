@@ -6,6 +6,7 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
 
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceSettingsService;
@@ -34,6 +35,7 @@ final readonly class WorkspaceSettingsController
         private WorkspaceRepository $repository,
         private WorkspaceAccessService $access,
         private WorkspaceSettingsService $settings,
+        private WorkspaceMaintenanceService $maintenance,
         private WorkspaceConfig $config,
         private UrlGenerator $urlGenerator,
         private AlertHandler $alertHandler,
@@ -61,6 +63,10 @@ final readonly class WorkspaceSettingsController
             ),
             'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
             'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
+            'maintenancePath' => $this->pathFor(
+                'workspace.settings.maintenance',
+                '/settings/workspaces/maintenance',
+            ),
             'settingsMenuActiveSection' => 'workspace.settings',
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
         ]);
@@ -130,6 +136,82 @@ final readonly class WorkspaceSettingsController
     }
 
     /**
+     * HR: Prikazuje zauzeće povijesti i obrisanih stavki te siguran obrazac održavanja.
+     * EN: Displays history/deleted-item storage and the safe maintenance form.
+     */
+    public function maintenance(): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        $dashboard = $this->maintenance->dashboard();
+        return $this->viewRenderer->render('settings/maintenance', [
+            'title' => __('Održavanje'),
+            'siteStatistics' => $dashboard['statistics']['site'] ?? [],
+            'workspaces' => $dashboard['workspaces'],
+            'runPath' => $this->pathFor(
+                'workspace.settings.maintenance.run',
+                '/settings/workspaces/maintenance',
+            ),
+            'settingsPath' => $this->pathFor('workspace.settings', '/settings/workspaces'),
+            'homepagePath' => $this->pathFor('workspace.settings.homepage', '/settings/workspaces/homepage'),
+            'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
+            'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
+            'maintenancePath' => $this->pathFor(
+                'workspace.settings.maintenance',
+                '/settings/workspaces/maintenance',
+            ),
+            'settingsMenuActiveSection' => 'workspace.settings.maintenance',
+            'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
+        ]);
+    }
+
+    /**
+     * HR: Izvršava izričito potvrđeno čišćenje i vraća mjerljiv rezultat administratoru.
+     * EN: Runs explicitly confirmed cleanup and reports measurable results to the administrator.
+     */
+    public function runMaintenance(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->access->isAdministrator()) {
+            return $this->accessDenied();
+        }
+
+        $body = WorkspaceValue::stringKeyArray($request->getParsedBody());
+        try {
+            if (WorkspaceValue::string($body['confirm'] ?? '') !== '1') {
+                throw new \RuntimeException(__('Prije čišćenja potvrdite da razumijete da je radnja nepovratna.'));
+            }
+
+            $result = $this->maintenance->clean(
+                WorkspaceValue::string($body['scope'] ?? 'site'),
+                WorkspaceValue::int($body['workspace_id'] ?? 0),
+                WorkspaceValue::string($body['history_policy'] ?? 'none'),
+                WorkspaceValue::int($body['history_value'] ?? 0),
+                WorkspaceValue::int($body['deleted_days'] ?? 0),
+            );
+            $message = __('Održavanje je dovršeno.')
+            . ' '
+            . __('Uklonjene povijesne verzije:') . ' ' . WorkspaceValue::int($result['deleted_versions'] ?? 0)
+            . '; '
+            . __('trajno uklonjene stranice:') . ' ' . WorkspaceValue::int($result['purged_documents'] ?? 0)
+            . '; '
+            . __('trajno uklonjeni privitci:') . ' ' . WorkspaceValue::int($result['purged_assets'] ?? 0) . '.';
+            if (WorkspaceValue::int($result['failed_files'] ?? 0) > 0) {
+                $message .= ' ' . __('Neke datoteke nije bilo moguće ukloniti; provjerite prava datotečnog sustava.');
+            }
+
+            $this->alertHandler->add(new Alert($message, AlertLevelEnum::Success));
+        } catch (Throwable $throwable) {
+            $this->alertHandler->add(new Alert($throwable->getMessage(), AlertLevelEnum::Danger));
+        }
+
+        return $this->responseFactory->redirect(
+            $this->pathFor('workspace.settings.maintenance', '/settings/workspaces/maintenance'),
+        );
+    }
+
+    /**
      * HR: Renderira zajednički administratorski popis aktivnih ili obrisanih područja.
      * EN: Renders the shared administration list for active or deleted workspaces.
      *
@@ -166,6 +248,10 @@ final readonly class WorkspaceSettingsController
             ),
             'allPath' => $this->pathFor('workspace.settings.all', '/settings/workspaces/all'),
             'deletedPath' => $this->pathFor('workspace.settings.deleted', '/settings/workspaces/deleted'),
+            'maintenancePath' => $this->pathFor(
+                'workspace.settings.maintenance',
+                '/settings/workspaces/maintenance',
+            ),
             'newPath' => $this->pathFor('workspace.manage', '/workspaces/manage'),
             'settingsMenuActiveSection' => $deleted
             ? 'workspace.settings.deleted'

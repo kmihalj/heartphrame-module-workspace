@@ -53,6 +53,8 @@ Croatian documentation: [README_hr.md](README_hr.md)
 - optional versioned REST API for Workspace metadata, ACL, link-tree operations,
   homepages, scoped themes, summaries, and portable HTML export
 - optional Workspace Search integration for ACL-aware published-content lookup
+- administrator maintenance for the complete site or one Workspace, with
+  storage reporting, safe history pruning, and permanent removal of old deleted pages and assets
 - neutral `WorkspaceContentChanged` events after publication, archival, deletion,
   tree metadata, and Workspace lifecycle changes so optional derived indexes can
   synchronize without coupling Workspace to a search implementation
@@ -77,6 +79,12 @@ search without loading the complete directory.
 Default display is resolved in **page → Workspace → system** order. A
 Workspace may inherit, show, or hide its tree and page outlines, while an
 individual page may override only its own outline display.
+
+Deleted documents are not physically removed immediately: administrators can
+restore them until they are explicitly purged after the selected retention
+period in **Settings → Workspaces → Maintenance**. See the
+[maintenance documentation](docs/index_en.md#13-storage-maintenance) for the
+safety rules.
 
 ## Requirements
 

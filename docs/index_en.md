@@ -668,3 +668,35 @@ Workspace ownership before write operations.
 
 Selective workspace archives, manager authorization, conflict modes, and
 cross-module references are documented in [Workspace backup and restore](backup_en.md).
+
+## 13. Storage maintenance
+
+The administrator-only **Settings → Workspaces → Maintenance** page reports the
+estimated database payload and actual managed-file size for the complete site
+and for every active Workspace. Historical versions and deleted pages/assets
+are reported separately so administrators can identify storage growth before
+removing anything.
+
+Cleanup may target the complete site or one Workspace. History may be:
+
+- left unchanged;
+- reduced by deleting all old versions;
+- limited to the newest 3, 5, or 10 versions per document and language;
+- pruned when older than 10, 30, or 90 days.
+
+Deleted pages and assets may be permanently purged after 10, 30, or 90 days.
+Until that purge, deletion is soft and an administrator can still restore the
+content. Permanent cleanup cannot be undone, so create and verify a backup
+first.
+
+The service always protects the current version, the newest version of every
+language, and versions referenced as current or published by the Workspace
+tree. An asset remains on disk while any retained version references it.
+Database changes run in a transaction; files are removed only after that
+transaction succeeds.
+
+Database size is an estimate of useful row payload, not the size of the entire
+database file. Database engines normally reuse freed pages, so the physical
+file may not shrink immediately. `VACUUM`, `OPTIMIZE`, and equivalent
+administrator operations differ across SQLite, PostgreSQL, and MySQL and are
+therefore not run automatically by the portable Workspace module.

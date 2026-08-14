@@ -24,6 +24,8 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuNavigationTargetProvider;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
@@ -48,6 +50,7 @@ use HeartPhrame\Routing\Routes;
 use HeartPhrame\Routing\UrlGenerator;
 use HeartPhrame\View\View;
 use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 
 $services = [
     WorkspaceConfig::class => static fn(ContainerInterface $container): WorkspaceConfig =>
@@ -57,6 +60,7 @@ $services = [
         new WorkspaceRepository(
             $container->get(Database::class),
             $container->get(\Psr\EventDispatcher\EventDispatcherInterface::class),
+            $container->get(LoggerInterface::class),
         ),
 
     WorkspaceThemeRepository::class => static fn(ContainerInterface $container): WorkspaceThemeRepository =>
@@ -186,6 +190,16 @@ $services = [
             $container->get(Routes::class),
         ),
 
+    WorkspaceMaintenanceBridge::class => static fn(ContainerInterface $container): WorkspaceMaintenanceBridge =>
+        new WorkspaceMaintenanceBridge($container),
+
+    WorkspaceMaintenanceService::class => static fn(ContainerInterface $container): WorkspaceMaintenanceService =>
+        new WorkspaceMaintenanceService(
+            $container->get(Database::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceMaintenanceBridge::class),
+        ),
+
     WorkspaceShortsService::class => static fn(ContainerInterface $container): WorkspaceShortsService =>
         new WorkspaceShortsService(
             $container->get(WorkspaceRepository::class),
@@ -243,6 +257,8 @@ $services = [
             $container->get(TranslatorInterface::class),
             $container->get(WorkspaceThemeService::class),
             $container->get(WorkspaceMenuService::class),
+            $container->get(\Psr\EventDispatcher\EventDispatcherInterface::class),
+            $container->get(LoggerInterface::class),
         ),
 
     WorkspaceExportController::class => static fn(ContainerInterface $container): WorkspaceExportController =>
@@ -265,6 +281,7 @@ $services = [
             $container->get(WorkspaceRepository::class),
             $container->get(WorkspaceAccessService::class),
             $container->get(WorkspaceSettingsService::class),
+            $container->get(WorkspaceMaintenanceService::class),
             $container->get(WorkspaceConfig::class),
             $container->get(UrlGenerator::class),
             $container->get(AlertHandler::class),
@@ -339,6 +356,7 @@ if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupPr
                     [\AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::SITE, \AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::COMPONENT],
                     true,
                     true,
+                    componentGroups: [\AaiEduHr\HeartPhrameModuleBackup\Value\BackupComponentGroup::WORKSPACES],
                 ),
                 [
                     ['dataset' => 'workspaces', 'table' => \AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace::TABLE_WORKSPACES, 'primary_key' => 'id', 'conflict_keys' => ['uuid'], 'preserve_primary_key' => false, 'identity_namespace' => 'workspace.workspace', 'foreign_keys' => [
@@ -414,6 +432,7 @@ if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvi
                     ['workspace'],
                     [\AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::SITE, \AaiEduHr\HeartPhrameModuleBackup\Value\BackupScope::COMPONENT],
                     true,
+                    componentGroups: [\AaiEduHr\HeartPhrameModuleBackup\Value\BackupComponentGroup::WORKSPACES],
                 ),
                 $container->get(\AaiEduHr\HeartPhrameModuleBackup\Service\BackupFilesystem::class),
                 [['key' => 'workspace-themes', 'path' => $container->get(ConfigInterface::class)->getAppRootDir() . '/data/workspaces/themes']],

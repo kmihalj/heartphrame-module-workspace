@@ -31,7 +31,7 @@ final class WorkspaceManifestTest extends TestCase
             $routesByName[$route[3]] = $route;
         }
 
-        $this->assertCount(39, $routesByName);
+        $this->assertCount(41, $routesByName);
         $this->assertSame(
             ['GET', '/workspaces', WorkspaceController::class . '@index', 'workspace.index', []],
             $routesByName['workspace.index'],
@@ -39,6 +39,18 @@ final class WorkspaceManifestTest extends TestCase
         $this->assertSame(
             WorkspaceSettingsController::class . '@index',
             $routesByName['workspace.settings'][2],
+        );
+        $this->assertSame(
+            WorkspaceSettingsController::class . '@maintenance',
+            $routesByName['workspace.settings.maintenance'][2],
+        );
+        $this->assertSame(
+            WorkspaceSettingsController::class . '@runMaintenance',
+            $routesByName['workspace.settings.maintenance.run'][2],
+        );
+        $this->assertContains(
+            RequireAuthenticatedUserMiddleware::class,
+            $routesByName['workspace.settings.maintenance.run'][4],
         );
         $this->assertContains(
             RequireAuthenticatedUserMiddleware::class,

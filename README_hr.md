@@ -52,6 +52,8 @@ English documentation: [README.md](README.md)
 - opcionalni izbor sistemske teme po Području i izolirana privatna prilagodba teme
 - opcionalni verzionirani REST API za podatke područja, ACL i linkove u stablu
 - opcionalna Workspace Search integracija za ACL pretragu objavljenog sadržaja
+- administratorsko održavanje cijelog sitea ili područja uz pregled prostora,
+  sigurno prorjeđivanje povijesti i trajno uklanjanje dovoljno starih obrisanih stranica i privitaka
 - neutralni događaji `WorkspaceContentChanged` nakon objave, arhiviranja, brisanja,
   promjene metapodataka stabla i životnog ciklusa Područja kako bi se opcionalni
   izvedeni indeksi sinkronizirali bez vezivanja Workspacea uz implementaciju pretrage
@@ -76,6 +78,11 @@ pretragom koja ne učitava cijeli imenik.
 Zadani prikaz se razrješava redom **stranica → Područje → sistem**. Područje
 može naslijediti, prikazati ili sakriti stablo i sadržaj, dok pojedina stranica
 može zasebno nadjačati samo prikaz svojega sadržaja.
+
+Obrisani dokumenti nisu odmah fizički uklonjeni: administrator ih može vratiti
+sve dok ih izričito ne ukloni kroz **Postavke → Područja → Održavanje** nakon
+odabranog razdoblja čuvanja. Detalji i sigurnosna pravila opisani su u
+[dokumentaciji održavanja](docs/index_hr.md#13-održavanje-prostora).
 
 ## Preduvjeti
 

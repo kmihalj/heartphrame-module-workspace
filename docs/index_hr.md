@@ -656,3 +656,34 @@ pisanja provjeravaju pripadnost Području.
 
 Selektivna arhiva područja, ovlasti upravitelja, načini obrade konflikata i veze
 između modula opisani su u [backupu i povratu područja](backup_hr.md).
+
+## 13. Održavanje prostora
+
+Administratorska stranica **Postavke → Područja → Održavanje** prikazuje
+procijenjeni prostor baze i stvarnu veličinu upravljanih datoteka za cijeli site
+i svako aktivno područje. Odvojeno su prikazani povijesne verzije te obrisane
+stranice i privitci, pa administrator prije čišćenja vidi gdje nastaje višak.
+
+Čišćenje se može ograničiti na cijeli site ili jedno područje. Za povijest je
+moguće:
+
+- ne mijenjati povijest;
+- obrisati sve stare verzije;
+- zadržati zadnje 3, 5 ili 10 verzija po dokumentu i jeziku;
+- obrisati verzije starije od 10, 30 ili 90 dana.
+
+Obrisane stranice i privitci mogu se trajno ukloniti nakon 10, 30 ili 90 dana.
+Dok se to ne napravi, riječ je o mekom brisanju: administrator ih još može
+vratiti. Trajno čišćenje je nepovratno, zato prije njega treba napraviti
+provjeren backup.
+
+Servis uvijek štiti trenutačnu verziju, najnoviju verziju svakog jezika te
+verzije koje stablo područja označava kao trenutačne ili objavljene. Privitak se
+ne briše dok ga koristi bilo koja sačuvana verzija. Baza se mijenja u
+transakciji, a datoteke se uklanjaju tek nakon uspješnog upisa promjena.
+
+Prikaz veličine baze je procjena korisnog sadržaja redaka, a ne veličina cijele
+datoteke baze. Nakon brisanja sustav baze oslobođene stranice uobičajeno ponovno
+koristi, pa fizička datoteka ne mora odmah postati manja. `VACUUM`, `OPTIMIZE`
+ili slična administratorska operacija ovisi o SQLiteu, PostgreSQL-u ili MySQL-u
+i zato se ne pokreće automatski iz prijenosnog Workspace modula.

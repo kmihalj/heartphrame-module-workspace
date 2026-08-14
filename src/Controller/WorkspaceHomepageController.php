@@ -74,6 +74,10 @@ final readonly class WorkspaceHomepageController
                 'workspace.settings.deleted',
                 '/settings/workspaces/deleted',
             ),
+            'maintenancePath' => $this->pathFor(
+                'workspace.settings.maintenance',
+                '/settings/workspaces/maintenance',
+            ),
             'settingsMenuActiveSection' => 'workspace.settings.homepage',
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
             'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),

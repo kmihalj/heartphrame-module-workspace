@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
 
+use AaiEduHr\HeartPhrameModuleWorkspace\Event\WorkspaceContentViewed;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
@@ -20,8 +21,10 @@ use HeartPhrame\CodeBook\AlertLevelEnum;
 use HeartPhrame\Http\ResponseFactory;
 use HeartPhrame\Localization\TranslatorInterface;
 use HeartPhrame\Routing\UrlGenerator;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
 
@@ -56,6 +59,8 @@ final readonly class WorkspaceController
         private TranslatorInterface $translator,
         private WorkspaceThemeService $themes,
         private WorkspaceMenuService $menus,
+        private EventDispatcherInterface $events,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -285,6 +290,12 @@ final readonly class WorkspaceController
                 $this->managePath($this->stringValue($workspace['slug'] ?? '')),
             );
         } catch (Throwable $throwable) {
+            $this->logger->warning('Workspace save failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.save',
+                'workspace_id' => $workspaceId > 0 ? $workspaceId : null,
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
 
             return $this->responseFactory->redirect($this->managePath(
@@ -336,6 +347,12 @@ final readonly class WorkspaceController
                 $this->managePath($this->stringValue($workspace['slug'] ?? '')),
             );
         } catch (Throwable $throwable) {
+            $this->logger->warning('Workspace restore failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.restore',
+                'workspace_id' => $this->intValue($body['workspace_id'] ?? 0) ?: null,
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
 
             return $this->responseFactory->redirect(
@@ -470,6 +487,13 @@ final readonly class WorkspaceController
                 $this->editor->deleteDocument($documentKey);
             }
 
+            $this->logger->warning('Workspace page creation failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.page.create',
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'parent_node_id' => $parentId > 0 ? $parentId : null,
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
 
             return $this->responseFactory->redirect($workspacePath);
@@ -672,6 +696,13 @@ final readonly class WorkspaceController
 
             $this->success(__('Stablo stranica je spremljeno.'));
         } catch (Throwable $throwable) {
+            $this->logger->warning('Workspace tree item save failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.node.save',
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'node_id' => $nodeId > 0 ? $nodeId : null,
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
         }
 
@@ -712,6 +743,12 @@ final readonly class WorkspaceController
             );
             $this->success(__('Hijerarhija i redoslijed stranica su spremljeni.'));
         } catch (Throwable $throwable) {
+            $this->logger->warning('Workspace tree reorder failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.tree.reorder',
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
         }
 
@@ -769,6 +806,13 @@ final readonly class WorkspaceController
 
             $this->success(__('Stranica i njezina podgrana su obrisane.'));
         } catch (Throwable $throwable) {
+            $this->logger->warning('Workspace subtree deletion failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.node.delete',
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'node_id' => $this->intValue($node['id'] ?? 0),
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
         }
 
@@ -958,6 +1002,14 @@ final readonly class WorkspaceController
                 );
             }
         } catch (Throwable $throwable) {
+            $this->logger->warning('Workspace page workflow transition failed.', [
+                'module' => 'workspace',
+                'action' => 'workspace.workflow.' . ($action !== '' ? $action : 'unknown'),
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'node_id' => $this->intValue($node['id'] ?? 0),
+                'language' => $language,
+                'exception' => $throwable,
+            ]);
             $this->failure($throwable->getMessage());
         }
 
@@ -1154,6 +1206,8 @@ final readonly class WorkspaceController
         $canOrganizeTree = $canOrganizeTree && count($managementNodes) === count($allNodes);
         $managementNodes = $this->orderNodesForManagement($managementNodes);
 
+        $this->contentViewed($workspace, $node, $language);
+
         return $this->viewRenderer->render('workspace/show', [
             'title' => is_array($editorView)
                 ? $this->stringValue($editorView['title'] ?? '')
@@ -1213,6 +1267,35 @@ final readonly class WorkspaceController
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
             'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
         ]);
+    }
+
+    /**
+     * HR: Obavještava opcionalne module o uspješnom pregledu bez utjecaja na
+     *     prikaz stranice ako neki izvedeni listener zakaže.
+     * EN: Notifies optional modules about a successful view without affecting
+     *     page rendering when a derived listener fails.
+     *
+     * @param array<string,mixed> $workspace
+     * @param array<string,mixed>|null $node
+     */
+    private function contentViewed(array $workspace, ?array $node, string $language): void
+    {
+        try {
+            $this->events->dispatch(new WorkspaceContentViewed(
+                $this->intValue($workspace['id'] ?? 0),
+                $this->stringValue($workspace['name'] ?? ''),
+                is_array($node) ? $this->intValue($node['id'] ?? 0) ?: null : null,
+                is_array($node) ? $this->stringValue($node['title'] ?? '') ?: null : null,
+                $language,
+            ));
+        } catch (Throwable $throwable) {
+            $this->logger->error('Workspace view listeners failed for workspace {workspace_id}.', [
+                'module' => 'workspace',
+                'workspace_id' => $this->intValue($workspace['id'] ?? 0),
+                'node_id' => is_array($node) ? $this->intValue($node['id'] ?? 0) : null,
+                'exception' => $throwable,
+            ]);
+        }
     }
 
     /**

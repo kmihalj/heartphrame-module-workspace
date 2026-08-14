@@ -296,6 +296,20 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                 'workspace.settings.deleted',
                 [RequireAuthenticatedUserMiddleware::class],
             ],
+            [
+                'GET',
+                '/settings/workspaces/maintenance',
+                WorkspaceSettingsController::class . '@maintenance',
+                'workspace.settings.maintenance',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
+            [
+                'POST',
+                '/settings/workspaces/maintenance',
+                WorkspaceSettingsController::class . '@runMaintenance',
+                'workspace.settings.maintenance.run',
+                [RequireAuthenticatedUserMiddleware::class],
+            ],
         ];
 
         // HR: Rute se uopće ne registriraju bez opcionalnog Backup modula.

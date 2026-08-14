@@ -588,4 +588,65 @@ return [
     'Zahtjev nije uspio.' => 'The request failed.',
     'Zamijeni postojeće područje' => 'Replace the existing Workspace',
     'Zaporka arhiva' => 'Archive passphrase',
+    'Održavanje' => 'Maintenance',
+    'Prije čišćenja potvrdite da razumijete da je radnja nepovratna.' =>
+        'Before cleaning, confirm that you understand the action is irreversible.',
+    'Održavanje je dovršeno.' => 'Maintenance has finished.',
+    'Uklonjene povijesne verzije:' => 'Historical versions removed:',
+    'trajno uklonjene stranice:' => 'pages permanently removed:',
+    'trajno uklonjeni privitci:' => 'attachments permanently removed:',
+    'Neke datoteke nije bilo moguće ukloniti; provjerite prava datotečnog sustava.' =>
+        'Some files could not be removed; check filesystem permissions.',
+    'Odaberite valjani opseg održavanja.' => 'Select a valid maintenance scope.',
+    'Odaberite valjano pravilo povijesti.' => 'Select a valid history rule.',
+    'Broj sačuvanih verzija mora biti 3, 5 ili 10.' =>
+        'The number of retained versions must be 3, 5, or 10.',
+    'Starost povijesti mora biti 10, 30 ili 90 dana.' =>
+        'History age must be 10, 30, or 90 days.',
+    'Starost obrisanih stavki mora biti 10, 30 ili 90 dana.' =>
+        'Deleted-item age must be 10, 30, or 90 days.',
+    'Odaberite barem jednu radnju održavanja.' => 'Select at least one maintenance action.',
+    'Odabrano područje nije pronađeno.' => 'The selected Workspace was not found.',
+    'HTML Editor nije dostupan pa održavanje sadržaja nije moguće.' =>
+        'HTML Editor is unavailable, so content maintenance cannot run.',
+    'Pregledajte koliko prostora zauzimaju povijest i obrisane stavke prije čišćenja.' =>
+        'Review the space used by history and deleted items before cleaning.',
+    'Povijesne verzije' => 'Historical versions',
+    'Obrisane stranice' => 'Deleted pages',
+    'Procjena baze' => 'Database estimate',
+    'Datotečni sustav' => 'Filesystem',
+    'Veličina baze je procjena korisnog sadržaja redaka, ne fizička veličina datoteke baze koja ovisi o sustavu baze i njegovu održavanju.' =>
+        'Database size is an estimate of useful row payload, not the physical database file size, which depends on the database engine and its maintenance.',
+    'Područje' => 'Workspace',
+    'Povijest' => 'History',
+    'Obrisano' => 'Deleted',
+    'Baza' => 'Database',
+    'Datoteke' => 'Files',
+    'Čišćenje' => 'Cleanup',
+    'Čišćenje je nepovratno. Prije pokretanja izradite potpuni backup sitea.' =>
+        'Cleanup is irreversible. Create a complete site backup before running it.',
+    'Opseg' => 'Scope',
+    'Cijeli site' => 'Entire site',
+    'Odabrano područje' => 'Selected Workspace',
+    'Povijest stranica' => 'Page history',
+    'Ne diraj povijest' => 'Do not change history',
+    'Ukloni svu povijest osim aktualnih i objavljenih verzija' =>
+        'Remove all history except current and published versions',
+    'Zadrži posljednjih nekoliko verzija' => 'Keep the latest versions',
+    'Ukloni povijest stariju od odabranog broja dana' =>
+        'Remove history older than the selected number of days',
+    'Vrijednost' => 'Value',
+    'Trajno uklanjanje obrisanih stavki' => 'Permanently remove deleted items',
+    'Ne uklanjaj obrisane stavke' => 'Do not remove deleted items',
+    'Starije od 10 dana' => 'Older than 10 days',
+    'Starije od 30 dana' => 'Older than 30 days',
+    'Starije od 90 dana' => 'Older than 90 days',
+    'Referencirani privitci ostaju sačuvani dok ih koristi neka zadržana verzija.' =>
+        'Referenced attachments remain preserved while any retained version uses them.',
+    'Razumijem da je čišćenje nepovratno i da sadržaj mogu vratiti samo iz backupa.' =>
+        'I understand that cleanup is irreversible and content can only be recovered from a backup.',
+    'Pokreni održavanje' => 'Run maintenance',
+    'Broj sačuvanih verzija' => 'Number of retained versions',
+    'Starost u danima' => 'Age in days',
+    'Ukupno' => 'Total',
 ];
