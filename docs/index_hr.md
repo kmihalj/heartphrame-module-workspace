@@ -573,9 +573,10 @@ vrijednosti.
 
 ## 10. API integracija
 
-Workspace se i dalje može instalirati samostalno. Izlaže samo neutralni opis
-scopeova i `WorkspaceApiService`; ne uvozi klase API modula. Kada je uključen
-opcionalni API modul, on registrira HTTP adapter:
+Workspace se i dalje može instalirati samostalno. Transportno neutralni
+`WorkspaceApiService` sadrži poslovnu granicu. Kada je opcionalni API uključen,
+Workspaceov `WorkspaceApiExtension` registrira rute, a
+`WorkspaceResourceController` prilagođava taj servis:
 
 | Metoda i putanja | Potrebni scope | Domensko pravilo |
 | --- | --- | --- |

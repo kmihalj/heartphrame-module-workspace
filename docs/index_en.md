@@ -584,9 +584,10 @@ these values.
 
 ## 10. API integration
 
-Workspace remains independently installable. It exposes only the neutral scope
-descriptor and `WorkspaceApiService`; it does not import API-module classes.
-When the optional API module is enabled, that module registers the HTTP adapter:
+Workspace remains independently installable. Its transport-neutral
+`WorkspaceApiService` contains the business boundary. When optional API is
+enabled, Workspace's `WorkspaceApiExtension` registers the routes and its
+`WorkspaceResourceController` adapts that service:
 
 | Method and path | Required scope | Domain rule |
 | --- | --- | --- |

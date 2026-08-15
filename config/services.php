@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use AaiEduHr\HeartPhrameModuleAuth\Backup\AuthBackupIdentityResolver;
 use AaiEduHr\HeartPhrameModuleOrm\Database\Database;
 use AaiEduHr\HeartPhrameModuleWorkspace\Account\WorkspaceHomepageAccountSectionProvider;
+use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceApiExtension;
 use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceApiService;
-use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Api\WorkspaceResourceController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Backup\WorkspaceScopedBackupProvider;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceBackupController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceExportController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceMenuController;
@@ -14,8 +18,6 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceShortsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceThemeController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
-use AaiEduHr\HeartPhrameModuleWorkspace\Backup\WorkspaceScopedBackupProvider;
-use AaiEduHr\HeartPhrameModuleAuth\Backup\AuthBackupIdentityResolver;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorAccess;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
@@ -23,9 +25,9 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportEditorBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageService;
-use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuNavigationTargetProvider;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
@@ -342,9 +344,26 @@ $services = [
             ),
 ];
 
+// HR: Workspace sam registrira svoje ACL-aware API rute uz API jezgru.
+// EN: Workspace registers its own ACL-aware API routes with the API core.
+if (interface_exists(\AaiEduHr\HeartPhrameModuleApi\Contract\ApiExtensionInterface::class)) {
+    $services[WorkspaceApiExtension::class] =
+    static fn(): WorkspaceApiExtension => new WorkspaceApiExtension();
+    $services[WorkspaceResourceController::class] =
+    static fn(ContainerInterface $container): WorkspaceResourceController =>
+            new WorkspaceResourceController(
+                $container->get(\AaiEduHr\HeartPhrameModuleApi\Http\ApiResponseFactory::class),
+                $container->get(ResponseFactory::class),
+                $container->get(WorkspaceApiService::class),
+                $container->get(ConfigInterface::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleApi\Service\ApiCursorPaginator::class),
+                $container->get(\AaiEduHr\HeartPhrameModuleApi\Service\ApiEntityTagService::class),
+            );
+}
+
 if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider::class)) {
     $services['heartphrame.backup.provider.workspace'] =
-        static fn(ContainerInterface $container): \AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider =>
+    static fn(ContainerInterface $container): \AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider =>
             new \AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupProvider(
                 $container->get(Database::class),
                 new \AaiEduHr\HeartPhrameModuleBackup\Value\BackupProviderMetadata(
@@ -422,7 +441,7 @@ if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\DatabaseTableBackupPr
 
 if (class_exists(\AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider::class)) {
     $services['heartphrame.backup.provider.workspace-files'] =
-        static fn(ContainerInterface $container): \AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider =>
+    static fn(ContainerInterface $container): \AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider =>
             new \AaiEduHr\HeartPhrameModuleBackup\Service\FilesystemBackupProvider(
                 new \AaiEduHr\HeartPhrameModuleBackup\Value\BackupProviderMetadata(
                     'workspace-files',
@@ -443,7 +462,7 @@ if (interface_exists(\AaiEduHr\HeartPhrameModuleBackup\Contract\BackupProviderIn
     // HR: Selektivni backup područja koristi stabilne poslovne identitete.
     // EN: Selective workspace backup uses stable business identities.
     $services['heartphrame.backup.provider.workspace-scope'] =
-        static fn(ContainerInterface $container): WorkspaceScopedBackupProvider =>
+    static fn(ContainerInterface $container): WorkspaceScopedBackupProvider =>
             new WorkspaceScopedBackupProvider(
                 $container->get(Database::class),
                 $container->get(AuthBackupIdentityResolver::class),
@@ -456,7 +475,7 @@ if (interface_exists(\AaiEduHr\HeartPhrameModuleBackup\Contract\BackupProviderIn
     // EN: Workspace owns its backup-UI ACL rules, so the generic Backup module
     // does not need to know any Workspace class.
     $services[WorkspaceBackupController::class] =
-        static fn(ContainerInterface $container): WorkspaceBackupController =>
+    static fn(ContainerInterface $container): WorkspaceBackupController =>
             new WorkspaceBackupController(
                 $container->get(ResponseFactory::class),
                 $container->get(WorkspaceModuleViewRenderer::class),
