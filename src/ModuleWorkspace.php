@@ -27,6 +27,10 @@ final class ModuleWorkspace
 
     public const TABLE_WORKSPACE_THEMES = 'workspace_themes';
 
+    public const TABLE_WORKSPACE_BACKLINKS = 'workspace_backlinks';
+
+    public const TABLE_WORKSPACE_BACKLINK_INDEX_STATE = 'workspace_backlink_index_state';
+
     /**
      * HR: Sprječava instanciranje klase koja služi samo kao registar stabilnog naziva paketa.
      * EN: Prevents instantiation of a class used only as a registry for the stable package name.

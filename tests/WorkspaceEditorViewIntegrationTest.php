@@ -105,6 +105,72 @@ final class WorkspaceEditorViewIntegrationTest extends TestCase
     }
 
     /**
+     * HR: Backlinkovi moraju pratiti isti responzivni stupac kao Editorov dokument.
+     * EN: Backlinks must follow the same responsive column as the Editor document.
+     */
+    public function testBacklinksFollowEditorDocumentColumnWidth(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/show.php');
+        $script = file_get_contents(dirname(__DIR__) . '/resources/assets/workspace.js');
+
+        $this->assertIsString($view);
+        $this->assertIsString($script);
+        $this->assertStringContainsString('workspace-backlinks-layout', $view);
+        $this->assertStringContainsString('data-workspace-backlinks-column', $view);
+        $this->assertStringContainsString('initializeBacklinkLayout', $script);
+        $this->assertStringContainsString("'show.bs.collapse'", $script);
+        $this->assertStringContainsString("'hidden.bs.collapse'", $script);
+        $this->assertStringContainsString("classList.toggle('col-lg-9'", $script);
+        $this->assertStringContainsString("classList.toggle('col-12'", $script);
+    }
+
+    /**
+     * HR: Kućica u breadcrumbu mora biti poravnata s osnovnom linijom teksta.
+     * EN: The breadcrumb home icon must align with the text baseline.
+     */
+    public function testBreadcrumbHomeIconUsesTextBaselineAlignment(): void
+    {
+        $css = file_get_contents(dirname(__DIR__) . '/resources/assets/workspace.css');
+
+        $this->assertIsString($css);
+        $this->assertStringContainsString('vertical-align: -.125em;', $css);
+        $this->assertStringNotContainsString('transform: translateY(-.04em);', $css);
+    }
+
+    /**
+     * HR: Sažetci prikazuju putanju u zajedničkom retku alata, dok stablo i sadržaj
+     *     zauzimaju isti sljedeći red responzivnog grida.
+     * EN: Shorts render breadcrumbs in the shared toolbar row while the tree and
+     *     content occupy the same following responsive-grid row.
+     */
+    public function testShortsBreadcrumbAndCardsUseAlignedGridRows(): void
+    {
+        $view = file_get_contents(dirname(__DIR__) . '/views/workspace/shorts.php');
+        $controller = file_get_contents(
+            dirname(__DIR__) . '/src/Controller/WorkspaceShortsController.php',
+        );
+        $css = file_get_contents(dirname(__DIR__) . '/resources/assets/workspace.css');
+
+        $this->assertIsString($view);
+        $this->assertIsString($controller);
+        $this->assertIsString($css);
+        $this->assertStringContainsString('workspace-shorts-breadcrumb-nav', $view);
+        $this->assertStringContainsString('workspace-breadcrumb-home-icon', $view);
+        $this->assertStringContainsString(
+            "build(\$workspace, null, [], \$language, '', true)",
+            $controller,
+        );
+        $this->assertStringContainsString("'breadcrumbs' => \$breadcrumbs", $controller);
+        $this->assertStringContainsString('.workspace-shorts-shell > .workspace-sidebar', $css);
+        $this->assertStringContainsString('.workspace-shorts-shell > .workspace-shorts-main', $css);
+        $this->assertStringContainsString('grid-row: 2;', $css);
+        $this->assertLessThan(
+            strpos($view, 'id="workspace-page-tree"'),
+            strpos($view, 'class="workspace-shorts-toolbar"'),
+        );
+    }
+
+    /**
      * HR: Blok za soft-brisanje mora koristiti tematsku Bootstrap karticu kao i ostale postavke.
      * EN: The soft-delete block must use a theme-aware Bootstrap card like the other settings.
      */
@@ -188,6 +254,15 @@ final class WorkspaceEditorViewIntegrationTest extends TestCase
             "(bool)(\$editorView['isDraftPreview'] ?? false)",
             $controller,
         );
+        $this->assertStringContainsString(
+            "\$editorView['documentLanguage'] ?? \$language",
+            $controller,
+        );
+        $this->assertStringContainsString(
+            '$this->workflow->viewModel(',
+            $controller,
+        );
+        $this->assertStringContainsString('$contentLanguage,', $controller);
     }
 
     /**

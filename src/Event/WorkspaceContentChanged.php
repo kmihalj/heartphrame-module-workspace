@@ -21,6 +21,7 @@ final readonly class WorkspaceContentChanged
         public string $reason,
         public ?int $nodeId = null,
         public ?string $language = null,
+        public ?int $actorUserId = null,
     ) {
     }
 }

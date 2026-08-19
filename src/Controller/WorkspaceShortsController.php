@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
 
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBreadcrumbService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
@@ -37,6 +38,7 @@ final readonly class WorkspaceShortsController
         private WorkspaceModuleViewRenderer $viewRenderer,
         private WorkspaceRepository $repository,
         private WorkspaceAccessService $access,
+        private WorkspaceBreadcrumbService $breadcrumbs,
         private WorkspaceShortsService $shorts,
         private WorkspaceConfig $config,
         private UrlGenerator $urlGenerator,
@@ -92,6 +94,9 @@ final readonly class WorkspaceShortsController
         $pageDescription = __(
             'Objavljene stranice koje smijete vidjeti, prikazane kao kratki isječci.',
         );
+        // HR: Sažetci nisu naslovnica područja pa zadnji trag ostaje poveznica za izlaz iz prikaza sažetaka.
+        // EN: Shorts are not the Workspace homepage, so the last crumb remains a link out of the Shorts view.
+        $breadcrumbs = $this->breadcrumbs->build($workspace, null, [], $language, '', true);
 
         return $this->viewRenderer->render('workspace/shorts', [
             'title' => $pageTitle,
@@ -102,6 +107,7 @@ final readonly class WorkspaceShortsController
                 'subtitle' => $pageDescription,
             ],
             'workspace' => $workspace,
+            'breadcrumbs' => $breadcrumbs,
             'tree' => $model['tree'],
             'articles' => $model['articles'],
             'depth' => $model['depth'],

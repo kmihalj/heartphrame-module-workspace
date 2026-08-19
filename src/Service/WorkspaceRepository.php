@@ -240,7 +240,11 @@ final readonly class WorkspaceRepository
             throw new RuntimeException(__('Spremljeno područje nije moguće učitati.'));
         }
 
-        $this->contentChanged($workspaceId, $isNew ? 'workspace_created' : 'workspace_updated');
+        $this->contentChanged(
+            $workspaceId,
+            $isNew ? 'workspace_created' : 'workspace_updated',
+            actorUserId: $actorUserId,
+        );
 
         return $workspace;
     }
@@ -263,7 +267,7 @@ final readonly class WorkspaceRepository
                 'updated_at' => $now,
             ]);
 
-        $this->contentChanged($workspaceId, 'workspace_deleted');
+        $this->contentChanged($workspaceId, 'workspace_deleted', actorUserId: $actorUserId);
     }
 
     /**
@@ -300,7 +304,7 @@ final readonly class WorkspaceRepository
             throw new RuntimeException(__('Vraćeno područje nije moguće učitati.'));
         }
 
-        $this->contentChanged($workspaceId, 'workspace_restored');
+        $this->contentChanged($workspaceId, 'workspace_restored', actorUserId: $actorUserId);
 
         return $restored;
     }
@@ -904,7 +908,13 @@ final readonly class WorkspaceRepository
         if ($publishedChanged || $archiveChanged) {
             $node = $this->findNodeById($nodeId);
             $workspaceId = is_array($node) ? $this->intValue($node['workspace_id'] ?? 0) : 0;
-            $this->contentChanged($workspaceId, 'publication_changed', $nodeId, $language);
+            $this->contentChanged(
+                $workspaceId,
+                'publication_changed',
+                $nodeId,
+                $language,
+                $actorUserId,
+            );
         }
 
         return $saved;
@@ -1030,7 +1040,12 @@ final readonly class WorkspaceRepository
             throw new RuntimeException(__('Spremljeni čvor nije moguće učitati.'));
         }
 
-        $this->contentChanged($workspaceId, $existingNode === null ? 'node_created' : 'node_updated', $nodeId);
+        $this->contentChanged(
+            $workspaceId,
+            $existingNode === null ? 'node_created' : 'node_updated',
+            $nodeId,
+            actorUserId: $actorUserId,
+        );
 
         return $node;
     }
@@ -1158,7 +1173,7 @@ final readonly class WorkspaceRepository
         }
 
 
-        $this->contentChanged($workspaceId, 'node_tree_deleted', $nodeId);
+        $this->contentChanged($workspaceId, 'node_tree_deleted', $nodeId, actorUserId: $actorUserId);
     }
 
     /**
@@ -1214,7 +1229,12 @@ final readonly class WorkspaceRepository
             },
         );
 
-        $this->contentChanged($workspaceId, 'unpublished_node_deleted', $nodeId);
+        $this->contentChanged(
+            $workspaceId,
+            'unpublished_node_deleted',
+            $nodeId,
+            actorUserId: $actorUserId,
+        );
     }
 
     /**
@@ -2179,6 +2199,7 @@ final readonly class WorkspaceRepository
         string $reason,
         ?int $nodeId = null,
         ?string $language = null,
+        ?int $actorUserId = null,
     ): void {
         if ($workspaceId <= 0 || !$this->events instanceof EventDispatcherInterface) {
             return;
@@ -2190,6 +2211,7 @@ final readonly class WorkspaceRepository
                 $reason,
                 $nodeId,
                 $language,
+                $actorUserId,
             ));
         } catch (\Throwable $throwable) {
             /*

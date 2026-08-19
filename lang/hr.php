@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'Predložak migracije backlinkova nije pronađen.' => 'Predložak migracije backlinkova nije pronađen.',
+    'Kreirana je migracija Workspace backlinkova: ' => 'Kreirana je migracija Workspace backlinkova: ',
     'Workspaces' => 'Područja',
     'Workspace' => 'Područje',
     'restricted' => 'Ograničeno',
@@ -666,4 +668,9 @@ return [
     'Broj sačuvanih verzija' => 'Broj sačuvanih verzija',
     'Starost u danima' => 'Starost u danima',
     'Ukupno' => 'Ukupno',
+    'Breadcrumb navigacija' => 'Navigacijska putanja',
+    'Poveznice na ovu stranicu' => 'Poveznice na ovu stranicu',
+    'Iz područja: %s' => 'Iz područja: %s',
+    'Tekst poveznice: %s' => 'Tekst poveznice: %s',
+    'Prati promjene ovog sadržaja' => 'Prati promjene ovog sadržaja',
 ];

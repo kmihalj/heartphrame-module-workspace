@@ -6,6 +6,8 @@ namespace AaiEduHr\HeartPhrameModuleWorkspace\Controller;
 
 use AaiEduHr\HeartPhrameModuleWorkspace\Event\WorkspaceContentViewed;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBacklinkService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBreadcrumbService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
@@ -59,6 +61,8 @@ final readonly class WorkspaceController
         private TranslatorInterface $translator,
         private WorkspaceThemeService $themes,
         private WorkspaceMenuService $menus,
+        private WorkspaceBreadcrumbService $breadcrumbs,
+        private WorkspaceBacklinkService $backlinks,
         private EventDispatcherInterface $events,
         private LoggerInterface $logger,
     ) {
@@ -1068,6 +1072,7 @@ final readonly class WorkspaceController
 
         $language = $this->language($request);
         $treeVisible = $this->config->treeVisibleForWorkspace($workspace);
+        $contentLanguage = $language;
         $editorView = null;
         $workflowView = null;
         $nodePermissions = $workspacePermissions;
@@ -1089,7 +1094,6 @@ final readonly class WorkspaceController
                     : 'off';
                 }
 
-                $latestVersion = $this->editor->latestVersionNumber($documentKey, $language);
                 $editorView = $this->editor->documentView(
                     $documentKey,
                     $language,
@@ -1098,9 +1102,28 @@ final readonly class WorkspaceController
                     (bool)($nodePermissions['can_edit'] ?? false)
                         || (bool)($nodePermissions['can_publish'] ?? false),
                 );
+                if (is_array($editorView)) {
+                    /*
+                     * HR: Editor može vratiti zadani jezik dokumenta kada prijevod
+                     *     za jezik sučelja ne postoji. Workflow mora pratiti upravo
+                     *     prikazanu inačicu, inače objavljena fallback stranica izgleda
+                     *     kao novi neobjavljeni prijevod.
+                     * EN: Editor may return the default document language when the UI
+                     *     locale has no translation. Workflow must follow that displayed
+                     *     variant, or a published fallback page looks like a new draft.
+                     */
+                    $contentLanguage = $this->stringValue(
+                        $editorView['documentLanguage'] ?? $language,
+                    );
+                    if ($contentLanguage === '') {
+                        $contentLanguage = $language;
+                    }
+                }
+
+                $latestVersion = $this->editor->latestVersionNumber($documentKey, $contentLanguage);
                 $workflowView = $this->workflow->viewModel(
                     $this->intValue($node['id'] ?? 0),
-                    $language,
+                    $contentLanguage,
                     $latestVersion,
                     (bool)($nodePermissions['can_edit'] ?? false),
                     (bool)($nodePermissions['can_publish'] ?? false),
@@ -1113,6 +1136,7 @@ final readonly class WorkspaceController
             'workspace.workflow.transition',
             '/workspaces/workflow',
         );
+        $followUi = $this->followUiData($request, $workspace, $node);
         if (is_array($editorView)) {
             $editorView['leadingActions'] = $this->documentLeadingActions(
                 $workspace,
@@ -1120,10 +1144,19 @@ final readonly class WorkspaceController
                 $nodePermissions,
                 $workflowView,
                 $workflowTransitionPath,
-                $language,
+                $contentLanguage,
                 (bool)($editorView['isDraftPreview'] ?? false),
                 $treeVisible,
             );
+            if (is_array($followUi)) {
+                $editorView['leadingActions'][] = [
+                    'type' => 'partial',
+                    'label' => __('Prati promjene ovog sadržaja'),
+                    'package' => 'aaieduhr/simbioza-module-user',
+                    'partial' => 'simbioza-user/follow_button',
+                    'data' => [...$followUi, 'compact' => '1'],
+                ];
+            }
         }
 
         /*
@@ -1206,7 +1239,31 @@ final readonly class WorkspaceController
         $canOrganizeTree = $canOrganizeTree && count($managementNodes) === count($allNodes);
         $managementNodes = $this->orderNodesForManagement($managementNodes);
 
-        $this->contentViewed($workspace, $node, $language);
+        $this->contentViewed($workspace, $node, $contentLanguage);
+
+        $currentTitle = is_array($editorView)
+        ? $this->stringValue($editorView['title'] ?? '')
+        : (is_array($node) ? $this->stringValue($node['title'] ?? '') : '');
+        $breadcrumbs = $this->breadcrumbs->build($workspace, $node, $tree, $language, $currentTitle);
+        $backlinks = [];
+        if (is_array($node)) {
+            try {
+                $backlinks = $this->backlinks->forTarget(
+                    $this->intValue($node['id'] ?? 0),
+                    $contentLanguage,
+                );
+            } catch (Throwable $throwable) {
+                // HR: Izvedeni indeks ne smije onemogućiti čitanje izvorne stranice.
+                // EN: A derived index must never prevent reading the source page.
+                $this->logger->error('Workspace backlinks could not be loaded.', [
+                    'module' => 'workspace',
+                    'workspace_id' => $workspaceId,
+                    'page_id' => $this->intValue($node['id'] ?? 0),
+                    'language' => $contentLanguage,
+                    'exception' => $throwable,
+                ]);
+            }
+        }
 
         return $this->viewRenderer->render('workspace/show', [
             'title' => is_array($editorView)
@@ -1219,6 +1276,9 @@ final readonly class WorkspaceController
             'activeNode' => $node,
             'editorView' => $editorView,
             'workflow' => $workflowView,
+            'breadcrumbs' => $breadcrumbs,
+            'backlinks' => $backlinks,
+            'followUi' => $followUi,
             'workflowTransitionPath' => $workflowTransitionPath,
             'reviewQueue' => $reviewQueue,
             'unpublishedPages' => $unpublishedPages,
@@ -1260,13 +1320,64 @@ final readonly class WorkspaceController
                 $nodePermissions,
                 $workflowView,
                 $workflowTransitionPath,
-                $language,
+                $contentLanguage,
                 false,
                 $treeVisible,
             ),
             'assetsCssPath' => $this->pathFor('workspace.assets.css', '/workspaces/assets.css'),
             'assetsJsPath' => $this->pathFor('workspace.assets.js', '/workspaces/assets.js'),
         ]);
+    }
+
+    /**
+     * HR: Priprema opcionalni Simbioza gumb bez hard ovisnosti Workspace modula.
+     * EN: Prepares the optional Simbioza button without a hard Workspace dependency.
+     *
+     * @param array<string,mixed> $workspace
+     * @param array<string,mixed>|null $node
+     * @return array<string,string>|null
+     */
+    private function followUiData(
+        ServerRequestInterface $request,
+        array $workspace,
+        ?array $node,
+    ): ?array {
+        /*
+         * HR: Javni prikaz ne smije koristiti strogi audit helper koji baca
+         *     iznimku za gosta; gumb praćenja jednostavno pripada samo prijavljenima.
+         * EN: Public rendering must not use the strict audit helper that throws
+         *     for guests; the follow button simply belongs to authenticated users.
+         */
+        $user = $this->access->currentUser();
+        $userId = is_array($user) && is_numeric($user['id'] ?? null) ? (int)$user['id'] : 0;
+        if (
+            $userId <= 0
+            || !$this->urlGenerator->namedRouteExists('simbioza-user.toggle')
+            || !$this->urlGenerator->namedRouteExists('simbioza-user.status')
+        ) {
+            return null;
+        }
+
+        $isPage = is_array($node) && $this->intValue($node['id'] ?? 0) > 0;
+        $returnUrl = $request->getUri()->getPath();
+        if ($request->getUri()->getQuery() !== '') {
+            $returnUrl .= '?' . $request->getUri()->getQuery();
+        }
+
+        return [
+            'targetType' => $isPage ? 'page' : 'workspace',
+            'targetId' => (string)($isPage
+                ? $this->intValue($node['id'] ?? 0)
+                : $this->intValue($workspace['id'] ?? 0)),
+            'documentId' => $isPage ? $this->stringValue($node['document_key'] ?? '') : '',
+            'label' => $isPage
+                ? $this->stringValue($node['title'] ?? '')
+                : $this->stringValue($workspace['name'] ?? ''),
+            'togglePath' => $this->pathFor('simbioza-user.toggle', '/account/following/toggle'),
+            'statusPath' => $this->pathFor('simbioza-user.status', '/account/following/status'),
+            'returnUrl' => $returnUrl,
+            'assetsCssPath' => $this->pathFor('simbioza-user.assets.css', '/simbioza-user/assets.css'),
+        ];
     }
 
     /**

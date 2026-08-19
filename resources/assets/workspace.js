@@ -1088,6 +1088,65 @@
     }
 
     /**
+     * HR: Drži backlinkove u istom Bootstrap stupcu kao glavni Editorov sadržaj.
+     *     Kada se sadržaj stranice sakrije, oba se bloka zajedno šire na punu
+     *     raspoloživu širinu, uključujući rasporede sa stablom ili posebnim menijem.
+     *
+     * EN: Keeps backlinks in the same Bootstrap column as the main Editor content.
+     *     When the table of contents is hidden, both blocks expand together to the
+     *     full available width, including layouts with a tree or a custom menu.
+     *
+     * @returns {void}
+     */
+    function initializeBacklinkLayout() {
+        const backlinkColumn = document.querySelector('[data-workspace-backlinks-column]');
+        if (!(backlinkColumn instanceof HTMLElement)) {
+            return;
+        }
+
+        const tocColumn = document.querySelector('[data-editor-html-toc-column]');
+        const mobileQuery = window.matchMedia('(max-width: 991.98px)');
+
+        /**
+         * HR: Vraća stvarno desktop stanje stupca sadržaja.
+         * EN: Returns the actual desktop state of the table-of-contents column.
+         *
+         * @returns {boolean}
+         */
+        const tableOfContentsIsVisible = () => tocColumn instanceof HTMLElement
+            && tocColumn.classList.contains('show')
+            && !tocColumn.hidden;
+
+        /**
+         * HR: Primjenjuje identičnu širinu koju Editor koristi za dokument.
+         * EN: Applies the same width used by the Editor document column.
+         *
+         * @param {boolean} visible Je li desktop sadržaj prikazan. / Whether the desktop outline is visible.
+         * @returns {void}
+         */
+        const synchronizeWidth = (visible) => {
+            const useNarrowColumn = !mobileQuery.matches && visible;
+            backlinkColumn.classList.toggle('col-lg-9', useNarrowColumn);
+            backlinkColumn.classList.toggle('col-12', !useNarrowColumn);
+        };
+
+        synchronizeWidth(tableOfContentsIsVisible());
+
+        if (tocColumn instanceof HTMLElement) {
+            tocColumn.addEventListener('show.bs.collapse', () => {
+                synchronizeWidth(true);
+            });
+            tocColumn.addEventListener('hidden.bs.collapse', () => {
+                synchronizeWidth(false);
+            });
+        }
+
+        mobileQuery.addEventListener('change', () => {
+            synchronizeWidth(tableOfContentsIsVisible());
+        });
+    }
+
+    /**
      * HR: Inicijalizira sve Workspace kontrole nakon što je DOM spreman.
      * EN: Initializes every Workspace control after the DOM is ready.
      *
@@ -1102,6 +1161,7 @@
         initializeAclControls();
         initializeHomepageTargets();
         initializeMobilePanels();
+        initializeBacklinkLayout();
     }
 
     if (document.readyState === 'loading') {

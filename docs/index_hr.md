@@ -499,6 +499,39 @@ menija nije vidljiva u editoru gornjeg menija i obratno; uklanjanje jedne strane
 čuva drugu. Runtime ipak smije spojiti podudarne odvojene zapise kako bi se oba
 menija prikazala na istoj stranici.
 
+### Navigacijska putanja i povratne poveznice
+
+Svaka prikazana stranica ima navigacijsku putanju **Početna → Područje →
+vidljivi preci → stranica**. Servis prima stablo nakon ACL filtriranja, stoga
+ne može otkriti ime skrivenog pretka. Aktivna stranica nije poveznica, a njezin
+naslov koristi lokalizirani naslov točno prikazane Editor verzije.
+
+Blok **Poveznice na ovu stranicu** navodi druge objavljene stranice koje vode
+na trenutačnu stranicu. Pri svakom prikazu ponovno se provjeravaju Workspace i
+stranični ACL te objavljeno stanje izvorne stranice. Gost zato vidi samo izvore
+koje smije javno otvoriti. Aktivni jezik ima prednost; ako na njemu nema zapisa
+izvorne stranice, koristi se zadani jezik sitea.
+
+Navigacijska putanja nalazi se iznad cijelog rasporeda pa stablo, poseban lijevi
+meni, sadržaj stranice i tablica sadržaja ostaju u istoj ravnini. Preuzima
+kontrastne boje teksta hero elementa, a tema ih po potrebi može zasebno
+nadjačati kroz `--hph-workspace-breadcrumb-text` i
+`--hph-workspace-breadcrumb-link`. Povratne poveznice koriste iste kartične,
+rubne, link i prigušene vrijednosti kao ostale tematske kartice. Bez Theme
+modula obje komponente koriste Bootstrap vrijednosti.
+
+Postojeća instalacija dodaje dvije izvedene tablice naredbama:
+
+```bash
+vendor/bin/hph workspace:install-backlinks-migration
+vendor/bin/hph orm-migrate:up
+```
+
+Tablice `workspace_backlinks` i `workspace_backlink_index_state` ne ulaze u
+backup jer ne sadrže izvorne podatke. Objavljivanje ciljano osvježava izvor,
+strukturna promjena obnavlja indeks, a periodična sigurnosna provjera popravlja
+eventualno prekinut događaj.
+
 ## 9. Instalacija i rad
 
 ```bash
@@ -688,3 +721,10 @@ datoteke baze. Nakon brisanja sustav baze oslobođene stranice uobičajeno ponov
 koristi, pa fizička datoteka ne mora odmah postati manja. `VACUUM`, `OPTIMIZE`
 ili slična administratorska operacija ovisi o SQLiteu, PostgreSQL-u ili MySQL-u
 i zato se ne pokreće automatski iz prijenosnog Workspace modula.
+
+## Događaj osobnog praćenja
+
+Repozitorij objavljuje `WorkspaceContentChanged` s neosjetljivim razlogom i
+identifikatorom izvršitelja. Simbioza User ga može obraditi i prikazati vlastite
+kontrole stranice ili područja. Isključivanje tog opcionalnog modula ne mijenja
+Workspace rute, pohranu ni ACL ponašanje.

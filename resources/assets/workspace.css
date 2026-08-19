@@ -3,6 +3,7 @@
 }
 
 .workspace-shell {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(14rem, var(--workspace-tree-width)) minmax(0, 1fr);
     gap: 1rem;
@@ -170,6 +171,119 @@
     min-width: 0;
 }
 
+.workspace-breadcrumb-nav {
+    color: var(
+        --hph-workspace-breadcrumb-text,
+        var(--hph-hero-subtitle, var(--hph-hero-text, var(--bs-body-color, #212529)))
+    );
+    inset-block-start: -3.25rem;
+    inset-inline-start: calc(var(--workspace-tree-width) + 1rem);
+    margin: 0;
+    max-width: 100%;
+    position: absolute;
+    z-index: 2;
+}
+
+.workspace-breadcrumb {
+    --bs-breadcrumb-divider-color: var(
+        --hph-workspace-breadcrumb-text,
+        var(--hph-hero-subtitle, var(--hph-hero-text, var(--bs-body-color, #212529)))
+    );
+    --bs-breadcrumb-item-active-color: var(
+        --hph-workspace-breadcrumb-text,
+        var(--hph-hero-subtitle, var(--hph-hero-text, var(--bs-body-color, #212529)))
+    );
+    flex-wrap: wrap;
+    margin: 0;
+    padding: .25rem .125rem;
+    row-gap: .2rem;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+}
+
+.workspace-breadcrumb a {
+    color: var(
+        --hph-workspace-breadcrumb-link,
+        var(--hph-hero-title, var(--hph-hero-text, var(--bs-link-color)))
+    );
+    text-decoration-thickness: .08em;
+    text-underline-offset: .18em;
+}
+
+.workspace-breadcrumb-home-link {
+    display: inline;
+    line-height: inherit;
+    text-decoration: none;
+}
+
+.workspace-breadcrumb-home-icon {
+    display: inline-block;
+    fill: none;
+    height: 1.05em;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+    vertical-align: -.125em;
+    width: 1.05em;
+}
+
+.workspace-breadcrumb .active {
+    color: var(
+        --hph-workspace-breadcrumb-text,
+        var(--hph-hero-subtitle, var(--hph-hero-text, var(--bs-body-color, #212529)))
+    );
+    font-weight: 600;
+}
+
+.workspace-backlinks {
+    background: var(--hph-card-bg, var(--hph-surface, var(--bs-body-bg)));
+    border-color: var(--hph-card-border, var(--hph-border, var(--bs-border-color)));
+    color: var(--hph-card-text, var(--hph-surface-text, var(--bs-body-color)));
+}
+
+.workspace-backlinks-heading {
+    align-items: center;
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.workspace-backlinks-count {
+    background: var(--hph-primary, var(--bs-primary));
+    color: var(--hph-primary-contrast, #fff);
+    font-size: .75rem;
+}
+
+.workspace-backlink-list {
+    display: grid;
+    gap: .65rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.workspace-backlink-item {
+    background: var(--hph-card-bg, var(--hph-surface, var(--bs-body-bg)));
+    background: var(--hph-surface-soft, color-mix(in srgb, var(--hph-card-bg, var(--bs-body-bg)) 94%, var(--hph-primary, var(--bs-primary))));
+    border: 1px solid var(--hph-card-border, var(--hph-border, var(--bs-border-color)));
+    border-radius: var(--hph-card-radius, .55rem);
+    padding: .75rem .9rem;
+}
+
+.workspace-backlink-link {
+    color: var(--hph-link, var(--bs-link-color));
+    font-weight: 650;
+    text-decoration-thickness: .08em;
+    text-underline-offset: .18em;
+}
+
+.workspace-backlink-meta {
+    color: var(--hph-muted, var(--bs-secondary-color));
+    font-size: .875rem;
+    margin-top: .2rem;
+}
+
 .workspace-mobile-panel-header,
 .workspace-mobile-edge-toggle,
 .workspace-mobile-panel-backdrop {
@@ -177,8 +291,42 @@
 }
 
 .workspace-shorts-toolbar {
+    align-items: center;
     display: flex;
-    justify-content: flex-end;
+    gap: .75rem 1rem;
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.workspace-shorts-breadcrumb-nav {
+    color: var(
+        --hph-workspace-breadcrumb-text,
+        var(--hph-hero-subtitle, var(--hph-hero-text, var(--bs-body-color, #212529)))
+    );
+    min-width: 0;
+}
+
+.workspace-shorts-toolbar-actions {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+}
+
+/*
+ * HR: Stablo i popis sažetaka dijele isti drugi red grida, ispod zajedničkog
+ *     retka breadcrumba i alata, pa njihove kartice uvijek počinju poravnato.
+ * EN: The tree and Shorts list share the same second grid row below the common
+ *     breadcrumb-and-tools row, so their cards always start aligned.
+ */
+.workspace-shorts-shell > .workspace-sidebar {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.workspace-shorts-shell > .workspace-shorts-main {
+    grid-column: 2;
+    grid-row: 2;
 }
 
 /*
@@ -576,6 +724,16 @@
         display: block;
     }
 
+    .workspace-breadcrumb-nav {
+        inset: auto;
+        margin-bottom: .75rem;
+        position: static;
+    }
+
+    .workspace-shorts-toolbar {
+        margin-bottom: .75rem;
+    }
+
     .workspace-sidebar {
         bottom: 0;
         display: block !important;
@@ -728,5 +886,16 @@
 
     .workspace-shell:has(.workspace-sidebar.collapse:not(.show)) {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workspace-shell:has(.workspace-sidebar.collapse:not(.show)) .workspace-breadcrumb-nav {
+        inset-inline-start: 0;
+    }
+
+    .workspace-shorts-shell:has(.workspace-sidebar.collapse:not(.show))
+        > .workspace-shorts-toolbar,
+    .workspace-shorts-shell:has(.workspace-sidebar.collapse:not(.show))
+        > .workspace-shorts-main {
+        grid-column: 1;
     }
 }

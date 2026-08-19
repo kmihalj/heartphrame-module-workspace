@@ -213,6 +213,20 @@ final readonly class WorkspaceConfig
     }
 
     /**
+     * HR: Vraća najdulje razdoblje između sigurnosnih provjera izvedenog
+     *     indeksa povratnih poveznica.
+     * EN: Returns the maximum interval between safety checks of the derived
+     *     backlink index.
+     */
+    public function backlinkRefreshSeconds(): int
+    {
+        $backlinks = $this->section('backlinks');
+        $seconds = WorkspaceValue::int($backlinks['refresh_seconds'] ?? 3600);
+
+        return max(60, min(86400, $seconds));
+    }
+
+    /**
      * HR: Vraća treba li modul automatski dodati glavnu menu stavku.
      * EN: Returns whether the module should automatically add its main menu item.
      */

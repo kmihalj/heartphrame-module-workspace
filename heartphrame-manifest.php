@@ -14,12 +14,15 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceHomepageController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceMenuController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceThemeController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Event\WorkspaceContentChanged;
+use AaiEduHr\HeartPhrameModuleWorkspace\Listener\SynchronizeWorkspaceBacklinks;
 use AaiEduHr\HeartPhrameModuleWorkspace\ModuleWorkspace;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRouteRegistrar;
 use HeartPhrame\Bridge\ComposerBridge;
 use HeartPhrame\Command\CommandDefinition;
 use HeartPhrame\Config\ConfigInterface;
+use HeartPhrame\Event\EventListener;
 use Psr\Container\ContainerInterface;
 
 return new class extends \HeartPhrame\Module\AbstractModuleManifest {
@@ -389,6 +392,27 @@ return new class extends \HeartPhrame\Module\AbstractModuleManifest {
                     'installThemesMigration',
                 ],
             ),
+            new CommandDefinition(
+                'workspace:install-backlinks-migration',
+                'Copy the Workspace backlinks upgrade migration into the host application.',
+                [
+                    \AaiEduHr\HeartPhrameModuleWorkspace\Command\HpWorkspaceCommand::class,
+                    'installBacklinksMigration',
+                ],
+            ),
+        ];
+    }
+
+    /**
+     * HR: Veže promjene objavljenog sadržaja na sinkronizaciju backlink indeksa.
+     * EN: Binds published-content changes to backlink-index synchronization.
+     *
+     * @return EventListener[]
+     */
+    public function getEventListeners(): array
+    {
+        return [
+            new EventListener(WorkspaceContentChanged::class, SynchronizeWorkspaceBacklinks::class),
         ];
     }
 

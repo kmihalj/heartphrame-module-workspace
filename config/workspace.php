@@ -24,6 +24,11 @@ return [
         'order' => 'newest',
         'display_options_visible' => false,
     ],
+    'backlinks' => [
+        // HR: Periodična provjera popravlja izvedeni indeks ako je događaj bio prekinut.
+        // EN: The periodic check repairs the derived index if an event was interrupted.
+        'refresh_seconds' => 3600,
+    ],
     'menu' => [
         'auto_register_top' => true,
         'auto_register_settings' => true,

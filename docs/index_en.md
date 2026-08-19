@@ -510,6 +510,39 @@ left-only definition is absent from the top-menu editor and vice versa;
 removing one side preserves the other. At runtime, matching separated records
 may still supply both menus on the same page.
 
+### Breadcrumbs and backlinks
+
+Every rendered page has a **Home → Workspace → visible ancestors → page**
+breadcrumb. The service receives the tree after ACL filtering, so it cannot
+reveal the name of a hidden ancestor. The current page is not a link and its
+label uses the localized title of the exact Editor version being displayed.
+
+The **Links to this page** block lists other published pages that link to the
+current page. Workspace and page ACL plus the source publication state are
+rechecked on every display. A guest therefore sees only publicly readable
+sources. The active locale is preferred; the site-default locale is used when
+the source page has no backlink record in the active locale.
+
+The breadcrumb sits above the complete layout, so the page tree, route-specific
+left menu, page content, and table of contents remain aligned. It inherits the
+contrasting hero text colors; a theme may override them specifically through
+`--hph-workspace-breadcrumb-text` and `--hph-workspace-breadcrumb-link`.
+Backlinks use the same themed card, border, link, and muted-text values as other
+cards. Both components fall back to Bootstrap values when Theme is not
+installed.
+
+Existing installations add the two derived tables with:
+
+```bash
+vendor/bin/hph workspace:install-backlinks-migration
+vendor/bin/hph orm-migrate:up
+```
+
+`workspace_backlinks` and `workspace_backlink_index_state` are excluded from
+backup because they contain no source-of-truth data. Publication updates the
+source incrementally, structural changes rebuild the index, and a periodic
+safety check repairs an interrupted event.
+
 ## 9. Installation and operation
 
 ```bash
@@ -701,3 +734,10 @@ database file. Database engines normally reuse freed pages, so the physical
 file may not shrink immediately. `VACUUM`, `OPTIMIZE`, and equivalent
 administrator operations differ across SQLite, PostgreSQL, and MySQL and are
 therefore not run automatically by the portable Workspace module.
+
+## Personal following event
+
+The repository emits `WorkspaceContentChanged` with a non-sensitive reason and
+actor identifier. Simbioza User may consume it and render its own page/workspace
+controls. Disabling that optional module does not change Workspace routes,
+persistence, or ACL behavior.

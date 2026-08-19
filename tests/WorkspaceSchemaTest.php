@@ -49,6 +49,8 @@ final class WorkspaceSchemaTest extends TestCase
                 ModuleWorkspace::TABLE_WORKSPACE_HOMEPAGE_SETTINGS,
                 ModuleWorkspace::TABLE_WORKSPACE_USER_HOMEPAGES,
                 ModuleWorkspace::TABLE_WORKSPACE_THEMES,
+                ModuleWorkspace::TABLE_WORKSPACE_BACKLINKS,
+                ModuleWorkspace::TABLE_WORKSPACE_BACKLINK_INDEX_STATE,
             ] as $table
         ) {
             $this->assertTrue($schema->hasTable($table), $table . ' was not created.');
@@ -205,6 +207,36 @@ final class WorkspaceSchemaTest extends TestCase
         $this->assertTrue($database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_THEMES));
         $migration->down($database);
         $this->assertFalse($database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_THEMES));
+    }
+
+    /**
+     * HR: Nadogradnja backlinkova dodaje samo izvedeni indeks i može se vratiti.
+     * EN: The backlink upgrade adds only the derived index and can be rolled back.
+     */
+    public function testBacklinkUpgradeMigrationIsPortableAndReversible(): void
+    {
+        $helper = new Helper();
+        $config = new Config($helper, [
+            'database' => [
+                'connections' => [
+                    'default' => ['driver' => 'sqlite', 'database' => ':memory:'],
+                ],
+            ],
+        ]);
+        $database = new Database($config, $helper);
+        $migration = require dirname(__DIR__) . '/resources/migrations/add_workspace_backlinks.php';
+        $this->assertInstanceOf(ReversibleMigrationInterface::class, $migration);
+
+        $migration->up($database);
+        $this->assertTrue($database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_BACKLINKS));
+        $this->assertTrue(
+            $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_BACKLINK_INDEX_STATE),
+        );
+        $migration->down($database);
+        $this->assertFalse($database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_BACKLINKS));
+        $this->assertFalse(
+            $database->schema()->hasTable(ModuleWorkspace::TABLE_WORKSPACE_BACKLINK_INDEX_STATE),
+        );
     }
 
     /**

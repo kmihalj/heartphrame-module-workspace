@@ -14,6 +14,9 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
  * @var array<string, mixed>|null $activeNode
  * @var array<string, mixed>|null $editorView
  * @var array<string, mixed>|null $workflow
+ * @var list<array{label:string,href:string,current:bool,icon?:string}> $breadcrumbs
+ * @var list<array{title:string,href:string,workspaceName:string,linkText:string,language:string}> $backlinks
+ * @var array<string,string>|null $followUi
  * @var string $workflowTransitionPath
  * @var list<array{title:string,href:string,submittedAt:string}> $reviewQueue
  * @var list<array{title:string,href:string,status:string,statusLabel:string,updatedAt:string}> $unpublishedPages
@@ -55,6 +58,16 @@ $hasTreeActions = WorkspaceValue::string($shortsPath ?? '') !== ''
 $fallbackLeadingActions = is_array($fallbackLeadingActions ?? null)
     ? array_values($fallbackLeadingActions)
     : [];
+$breadcrumbs = is_array($breadcrumbs ?? null) ? array_values($breadcrumbs) : [];
+$backlinks = is_array($backlinks ?? null) ? array_values($backlinks) : [];
+$editorOutlinedDocument = is_array($editorView ?? null)
+    ? ($editorView['outlinedDocument'] ?? null)
+    : null;
+$backlinksUseNarrowColumn = is_object($editorOutlinedDocument)
+    && property_exists($editorOutlinedDocument, 'headings')
+    && is_array($editorOutlinedDocument->headings)
+    && $editorOutlinedDocument->headings !== []
+    && (bool)($editorView['showTableOfContents'] ?? false);
 $workflowIcon = static function (string $action): string {
     $paths = match ($action) {
         'submit' => '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>',
@@ -83,6 +96,54 @@ $workflowIcon = static function (string $action): string {
 <script src="<?= $this->escape($assetsJsPath) ?>" defer></script>
 
 <div class="workspace-shell">
+    <?php if ($breadcrumbs !== []) : ?>
+        <nav
+            class="workspace-breadcrumb-nav"
+            aria-label="<?= $this->escape(__('Breadcrumb navigacija')) ?>"
+        >
+            <ol class="breadcrumb workspace-breadcrumb">
+                <?php foreach ($breadcrumbs as $breadcrumb) : ?>
+                    <?php if ((bool)($breadcrumb['current'] ?? false)) : ?>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            <?= $this->escape(WorkspaceValue::string($breadcrumb['label'] ?? '')) ?>
+                        </li>
+                    <?php else : ?>
+                        <li class="breadcrumb-item">
+                            <?php
+                            $breadcrumbLabel = WorkspaceValue::string($breadcrumb['label'] ?? '');
+                            $breadcrumbIcon = WorkspaceValue::string($breadcrumb['icon'] ?? '');
+                            ?>
+                            <a
+                                href="<?= $this->escape(WorkspaceValue::string($breadcrumb['href'] ?? '')) ?>"
+                                <?php if ($breadcrumbIcon === 'home') : ?>
+                                    class="workspace-breadcrumb-home-link"
+                                    aria-label="<?= $this->escape($breadcrumbLabel) ?>"
+                                    title="<?= $this->escape($breadcrumbLabel) ?>"
+                                <?php endif; ?>
+                            >
+                                <?php if ($breadcrumbIcon === 'home') : ?>
+                                    <svg
+                                        class="workspace-breadcrumb-home-icon"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                        focusable="false"
+                                    >
+                                        <path d="M3 11.5 12 4l9 7.5" />
+                                        <path d="M5.5 10.5V20h13v-9.5" />
+                                        <path d="M9.5 20v-6h5v6" />
+                                    </svg>
+                                    <span class="visually-hidden"><?= $this->escape($breadcrumbLabel) ?></span>
+                                <?php else : ?>
+                                    <?= $this->escape($breadcrumbLabel) ?>
+                                <?php endif; ?>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </ol>
+        </nav>
+    <?php endif; ?>
+
     <aside
         id="workspace-page-tree"
         class="workspace-sidebar collapse<?= $treeVisibleByDefault ? ' show' : '' ?>"
@@ -368,6 +429,13 @@ $workflowIcon = static function (string $action): string {
             <article class="card shadow-sm hph-content-card">
                 <div class="card-body" data-hph-content-title-target>
                     <div class="editor-html-view-actions workspace-unpublished-actions">
+                    <?php if (is_array($followUi ?? null)) : ?>
+                        <?= $this->forModulePartial(
+                            'aaieduhr/simbioza-module-user',
+                            'simbioza-user/follow_button',
+                            [...$followUi, 'compact' => '1'],
+                        ) ?>
+                    <?php endif; ?>
                     <?php foreach ($fallbackLeadingActions as $action) : ?>
                         <?php $actionType = WorkspaceValue::string($action['type'] ?? ''); ?>
                         <?php if ($actionType === 'collapse') : ?>
@@ -444,17 +512,73 @@ $workflowIcon = static function (string $action): string {
                     <path d="M7 10v2a2 2 0 0 0 2 2h5"/>
                 </svg>
             </button>
-            <header class="mb-4">
-                <h1 class="h2 mb-2"><?= $this->escape(WorkspaceValue::string($workspace['name'] ?? '')) ?></h1>
-            <?php if (WorkspaceValue::string($workspace['description'] ?? '') !== '') : ?>
-                    <p class="text-body-secondary mb-0">
-                <?= nl2br($this->escape(WorkspaceValue::string($workspace['description'] ?? ''))) ?>
-                    </p>
-            <?php endif; ?>
+            <header class="mb-4 d-flex align-items-start justify-content-between gap-3">
+                <div>
+                    <h1 class="h2 mb-2"><?= $this->escape(WorkspaceValue::string($workspace['name'] ?? '')) ?></h1>
+                <?php if (WorkspaceValue::string($workspace['description'] ?? '') !== '') : ?>
+                        <p class="text-body-secondary mb-0">
+                    <?= nl2br($this->escape(WorkspaceValue::string($workspace['description'] ?? ''))) ?>
+                        </p>
+                <?php endif; ?>
+                </div>
+                <?php if (is_array($followUi ?? null)) : ?>
+                    <?= $this->forModulePartial(
+                        'aaieduhr/simbioza-module-user',
+                        'simbioza-user/follow_button',
+                        [...$followUi, 'compact' => '1'],
+                    ) ?>
+                <?php endif; ?>
             </header>
             <p class="text-body-secondary">
             <?= $this->escape(__('Odaberite stranicu iz stabla ili postavite početnu stranicu područja.')) ?>
             </p>
+        <?php endif; ?>
+
+        <?php if ($backlinks !== []) : ?>
+            <div class="row g-4 align-items-start workspace-backlinks-layout">
+                <div
+                    class="<?= $backlinksUseNarrowColumn ? 'col-lg-9' : 'col-12' ?>"
+                    data-workspace-backlinks-column
+                >
+                    <aside
+                        class="card shadow-sm hph-content-card workspace-backlinks mt-4"
+                        aria-labelledby="workspace-backlinks-title"
+                    >
+                        <div class="card-body">
+                            <div class="workspace-backlinks-heading">
+                                <h2 id="workspace-backlinks-title" class="h5 mb-0">
+                                    <?= $this->escape(__('Poveznice na ovu stranicu')) ?>
+                                </h2>
+                                <span class="badge workspace-backlinks-count"><?= count($backlinks) ?></span>
+                            </div>
+                            <ul class="workspace-backlink-list">
+                                <?php foreach ($backlinks as $backlink) : ?>
+                                    <li class="workspace-backlink-item">
+                                        <a class="workspace-backlink-link" href="<?= $this->escape(
+                                            WorkspaceValue::string($backlink['href'] ?? ''),
+                                        ) ?>">
+                                            <?= $this->escape(WorkspaceValue::string($backlink['title'] ?? '')) ?>
+                                        </a>
+                                        <div class="workspace-backlink-meta">
+                                            <?= $this->escape(sprintf(
+                                                __('Iz područja: %s'),
+                                                WorkspaceValue::string($backlink['workspaceName'] ?? ''),
+                                            )) ?>
+                                            <?php if (WorkspaceValue::string($backlink['linkText'] ?? '') !== '') : ?>
+                                                <span aria-hidden="true"> · </span>
+                                                <?= $this->escape(sprintf(
+                                                    __('Tekst poveznice: %s'),
+                                                    WorkspaceValue::string($backlink['linkText'] ?? ''),
+                                                )) ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </aside>
+                </div>
+            </div>
         <?php endif; ?>
     </main>
 </div>

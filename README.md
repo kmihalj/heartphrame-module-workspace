@@ -40,6 +40,8 @@ Croatian documentation: [README_hr.md](README_hr.md)
 - ACL-filtered Workspace Shorts with rendered article excerpts, depth, count, and ordering controls
 - hierarchical document, internal-link, and external-link nodes
 - collapsible and responsive page tree
+- ACL-safe breadcrumbs from the application home through visible ancestors
+- backlinks from other published pages, revalidated against the viewer's current ACL
 - system, Workspace, and page-specific defaults for page-tree and outline visibility
 - page creation directly from an open Workspace
 - soft deletion and administrator restoration of Workspaces
@@ -160,6 +162,25 @@ For an existing installation, add private Workspace-theme storage once:
 vendor/bin/hph workspace:install-themes-migration
 vendor/bin/hph orm-migrate:up
 ```
+
+Existing installations also add the rebuildable backlink index once:
+
+```bash
+vendor/bin/hph workspace:install-backlinks-migration
+vendor/bin/hph orm-migrate:up
+```
+
+Breadcrumbs are built only from the already ACL-filtered page tree. Backlinks
+are extracted from exact published HTML versions and are checked again against
+page ACL and publication state whenever they are displayed. The active locale
+is preferred and the site-default locale is used only when that source page has
+no backlink record in the active locale. Theme-enabled applications use the
+breadcrumb, card, link, border, and muted-text theme tokens; Bootstrap
+fallbacks keep both components usable without Theme.
+
+`workspace_backlinks` and `workspace_backlink_index_state` are derived data.
+They must not be included in backups; publication events keep them current and
+the periodic safety rebuild repairs missed events.
 
 ## Workspace Shorts
 
@@ -360,6 +381,13 @@ Workspace backup and restore are documented in [docs/backup_en.md](docs/backup_e
 
 This work is published under the
 [European Union Public License (EUPL) v1.2](LICENSE).
+
+## Personal following integration
+
+Workspace publishes neutral content-change events with the actor, workspace,
+page, language, and reason. When `aaieduhr/simbioza-module-user` is enabled it
+adds page/workspace follow controls and converts those events into ACL-safe
+personal notifications. Workspace does not depend on that optional module.
 
 ## Dependency policy
 

@@ -40,6 +40,8 @@ English documentation: [README.md](README.md)
 - ACL-filtrirani Sažetci s renderiranim isječcima, razinama, brojem i redoslijedom članaka
 - hijerarhijski čvorovi za dokumente, interne i vanjske linkove
 - sakrivo i responzivno stablo stranica
+- ACL-sigurna navigacijska putanja od početne stranice kroz vidljive pretke
+- povratne poveznice s drugih objavljenih stranica uz ponovnu provjeru prava čitatelja
 - sistemski, područni i stranica-specifični zadani prikaz stabla i sadržaja
 - kreiranje nove stranice izravno iz otvorenog Područja
 - soft delete Područja i administratorsko vraćanje
@@ -158,6 +160,26 @@ Za postojeću instalaciju jednom dodajte pohranu privatnih tema Područja:
 vendor/bin/hph workspace:install-themes-migration
 vendor/bin/hph orm-migrate:up
 ```
+
+Postojeća instalacija jednom dodaje i ponovno izgradivi indeks povratnih poveznica:
+
+```bash
+vendor/bin/hph workspace:install-backlinks-migration
+vendor/bin/hph orm-migrate:up
+```
+
+Navigacijska putanja gradi se samo iz stabla koje je već filtrirano ACL-om.
+Povratne poveznice izdvajaju se iz točnih objavljenih HTML verzija, a pri
+svakom prikazu ponovno se provjeravaju ACL stranice i stanje objave. Prednost
+ima aktivni jezik, dok se zadani jezik sitea koristi samo ako izvorna stranica
+nema zapis poveznice na aktivnom jeziku. Kada je Theme uključen, oba elementa
+koriste tematske vrijednosti za navigacijsku putanju, kartice, poveznice,
+rubove i prigušeni tekst; Bootstrap fallback održava ih uporabljivima i bez
+Theme modula.
+
+`workspace_backlinks` i `workspace_backlink_index_state` izvedeni su podaci.
+Ne ulaze u backup: događaji objave ih održavaju aktualnima, a periodična
+sigurnosna obnova popravlja eventualno propušten događaj.
 
 ## Sažetci Područja
 
@@ -355,6 +377,14 @@ Backup i povrat područja opisani su u [docs/backup_hr.md](docs/backup_hr.md).
 
 Modul je objavljen pod
 [European Union Public License (EUPL) v1.2](LICENSE).
+
+## Integracija osobnog praćenja
+
+Workspace objavljuje neutralne događaje promjene s izvršiteljem, područjem,
+stranicom, jezikom i razlogom. Kada je uključen
+`aaieduhr/simbioza-module-user`, dodaju se kontrole praćenja stranice i područja
+te se događaji pretvaraju u ACL-sigurne osobne obavijesti. Workspace ne ovisi o
+tom opcionalnom modulu.
 
 ## Politika ovisnosti
 

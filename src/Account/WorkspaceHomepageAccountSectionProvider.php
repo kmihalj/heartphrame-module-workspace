@@ -31,7 +31,7 @@ final readonly class WorkspaceHomepageAccountSectionProvider implements AuthAcco
      * HR: Vraća modularni partial samo kada je osobni odabir omogućen.
      * EN: Returns the module partial only when personal selection is enabled.
      *
-     * @return array{key:string,package:string,partial:string,data:array<string,mixed>}|null
+     * @return array{key:string,package:string,partial:string,data:array<string,mixed>,group:string,order:int}|null
      */
     public function sectionForUser(int $userId): ?array
     {
@@ -51,6 +51,8 @@ final readonly class WorkspaceHomepageAccountSectionProvider implements AuthAcco
             'key' => 'workspace-homepage',
             'package' => ModuleWorkspace::PACKAGE_NAME,
             'partial' => 'workspace/account_homepage',
+            'group' => 'personal',
+            'order' => 100,
             'data' => $data,
         ];
     }

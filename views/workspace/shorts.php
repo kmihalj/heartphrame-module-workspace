@@ -9,6 +9,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
 /**
  * @var \HeartPhrame\View\View $this
  * @var array<string, mixed> $workspace
+ * @var list<array{label:string,href:string,current:bool,icon?:string}> $breadcrumbs
  * @var list<array<string, mixed>> $tree
  * @var list<array{title:string,html:string,published_at:string,href:string}> $articles
  * @var int $depth
@@ -33,6 +34,104 @@ $orderOptions = [
 <script src="<?= $this->escape($assetsJsPath) ?>" defer></script>
 
 <div class="workspace-shell workspace-shorts-shell">
+    <div class="workspace-shorts-toolbar" aria-label="<?= $this->escape(__('Opcije prikaza')) ?>">
+        <?php if ($breadcrumbs !== []) : ?>
+            <nav
+                class="workspace-shorts-breadcrumb-nav"
+                aria-label="<?= $this->escape(__('Breadcrumb navigacija')) ?>"
+            >
+                <ol class="breadcrumb workspace-breadcrumb">
+                    <?php foreach ($breadcrumbs as $breadcrumb) : ?>
+                        <?php if ((bool)($breadcrumb['current'] ?? false)) : ?>
+                            <li class="breadcrumb-item active" aria-current="page">
+                                <?= $this->escape(WorkspaceValue::string($breadcrumb['label'] ?? '')) ?>
+                            </li>
+                        <?php else : ?>
+                            <li class="breadcrumb-item">
+                                <?php
+                                $breadcrumbLabel = WorkspaceValue::string($breadcrumb['label'] ?? '');
+                                $breadcrumbIcon = WorkspaceValue::string($breadcrumb['icon'] ?? '');
+                                ?>
+                                <a
+                                    href="<?= $this->escape(
+                                        WorkspaceValue::string($breadcrumb['href'] ?? ''),
+                                    ) ?>"
+                                    <?php if ($breadcrumbIcon === 'home') : ?>
+                                        class="workspace-breadcrumb-home-link"
+                                        aria-label="<?= $this->escape($breadcrumbLabel) ?>"
+                                        title="<?= $this->escape($breadcrumbLabel) ?>"
+                                    <?php endif; ?>
+                                >
+                                    <?php if ($breadcrumbIcon === 'home') : ?>
+                                        <svg
+                                            class="workspace-breadcrumb-home-icon"
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                            focusable="false"
+                                        >
+                                            <path d="M3 11.5 12 4l9 7.5" />
+                                            <path d="M5.5 10.5V20h13v-9.5" />
+                                            <path d="M9.5 20v-6h5v6" />
+                                        </svg>
+                                        <span class="visually-hidden">
+                                            <?= $this->escape($breadcrumbLabel) ?>
+                                        </span>
+                                    <?php else : ?>
+                                        <?= $this->escape($breadcrumbLabel) ?>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </ol>
+            </nav>
+        <?php endif; ?>
+
+        <div class="workspace-shorts-toolbar-actions d-flex flex-wrap gap-2">
+            <button
+                class="btn btn-sm workspace-shorts-toggle"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#workspace-page-tree"
+                aria-controls="workspace-page-tree"
+                aria-expanded="<?= $treeVisibleByDefault ? 'true' : 'false' ?>"
+                aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
+                title="<?= $this->escape(__('Stablo stranica')) ?>"
+            >
+                <svg
+                    class="workspace-shorts-toggle-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                >
+                    <path d="M10 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/>
+                    <path d="M19 14h-5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2Z"/>
+                    <path d="M7 11v2a3 3 0 0 0 3 3h2"/>
+                </svg>
+            </button>
+            <button
+                class="btn btn-sm workspace-shorts-toggle"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#workspace-shorts-display-options"
+                aria-controls="workspace-shorts-display-options"
+                aria-expanded="<?= $displayOptionsVisibleByDefault ? 'true' : 'false' ?>"
+                aria-label="<?= $this->escape(__('Opcije prikaza')) ?>"
+                title="<?= $this->escape(__('Opcije prikaza')) ?>"
+            >
+                <svg
+                    class="workspace-shorts-toggle-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                >
+                    <path d="M4 6h5M13 6h7M4 12h9M17 12h3M4 18h3M11 18h9"/>
+                    <path d="M9 4v4M13 10v4M7 16v4"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <aside
         id="workspace-page-tree"
         class="workspace-sidebar collapse<?= $treeVisibleByDefault ? ' show' : '' ?>"
@@ -109,52 +208,6 @@ $orderOptions = [
     <div class="workspace-mobile-panel-backdrop" data-workspace-mobile-panel-backdrop hidden></div>
 
     <main class="workspace-main workspace-shorts-main">
-        <div class="workspace-shorts-toolbar mb-3" aria-label="<?= $this->escape(__('Opcije prikaza')) ?>">
-            <div class="d-flex flex-wrap gap-2">
-                <button
-                    class="btn btn-sm workspace-shorts-toggle"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#workspace-page-tree"
-                    aria-controls="workspace-page-tree"
-                    aria-expanded="<?= $treeVisibleByDefault ? 'true' : 'false' ?>"
-                    aria-label="<?= $this->escape(__('Stablo stranica')) ?>"
-                    title="<?= $this->escape(__('Stablo stranica')) ?>"
-                >
-                    <svg
-                        class="workspace-shorts-toggle-icon"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                        focusable="false"
-                    >
-                        <path d="M10 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/>
-                        <path d="M19 14h-5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2Z"/>
-                        <path d="M7 11v2a3 3 0 0 0 3 3h2"/>
-                    </svg>
-                </button>
-                <button
-                    class="btn btn-sm workspace-shorts-toggle"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#workspace-shorts-display-options"
-                    aria-controls="workspace-shorts-display-options"
-                    aria-expanded="<?= $displayOptionsVisibleByDefault ? 'true' : 'false' ?>"
-                    aria-label="<?= $this->escape(__('Opcije prikaza')) ?>"
-                    title="<?= $this->escape(__('Opcije prikaza')) ?>"
-                >
-                    <svg
-                        class="workspace-shorts-toggle-icon"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                        focusable="false"
-                    >
-                        <path d="M4 6h5M13 6h7M4 12h9M17 12h3M4 18h3M11 18h9"/>
-                        <path d="M9 4v4M13 10v4M7 16v4"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
         <div
             id="workspace-shorts-display-options"
             class="collapse<?= $displayOptionsVisibleByDefault ? ' show' : '' ?>"

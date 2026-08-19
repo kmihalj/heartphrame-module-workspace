@@ -17,7 +17,11 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceMenuController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceSettingsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceShortsController;
 use AaiEduHr\HeartPhrameModuleWorkspace\Controller\WorkspaceThemeController;
+use AaiEduHr\HeartPhrameModuleWorkspace\Listener\SynchronizeWorkspaceBacklinks;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBacklinkIndexer;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBacklinkService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBreadcrumbService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorAccess;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
@@ -25,6 +29,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportEditorBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceExportService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceHomepageService;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceLinkExtractor;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMaintenanceService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuIntegration;
@@ -105,6 +110,44 @@ $services = [
             $container->get(WorkspaceConfig::class),
             $container->get(WorkspaceWorkflowService::class),
         ),
+
+    WorkspaceLinkExtractor::class => static fn(ContainerInterface $container): WorkspaceLinkExtractor =>
+        new WorkspaceLinkExtractor($container->get(WorkspaceConfig::class)),
+
+    WorkspaceBacklinkIndexer::class => static fn(ContainerInterface $container): WorkspaceBacklinkIndexer =>
+        new WorkspaceBacklinkIndexer(
+            $container->get(Database::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceWorkflowService::class),
+            $container->get(WorkspaceEditorBridge::class),
+            $container->get(WorkspaceLinkExtractor::class),
+            $container->get(WorkspaceConfig::class),
+        ),
+
+    WorkspaceBacklinkService::class => static fn(ContainerInterface $container): WorkspaceBacklinkService =>
+        new WorkspaceBacklinkService(
+            $container->get(Database::class),
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceWorkflowService::class),
+            $container->get(WorkspaceBacklinkIndexer::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
+        ),
+
+    WorkspaceBreadcrumbService::class => static fn(ContainerInterface $container): WorkspaceBreadcrumbService =>
+        new WorkspaceBreadcrumbService(
+            $container->get(WorkspaceRepository::class),
+            $container->get(WorkspaceConfig::class),
+            $container->get(UrlGenerator::class),
+        ),
+
+    SynchronizeWorkspaceBacklinks::class =>
+        static fn(ContainerInterface $container): SynchronizeWorkspaceBacklinks =>
+            new SynchronizeWorkspaceBacklinks(
+                $container->get(WorkspaceBacklinkIndexer::class),
+                $container->get(LoggerInterface::class),
+            ),
 
     WorkspaceApiService::class => static fn(ContainerInterface $container): WorkspaceApiService =>
         new WorkspaceApiService(
@@ -259,6 +302,8 @@ $services = [
             $container->get(TranslatorInterface::class),
             $container->get(WorkspaceThemeService::class),
             $container->get(WorkspaceMenuService::class),
+            $container->get(WorkspaceBreadcrumbService::class),
+            $container->get(WorkspaceBacklinkService::class),
             $container->get(\Psr\EventDispatcher\EventDispatcherInterface::class),
             $container->get(LoggerInterface::class),
         ),
@@ -294,6 +339,7 @@ $services = [
             $container->get(WorkspaceModuleViewRenderer::class),
             $container->get(WorkspaceRepository::class),
             $container->get(WorkspaceAccessService::class),
+            $container->get(WorkspaceBreadcrumbService::class),
             $container->get(WorkspaceShortsService::class),
             $container->get(WorkspaceConfig::class),
             $container->get(UrlGenerator::class),
