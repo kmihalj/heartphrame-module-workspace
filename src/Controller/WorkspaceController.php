@@ -13,6 +13,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceEditorBridge;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspacePresentationRegistry;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceValue;
@@ -63,6 +64,7 @@ final readonly class WorkspaceController
         private WorkspaceMenuService $menus,
         private WorkspaceBreadcrumbService $breadcrumbs,
         private WorkspaceBacklinkService $backlinks,
+        private WorkspacePresentationRegistry $presentations,
         private EventDispatcherInterface $events,
         private LoggerInterface $logger,
     ) {
@@ -100,6 +102,7 @@ final readonly class WorkspaceController
         }
 
         $language = $this->language($request);
+        $workspace = $this->presentations->one($workspace, $language);
         $visibleTree = $this->access->visibleTree($workspace, null, $language);
         $workflows = $this->repository->nodeWorkflowsForNodes(
             $this->treeNodeIds($visibleTree),
@@ -129,6 +132,9 @@ final readonly class WorkspaceController
             return $this->notFound();
         }
 
+        $language = $this->language($request);
+        $workspace = $this->presentations->one($workspace, $language);
+
         $node = $this->repository->findNodeBySlug($this->intValue($workspace['id'] ?? 0), $nodeSlug);
         if (!is_array($node)) {
             return $this->accessDenied();
@@ -145,7 +151,6 @@ final readonly class WorkspaceController
             return $this->redirectLinkNode($node);
         }
 
-        $language = $this->language($request);
         $visibleTree = $this->access->visibleTree($workspace, null, $language);
         $workflows = $this->repository->nodeWorkflowsForNodes(
             $this->treeNodeIds($visibleTree),
@@ -1646,6 +1651,7 @@ final readonly class WorkspaceController
      */
     private function decorateWorkspaces(array $workspaces): array
     {
+        $workspaces = $this->presentations->many($workspaces);
         foreach ($workspaces as &$workspace) {
             $workspace['href'] = $this->workspacePath(
                 $this->stringValue($workspace['slug'] ?? ''),

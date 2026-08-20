@@ -2,6 +2,14 @@
 
 Croatian version: [index_hr.md](index_hr.md)
 
+## Presentation extensions
+
+Derived modules may register a `WorkspacePresentationProviderInterface`
+implementation in `WorkspacePresentationRegistry`. The registry decorates
+already loaded Workspace rows in one batch for the active or explicitly
+requested locale. Providers must change presentation fields only and must not
+write to the Workspace tables.
+
 ## 1. Mental model
 
 A Workspace is an organizational and security boundary above individual

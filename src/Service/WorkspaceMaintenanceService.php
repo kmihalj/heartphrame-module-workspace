@@ -191,7 +191,11 @@ final readonly class WorkspaceMaintenanceService
             $workflow = is_array($workflow) ? $workflow : [];
             $key = $keyByNode[WorkspaceValue::int($workflow['node_id'] ?? 0)] ?? '';
             $language = WorkspaceValue::string($workflow['language_code'] ?? '');
-            if ($key === '' || $language === '') {
+            if ($key === '') {
+                continue;
+            }
+
+            if ($language === '') {
                 continue;
             }
 

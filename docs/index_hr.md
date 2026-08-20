@@ -2,6 +2,14 @@
 
 English version: [index_en.md](index_en.md)
 
+## Proširenja prikaza
+
+Izvedeni moduli mogu registrirati implementaciju sučelja
+`WorkspacePresentationProviderInterface` u `WorkspacePresentationRegistry`.
+Registry grupno prilagođava već učitane retke područja za aktivni ili izričito
+zadani jezik. Provider smije mijenjati samo prikazne vrijednosti i ne smije
+pisati u Workspace tablice.
+
 ## 1. Mentalni model
 
 Područje je organizacijska i sigurnosna granica iznad pojedinih stranica.

@@ -233,11 +233,23 @@ final class WorkspaceBacklinkIndexer
                     $node = $nodesById[$nodeId] ?? null;
                     $documentKey = is_array($node) ? WorkspaceValue::string($node['document_key'] ?? '') : '';
                     $version = WorkspaceValue::int($workflow['published_version_number'] ?? 0);
-                    if (
-                        !$this->workflow->isReadableWorkflow($workflow)
-                        || $language === '' || $documentKey === '' || $version <= 0
-                        || ($onlyLanguage !== null && $language !== $onlyLanguage)
-                    ) {
+                    if (!$this->workflow->isReadableWorkflow($workflow)) {
+                        continue;
+                    }
+
+                    if ($language === '') {
+                        continue;
+                    }
+
+                    if ($documentKey === '') {
+                        continue;
+                    }
+
+                    if ($version <= 0) {
+                        continue;
+                    }
+
+                    if ($onlyLanguage !== null && $language !== $onlyLanguage) {
                         continue;
                     }
 
@@ -255,7 +267,11 @@ final class WorkspaceBacklinkIndexer
                     $sourceNodeId = WorkspaceValue::int($source['id'] ?? 0);
                     foreach ($this->extractor->extract(WorkspaceValue::string($version['html'] ?? '')) as $link) {
                         $target = $targets[$link['workspaceSlug'] . '/' . $link['nodeSlug']] ?? null;
-                        if (!is_array($target) || $target['nodeId'] === $sourceNodeId) {
+                        if (!is_array($target)) {
+                            continue;
+                        }
+
+                        if ($target['nodeId'] === $sourceNodeId) {
                             continue;
                         }
 

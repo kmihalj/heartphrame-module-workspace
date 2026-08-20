@@ -37,6 +37,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuNavigationTargetPro
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceMenuService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceNotificationBridge;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspacePresentationRegistry;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRouteRegistrar;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceSettingsService;
@@ -60,6 +61,10 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
 $services = [
+    WorkspacePresentationRegistry::class =>
+        static fn(ContainerInterface $container): WorkspacePresentationRegistry =>
+            new WorkspacePresentationRegistry($container->get(TranslatorInterface::class)),
+
     WorkspaceConfig::class => static fn(ContainerInterface $container): WorkspaceConfig =>
         new WorkspaceConfig($container->get(ConfigInterface::class), dirname(__DIR__)),
 
@@ -304,6 +309,7 @@ $services = [
             $container->get(WorkspaceMenuService::class),
             $container->get(WorkspaceBreadcrumbService::class),
             $container->get(WorkspaceBacklinkService::class),
+            $container->get(WorkspacePresentationRegistry::class),
             $container->get(\Psr\EventDispatcher\EventDispatcherInterface::class),
             $container->get(LoggerInterface::class),
         ),
@@ -345,6 +351,7 @@ $services = [
             $container->get(UrlGenerator::class),
             $container->get(TranslatorInterface::class),
             $container->get(WorkspaceThemeService::class),
+            $container->get(WorkspacePresentationRegistry::class),
         ),
 
     WorkspaceThemeController::class => static fn(ContainerInterface $container): WorkspaceThemeController =>

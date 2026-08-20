@@ -92,7 +92,11 @@ final readonly class WorkspaceMaintenanceBridge
     {
         $normalized = [];
         foreach ($statistics as $scope => $values) {
-            if (!is_string($scope) || !is_array($values)) {
+            if (!is_string($scope)) {
+                continue;
+            }
+
+            if (!is_array($values)) {
                 continue;
             }
 

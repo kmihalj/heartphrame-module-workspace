@@ -63,7 +63,11 @@ final readonly class WorkspaceBacklinkService
         foreach ($rows as $row) {
             $sourceNodeId = WorkspaceValue::int($row['source_node_id'] ?? 0);
             $rowLanguage = strtolower(WorkspaceValue::string($row['source_language_code'] ?? ''));
-            if ($sourceNodeId <= 0 || ($rowLanguage !== $preferredLanguage && $rowLanguage !== $fallbackLanguage)) {
+            if ($sourceNodeId <= 0) {
+                continue;
+            }
+
+            if ($rowLanguage !== $preferredLanguage && $rowLanguage !== $fallbackLanguage) {
                 continue;
             }
 
@@ -124,11 +128,23 @@ final readonly class WorkspaceBacklinkService
             $node = $nodesById[$sourceNodeId] ?? null;
             $permissions = $permissionsByWorkspace[$workspaceId][$sourceNodeId] ?? null;
             $rowLanguage = strtolower(WorkspaceValue::string($row['source_language_code'] ?? ''));
-            if (
-                !is_array($workspace) || !is_array($node) || !is_array($permissions)
-                || !($permissions['can_view'] ?? false)
-                || !($readableByLanguage[$rowLanguage][$sourceNodeId] ?? false)
-            ) {
+            if (!is_array($workspace)) {
+                continue;
+            }
+
+            if (!is_array($node)) {
+                continue;
+            }
+
+            if (!is_array($permissions)) {
+                continue;
+            }
+
+            if (!($permissions['can_view'] ?? false)) {
+                continue;
+            }
+
+            if (!($readableByLanguage[$rowLanguage][$sourceNodeId] ?? false)) {
                 continue;
             }
 

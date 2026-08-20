@@ -8,6 +8,7 @@ use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceAccessService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceBreadcrumbService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceConfig;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceModuleViewRenderer;
+use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspacePresentationRegistry;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceRepository;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceShortsService;
 use AaiEduHr\HeartPhrameModuleWorkspace\Service\WorkspaceThemeService;
@@ -44,6 +45,7 @@ final readonly class WorkspaceShortsController
         private UrlGenerator $urlGenerator,
         private TranslatorInterface $translator,
         private WorkspaceThemeService $themes,
+        private WorkspacePresentationRegistry $presentations,
     ) {
     }
 
@@ -66,6 +68,8 @@ final readonly class WorkspaceShortsController
             return $this->notFound();
         }
 
+        $language = $this->language($request);
+        $workspace = $this->presentations->one($workspace, $language);
         $permissions = $this->access->workspacePermissions($workspace);
         if (!(bool)($permissions['can_view'] ?? false)) {
             return $this->accessDenied();
@@ -73,7 +77,6 @@ final readonly class WorkspaceShortsController
 
         $this->themes->activate($workspace);
 
-        $language = $this->language($request);
         $query = $request->getQueryParams();
         $model = $this->shorts->viewModel(
             $workspace,
